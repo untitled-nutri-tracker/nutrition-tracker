@@ -1,1 +1,0 @@
-Other stuff like API keys, images etc should go here 
