@@ -1,1 +1,19 @@
+# Node / frontend
+node_modules/
+dist/
+/.vite
+
+# Tauri / Rust
+target/
+src-tauri/target/
+
+# OS / misc
+.DS_Store
+npm-debug.log*
+.env
+.env.*
+
+# Logs
+*.log
+
 /node_modules
