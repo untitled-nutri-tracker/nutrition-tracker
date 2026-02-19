@@ -2,10 +2,13 @@
 node_modules/
 dist/
 /.vite
+/vite.config.d.ts
+/vite.config.js
 
 # Tauri / Rust
 target/
 src-tauri/target/
+src-rust-crates/**/target/
 
 # OS / misc
 .DS_Store
@@ -16,4 +19,6 @@ npm-debug.log*
 # Logs
 *.log
 
+/.vscode
+/.idea
 /node_modules
