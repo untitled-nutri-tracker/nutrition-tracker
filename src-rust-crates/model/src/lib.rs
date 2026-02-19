@@ -1,3 +1,8 @@
+mod food;
+mod metric_unit;
+mod meal;
+mod user_profile;
+
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
