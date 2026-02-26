@@ -1,14 +1,16 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+pub mod food;
+pub mod meal;
+pub mod user_profile;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+use tauri::ipc::Invoke;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
+    println!("cargo:warning=Generate database handlers!");
+    tauri::generate_handler![
+        food::create_food_demo,
+        food::create_food,
+        food::create_serving,
+        meal::create_meal,
+        user_profile::create_profile,
+    ]
 }

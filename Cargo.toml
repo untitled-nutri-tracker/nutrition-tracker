@@ -16,3 +16,7 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+nutrack-database = { path = "./src-rust-crates/database" }
+nutrack-model = { path = "./src-rust-crates/model" }
+tauri-typegen = { git = "https://github.com/untitled-nutri-tracker/tauri-typegen-multicrate.git" }

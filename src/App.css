@@ -46,6 +46,19 @@
   justify-content: center;
 }
 
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
@@ -61,6 +74,7 @@ h1 {
 }
 
 input,
+select,
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -72,6 +86,17 @@ button {
   background-color: #ffffff;
   transition: border-color 0.25s;
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+}
+
+#sex-input {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #ffffff;
+}
+
+#sex-input option {
+  background-color: #ffffff;
 }
 
 button {
@@ -87,6 +112,7 @@ button:active {
 }
 
 input,
+select,
 button {
   outline: none;
 }
@@ -106,8 +132,14 @@ button {
   }
 
   input,
+  select,
   button {
     color: #ffffff;
+    background-color: #0f0f0f98;
+  }
+
+  #sex-input,
+  #sex-input option {
     background-color: #0f0f0f98;
   }
   button:active {
