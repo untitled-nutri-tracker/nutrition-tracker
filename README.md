@@ -47,3 +47,9 @@ npm run tauri build
 ```bash
 cd src-tauri && cargo build
 ```
+
+- Run database rust tests exclusively:
+
+```bash
+cd src-rust-crates/database && cargo test
+```
