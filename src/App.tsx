@@ -6,6 +6,7 @@ import "./App.css";
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
   const [name, setName] = useState("");
+  const [dbPath, setDbPath] = useState("");
 
   async function greet() {
     // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -44,6 +45,27 @@ function App() {
         <button type="submit">Greet</button>
       </form>
       <p>{greetMsg}</p>
+
+      <hr style={{ margin: "2rem 0", width: "100%", borderColor: "#333" }} />
+        <h2>Database Location Demo</h2>
+      <div className="row">
+        <button onClick={async () => {
+          try {
+            const path: string = await invoke("get_db_path");
+            setDbPath(path);
+          } catch (e) {
+            setDbPath(`Error: ${e}`);
+          }
+        }}>
+          Show Database Location
+        </button>
+      </div>
+      {dbPath && (
+        <p>
+          {dbPath}
+        </p>
+      )}
+
     </main>
   );
 }
