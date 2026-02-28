@@ -24,3 +24,4 @@ npm-debug.log*
 /.vscode
 /.idea
 /node_modules
+/src/generated/

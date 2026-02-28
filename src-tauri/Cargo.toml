@@ -17,6 +17,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+tauri-typegen.workspace = true
 
 [dependencies]
 tauri.workspace = true
@@ -24,5 +25,5 @@ tauri-plugin-opener.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 
-nutrack-database = { path = "../src-rust-crates/database" }
-nutrack-model = { path = "../src-rust-crates/model" }
+nutrack-model.workspace = true
+nutrack-database.workspace = true

@@ -1,5 +1,6 @@
 use std::sync::Mutex;
 use tauri::Manager;
+use nutrack_database;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -14,9 +15,9 @@ fn get_db_path(app: tauri::AppHandle) -> Result<String, String> {
         .path()
         .app_data_dir()
         .map_err(|e| format!("Failed to locate app data directory: {}", e))?;
-        
+
     let db_path = app_data_dir.join("nutrition.db");
-    
+
     Ok(db_path.to_string_lossy().into_owned())
 }
 
@@ -38,15 +39,16 @@ pub fn run() {
             // Init the database explicitly without unwrap/expect
             let conn = nutrack_database::init_db(&db_path)
                 .map_err(|e| Box::<dyn std::error::Error>::from(format!("Failed to initialize: {}", e)))?;
-                
+
             println!("Successfully initialized DB at: {:?}", db_path);
-            
+
             // Manage connection state for commands safely using Mutex
             app.manage(Mutex::new(conn));
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, get_db_path])
+        .invoke_handler(nutrack_database::handler())
+        .invoke_handler(tauri::generate_handler![get_db_path])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
