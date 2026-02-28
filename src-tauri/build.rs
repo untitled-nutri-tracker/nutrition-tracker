@@ -22,12 +22,6 @@ fn generate_bindings() {
 
     let files = generate_from_config(&config)
         .expect("failed to generate bindings");
-
-    println!("cargo:warning={} files generated", files.len());
-
-    for file in files {
-        println!("cargo:warning=File generated: {}", file);
-    }
 }
 
 fn main() {
