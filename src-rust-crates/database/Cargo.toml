@@ -6,6 +6,10 @@ license.workspace = true
 
 [dependencies]
 rusqlite = "0.38.0"
+thiserror = "2.0.18"
 tauri.workspace = true
 nutrack-model.workspace = true
 tauri-macros = "2.5.4"
+
+[dev-dependencies]
+tempfile = "3.26.0"

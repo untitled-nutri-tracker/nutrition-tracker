@@ -1,30 +1,16 @@
 import { useState } from "react";
 import reactLogo from "./assets/react.svg";
+import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
-import {createProfile, Sex, UserProfile} from "./generated";
-
-export const SEX_OPTIONS = [
-    {value: "FEMALE", label: "Female"},
-    {value: "MALE", label: "Male"},
-] as const;
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
   const [name, setName] = useState("");
-    const [height, setHeight] = useState("");
-    const [weight, setWeight] = useState("");
-    const [sex, setSex] = useState("FEMALE");
+  const [dbPath, setDbPath] = useState("");
 
   async function greet() {
     // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-      const profile: UserProfile = {
-          id: 0,
-          name: name,
-          weight: parseFloat(weight),
-          sex: sex as Sex,
-          height: parseFloat(height),
-      }
-      setGreetMsg(await createProfile({userProfile: profile}));
+    setGreetMsg(await invoke("greet", { name }));
   }
 
   return (
@@ -45,49 +31,41 @@ function App() {
       <p>Click on the Tauri, Vite, and React logos to learn more.</p>
 
       <form
-          className="profile-form"
+        className="row"
         onSubmit={(e) => {
           e.preventDefault();
           greet();
         }}
       >
-          <div className="form-row">
-              <input
-                  id="name-input"
-                  onChange={(e) => setName(e.currentTarget.value)}
-                  placeholder="Enter a name..."
-              />
-              <select
-                  id="sex-input"
-                  value={sex}
-                  onChange={(e) => {
-                      setSex(e.target.value);
-                  }}
-              >
-                  {SEX_OPTIONS.map((sex) => (
-                      <option key={sex.value} value={sex.value}>
-                          {sex.label}
-                      </option>
-                  ))}
-              </select>
-          </div>
-          <div className="form-row">
-              <input
-                  id="weight-input"
-                  onChange={(e) => setWeight(e.currentTarget.value)}
-                  placeholder="Weight... (number only)"
-              />
-              <input
-                  id="height-input"
-                  onChange={(e) => setHeight(e.currentTarget.value)}
-                  placeholder="Height... (number only)"
-              />
-          </div>
-          <div className="form-row">
-              <button type="submit">Create Profile</button>
-          </div>
+        <input
+          id="greet-input"
+          onChange={(e) => setName(e.currentTarget.value)}
+          placeholder="Enter a name..."
+        />
+        <button type="submit">Greet</button>
       </form>
       <p>{greetMsg}</p>
+
+      <hr style={{ margin: "2rem 0", width: "100%", borderColor: "#333" }} />
+        <h2>Database Location Demo</h2>
+      <div className="row">
+        <button onClick={async () => {
+          try {
+            const path: string = await invoke("get_db_path");
+            setDbPath(path);
+          } catch (e) {
+            setDbPath(`Error: ${e}`);
+          }
+        }}>
+          Show Database Location
+        </button>
+      </div>
+      {dbPath && (
+        <p>
+          {dbPath}
+        </p>
+      )}
+
     </main>
   );
 }
