@@ -1,6 +1,8 @@
+pub mod api;
+
+use nutrack_database;
 use std::sync::Mutex;
 use tauri::Manager;
-use nutrack_database;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -27,18 +29,19 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // Resolve the platform-specific AppData directory dynamically
-            let app_data_dir = app
-                .path()
-                .app_data_dir()
-                .map_err(|e| {
-                    Box::<dyn std::error::Error>::from(format!("Failed to locate app data directory on this OS: {}", e))
-                })?;
+            let app_data_dir = app.path().app_data_dir().map_err(|e| {
+                Box::<dyn std::error::Error>::from(format!(
+                    "Failed to locate app data directory on this OS: {}",
+                    e
+                ))
+            })?;
 
             let db_path = app_data_dir.join("nutrition.db");
 
             // Init the database explicitly without unwrap/expect
-            let conn = nutrack_database::init_db(&db_path)
-                .map_err(|e| Box::<dyn std::error::Error>::from(format!("Failed to initialize: {}", e)))?;
+            let conn = nutrack_database::init_db(&db_path).map_err(|e| {
+                Box::<dyn std::error::Error>::from(format!("Failed to initialize: {}", e))
+            })?;
 
             println!("Successfully initialized DB at: {:?}", db_path);
 
