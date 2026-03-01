@@ -24,6 +24,8 @@ tauri.workspace = true
 tauri-plugin-opener.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+tokio = { version = "1", features = ["full"] }
 
 nutrack-model.workspace = true
 nutrack-database.workspace = true
