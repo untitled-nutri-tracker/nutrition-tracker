@@ -1,5 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::food::{Food, Serving};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Meal {
@@ -12,8 +13,9 @@ pub struct Meal {
     pub updated_at: i64, // timestamp
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, IntoPrimitive, TryFromPrimitive, Clone, Copy)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[repr(i64)]
 pub enum MealType {
     Breakfast = 1,
     Brunch = 2,

@@ -1,7 +1,9 @@
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, IntoPrimitive, TryFromPrimitive, Clone, Copy)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[repr(i64)]
 pub enum MetricUnit {
     Serving = 0,
 
