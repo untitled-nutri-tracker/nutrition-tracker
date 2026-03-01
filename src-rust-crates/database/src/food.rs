@@ -1,82 +1,80 @@
-use nutrack_model::food::{Food, Serving, NutritionFacts};
+use nutrack_model::food::{Food, NutritionFacts, Serving};
 
 #[tauri::command]
-pub async fn create_food(_food: Food) -> crate::CommandResult<Food> {
+pub async fn create_food(_food: Food) -> Result<Food, String> {
     todo!()
 }
 
 #[tauri::command]
-pub async fn get_food(_id: i64) -> crate::CommandResult<Option<Food>> {
+pub async fn get_food(_id: i64) -> Result<Option<Food>, String> {
     todo!()
 }
 
 #[tauri::command]
-pub async fn list_foods() -> crate::CommandResult<Vec<Food>> {
+pub async fn list_foods() -> Result<Vec<Food>, String> {
     todo!()
 }
 
 #[tauri::command]
-pub async fn update_food(_food: Food) -> crate::CommandResult<Food> {
+pub async fn update_food(_food: Food) -> Result<Food, String> {
     todo!()
 }
 
 #[tauri::command]
-pub async fn delete_food(_id: i64) -> crate::CommandResult<bool> {
+pub async fn delete_food(_id: i64) -> Result<bool, String> {
     todo!()
 }
 
 #[tauri::command]
-pub async fn create_serving(_serving: Serving) -> crate::CommandResult<Serving> {
+pub async fn create_serving(_serving: Serving) -> Result<Serving, String> {
     todo!()
 }
 
 #[tauri::command]
-pub async fn get_serving(_id: i64) -> crate::CommandResult<Option<Serving>> {
+pub async fn get_serving(_id: i64) -> Result<Option<Serving>, String> {
     todo!()
 }
 
 #[tauri::command]
-pub async fn list_servings_by_food(_food_id: i64) -> crate::CommandResult<Vec<Serving>> {
+pub async fn list_servings_by_food(_food_id: i64) -> Result<Vec<Serving>, String> {
     todo!()
 }
 
 #[tauri::command]
-pub async fn update_serving(_serving: Serving) -> crate::CommandResult<Serving> {
+pub async fn update_serving(_serving: Serving) -> Result<Serving, String> {
     todo!()
 }
 
 #[tauri::command]
-pub async fn delete_serving(_id: i64) -> crate::CommandResult<bool> {
+pub async fn delete_serving(_id: i64) -> Result<bool, String> {
     todo!()
 }
 
 #[tauri::command]
 pub async fn create_nutrition_facts(
     _nutrition_facts: NutritionFacts,
-) -> crate::CommandResult<NutritionFacts> {
+) -> Result<NutritionFacts, String> {
     todo!()
 }
 
 #[tauri::command]
-pub async fn get_nutrition_facts(
-    _serving_id: i64,
-) -> crate::CommandResult<Option<NutritionFacts>> {
+pub async fn get_nutrition_facts(_serving_id: i64) -> Result<Option<NutritionFacts>, String> {
     todo!()
 }
 
 #[tauri::command]
-pub async fn list_nutrition_facts() -> crate::CommandResult<Vec<NutritionFacts>> {
+pub async fn list_nutrition_facts() -> Result<Vec<NutritionFacts>, String> {
     todo!()
 }
 
 #[tauri::command]
 pub async fn update_nutrition_facts(
     _nutrition_facts: NutritionFacts,
-) -> crate::CommandResult<NutritionFacts> {
+) -> Result<NutritionFacts, String> {
     todo!()
 }
 
 #[tauri::command]
-pub async fn delete_nutrition_facts(_serving_id: i64) -> crate::CommandResult<bool> {
+pub async fn delete_nutrition_facts(_serving_id: i64) -> Result<bool, String> {
     todo!()
 }

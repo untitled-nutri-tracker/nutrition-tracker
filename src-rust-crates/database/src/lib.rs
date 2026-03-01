@@ -10,7 +10,6 @@ pub mod user_profile;
 use tauri::ipc::Invoke;
 
 const SCHEMA_SQL: &str = include_str!("../sql/init.sql");
-pub type CommandResult<T> = Result<T, String>;
 static DB_MANAGER: OnceLock<DatabaseConnectionManager> = OnceLock::new();
 
 pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {

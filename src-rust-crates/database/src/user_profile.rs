@@ -1,7 +1,7 @@
 use nutrack_model::user_profile::{Sex, UserProfile};
 use rusqlite::{params, Connection, OptionalExtension};
 
-fn get_profile_with_conn(conn: &Connection, id: i16) -> crate::CommandResult<Option<UserProfile>> {
+fn get_profile_with_conn(conn: &Connection, id: i16) -> Result<Option<UserProfile>, String> {
     let row = conn
         .query_row(
             "SELECT id, name, sex, weight, height FROM user_profiles WHERE id = ?1",
@@ -36,7 +36,7 @@ fn get_profile_with_conn(conn: &Connection, id: i16) -> crate::CommandResult<Opt
 fn create_profile_with_conn(
     conn: &Connection,
     user_profile: UserProfile,
-) -> crate::CommandResult<UserProfile> {
+) -> Result<UserProfile, String> {
     let id = user_profile.id;
     let name = user_profile.name;
     let sex = user_profile.sex;
@@ -53,7 +53,7 @@ fn create_profile_with_conn(
         .ok_or_else(|| format!("Profile was inserted but could not be read back for id {id}"))
 }
 
-fn list_profiles_with_conn(conn: &Connection) -> crate::CommandResult<Vec<UserProfile>> {
+fn list_profiles_with_conn(conn: &Connection) -> Result<Vec<UserProfile>, String> {
     let mut stmt = conn
         .prepare("SELECT id, name, sex, weight, height FROM user_profiles ORDER BY id")
         .map_err(|e| e.to_string())?;
@@ -89,7 +89,7 @@ fn list_profiles_with_conn(conn: &Connection) -> crate::CommandResult<Vec<UserPr
 fn update_profile_with_conn(
     conn: &Connection,
     user_profile: UserProfile,
-) -> crate::CommandResult<UserProfile> {
+) -> Result<UserProfile, String> {
     let id = user_profile.id;
     let name = user_profile.name;
     let sex = user_profile.sex;
@@ -111,7 +111,7 @@ fn update_profile_with_conn(
         .ok_or_else(|| format!("Profile was updated but could not be read back for id {id}"))
 }
 
-fn delete_profile_with_conn(conn: &Connection, id: i16) -> crate::CommandResult<bool> {
+fn delete_profile_with_conn(conn: &Connection, id: i16) -> Result<bool, String> {
     let changed = conn
         .execute(
             "DELETE FROM user_profiles WHERE id = ?1",
@@ -122,35 +122,35 @@ fn delete_profile_with_conn(conn: &Connection, id: i16) -> crate::CommandResult<
 }
 
 #[tauri::command]
-pub async fn create_profile(user_profile: UserProfile) -> crate::CommandResult<UserProfile> {
+pub async fn create_profile(user_profile: UserProfile) -> Result<UserProfile, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
     create_profile_with_conn(&conn, user_profile)
 }
 
 #[tauri::command]
-pub async fn get_profile(id: i16) -> crate::CommandResult<Option<UserProfile>> {
+pub async fn get_profile(id: i16) -> Result<Option<UserProfile>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
     get_profile_with_conn(&conn, id)
 }
 
 #[tauri::command]
-pub async fn list_profiles() -> crate::CommandResult<Vec<UserProfile>> {
+pub async fn list_profiles() -> Result<Vec<UserProfile>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
     list_profiles_with_conn(&conn)
 }
 
 #[tauri::command]
-pub async fn update_profile(user_profile: UserProfile) -> crate::CommandResult<UserProfile> {
+pub async fn update_profile(user_profile: UserProfile) -> Result<UserProfile, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
     update_profile_with_conn(&conn, user_profile)
 }
 
 #[tauri::command]
-pub async fn delete_profile(id: i16) -> crate::CommandResult<bool> {
+pub async fn delete_profile(id: i16) -> Result<bool, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
     delete_profile_with_conn(&conn, id)
