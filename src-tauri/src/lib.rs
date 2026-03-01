@@ -1,4 +1,7 @@
+pub mod api;
+
 use nutrack_database;
+use std::sync::Mutex;
 use tauri::Manager;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/

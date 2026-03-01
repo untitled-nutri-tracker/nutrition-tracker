@@ -17,6 +17,7 @@ src-rust-crates/**/target/
 npm-debug.log*
 .env
 .env.*
+*.md
 
 # Logs
 *.log
@@ -25,3 +26,8 @@ npm-debug.log*
 /.idea
 /node_modules
 /src/generated/
+
+# AI pipeline
+src-ai/node_modules/
+src-ai/data/*.json
+target2/
