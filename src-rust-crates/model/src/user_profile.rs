@@ -1,5 +1,6 @@
-use std::fmt;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(Serialize, Deserialize)]
 pub struct UserProfile {
@@ -10,8 +11,9 @@ pub struct UserProfile {
     pub height: f32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, IntoPrimitive, TryFromPrimitive, Clone, Copy)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[repr(i64)]
 pub enum Sex {
     Female = 0,
     Male = 1,

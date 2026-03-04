@@ -2434,6 +2434,7 @@ dependencies = [
 name = "nutrack-model"
 version = "0.1.0"
 dependencies = [
+ "num_enum",
  "serde",
 ]
 
@@ -2450,6 +2451,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-opener",
  "tauri-typegen",
+ "tokio",
 ]
 
 [[package]]
