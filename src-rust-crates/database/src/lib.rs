@@ -1,5 +1,6 @@
 use rusqlite::Connection;
 use std::path::Path;
+use std::sync::{Mutex, MutexGuard, OnceLock};
 use thiserror::Error;
 
 pub mod food;
@@ -9,15 +10,41 @@ pub mod user_profile;
 use tauri::ipc::Invoke;
 
 const SCHEMA_SQL: &str = include_str!("../sql/init.sql");
+static DB_MANAGER: OnceLock<DatabaseConnectionManager> = OnceLock::new();
 
 pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
     println!("cargo:warning=Generate database handlers!");
     tauri::generate_handler![
-        food::create_food_demo,
         food::create_food,
+        food::get_food,
+        food::list_foods,
+        food::update_food,
+        food::delete_food,
         food::create_serving,
+        food::get_serving,
+        food::list_servings_by_food,
+        food::update_serving,
+        food::delete_serving,
+        food::create_nutrition_facts,
+        food::get_nutrition_facts,
+        food::list_nutrition_facts,
+        food::update_nutrition_facts,
+        food::delete_nutrition_facts,
         meal::create_meal,
+        meal::get_meal,
+        meal::list_meals,
+        meal::update_meal,
+        meal::delete_meal,
+        meal::create_meal_item,
+        meal::get_meal_item,
+        meal::list_meal_items_by_meal,
+        meal::update_meal_item,
+        meal::delete_meal_item,
         user_profile::create_profile,
+        user_profile::get_profile,
+        user_profile::list_profiles,
+        user_profile::update_profile,
+        user_profile::delete_profile,
     ]
 }
 
@@ -27,6 +54,39 @@ pub enum DatabaseError {
     ConnectionError(#[from] rusqlite::Error),
     #[error("Failed to access storage path: {0}")]
     IoError(#[from] std::io::Error),
+    #[error("Database manager has not been initialized")]
+    NotInitialized,
+    #[error("Database connection lock is poisoned")]
+    LockPoisoned,
+}
+
+pub struct DatabaseConnectionManager {
+    connection: Mutex<Connection>,
+}
+
+impl DatabaseConnectionManager {
+    pub fn initialize(db_path: &Path) -> Result<&'static Self, DatabaseError> {
+        if let Some(manager) = DB_MANAGER.get() {
+            return Ok(manager);
+        }
+
+        let conn = init_db(db_path)?;
+        let manager = Self {
+            connection: Mutex::new(conn),
+        };
+        let _ = DB_MANAGER.set(manager);
+        DB_MANAGER.get().ok_or(DatabaseError::NotInitialized)
+    }
+
+    pub fn global() -> Result<&'static Self, DatabaseError> {
+        DB_MANAGER.get().ok_or(DatabaseError::NotInitialized)
+    }
+
+    pub fn connection(&self) -> Result<MutexGuard<'_, Connection>, DatabaseError> {
+        self.connection
+            .lock()
+            .map_err(|_| DatabaseError::LockPoisoned)
+    }
 }
 
 /// Initializes the database at the securely provided file path.

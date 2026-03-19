@@ -38,15 +38,12 @@ pub fn run() {
 
             let db_path = app_data_dir.join("nutrition.db");
 
-            // Init the database explicitly without unwrap/expect
-            let conn = nutrack_database::init_db(&db_path).map_err(|e| {
+            // Init global database manager explicitly without unwrap/expect
+            nutrack_database::DatabaseConnectionManager::initialize(&db_path).map_err(|e| {
                 Box::<dyn std::error::Error>::from(format!("Failed to initialize: {}", e))
             })?;
 
             println!("Successfully initialized DB at: {:?}", db_path);
-
-            // Manage connection state for commands safely using Mutex
-            app.manage(Mutex::new(conn));
 
             Ok(())
         })
