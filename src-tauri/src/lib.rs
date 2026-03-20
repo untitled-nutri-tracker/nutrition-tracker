@@ -1,4 +1,5 @@
 pub mod api;
+pub mod network_config;
 
 use nutrack_database;
 use std::sync::Mutex;
@@ -28,6 +29,9 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            // Initialize network feature-flag configuration
+            network_config::NetworkConfig::initialize();
+
             // Resolve the platform-specific AppData directory dynamically
             let app_data_dir = app.path().app_data_dir().map_err(|e| {
                 Box::<dyn std::error::Error>::from(format!(
@@ -48,7 +52,10 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(nutrack_database::handler())
-        .invoke_handler(tauri::generate_handler![get_db_path])
+        .invoke_handler(tauri::generate_handler![
+            get_db_path,
+            network_config::get_network_config,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -1,3 +1,4 @@
+use crate::api::network_errors::map_network_error;
 use nutrack_model::food::{Food, NutritionFacts, Serving};
 use nutrack_model::metric_unit::MetricUnit;
 use reqwest::Client;
@@ -13,6 +14,9 @@ fn current_timestamp() -> i64 {
 }
 
 /// Fetches nutrition data from OpenFoodFacts for a given barcode.
+///
+/// Returns a user-friendly error string on failure — callers do not need to
+/// do any special error handling for offline/timeout scenarios.
 pub async fn fetch(barcode: &str) -> Result<NutritionFacts, String> {
     let url = format!(
         "https://world.openfoodfacts.org/api/v2/product/{}.json",
@@ -29,12 +33,12 @@ pub async fn fetch(barcode: &str) -> Result<NutritionFacts, String> {
         .get(&url)
         .send()
         .await
-        .map_err(|e| format!("HTTP request failed: {}", e))?;
+        .map_err(map_network_error)?; // user-friendly offline/timeout errors
 
     let json: Value = res
         .json()
         .await
-        .map_err(|e| format!("Failed to parse JSON: {}", e))?;
+        .map_err(map_network_error)?; // user-friendly decode errors
 
     if json["status"].as_i64() != Some(1) {
         return Err(format!("Product not found for barcode: {}", barcode));
