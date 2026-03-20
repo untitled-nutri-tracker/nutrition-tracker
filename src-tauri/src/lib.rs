@@ -1,5 +1,6 @@
 pub mod api;
 pub mod network_config;
+pub mod utils;
 
 use nutrack_database;
 use std::sync::Mutex;

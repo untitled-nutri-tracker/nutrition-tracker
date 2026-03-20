@@ -8,7 +8,7 @@ use reqwest::Error;
 ///
 /// # Example
 /// ```rust,ignore
-/// use crate::api::network_errors::map_network_error;
+/// use crate::utils::network_errors::map_network_error;
 ///
 /// let res = client
 ///     .get(&url)

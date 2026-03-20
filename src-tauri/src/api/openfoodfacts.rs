@@ -1,4 +1,4 @@
-use crate::api::network_errors::map_network_error;
+use crate::utils::network_errors::map_network_error;
 use nutrack_model::food::{Food, NutritionFacts, Serving};
 use nutrack_model::metric_unit::MetricUnit;
 use reqwest::Client;
