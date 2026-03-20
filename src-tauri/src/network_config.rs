@@ -7,7 +7,7 @@ use std::sync::{OnceLock, RwLock};
 /// allowed to make external HTTP requests, independent of actual connectivity.
 ///
 /// ## Usage (Rust side)
-/// ```rust
+/// ```rust,ignore
 /// let config = NetworkConfig::global();
 /// if !config.is_feature_enabled("openfoodfacts") {
 ///     return Err("Barcode lookup is currently disabled.".into());

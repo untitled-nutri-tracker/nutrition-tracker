@@ -7,7 +7,7 @@ use reqwest::Error;
 /// unexpected-response scenarios — no extra work for developers.
 ///
 /// # Example
-/// ```rust
+/// ```rust,ignore
 /// use crate::api::network_errors::map_network_error;
 ///
 /// let res = client
