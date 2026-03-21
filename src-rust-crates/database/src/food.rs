@@ -5,6 +5,34 @@ use rusqlite::{params, Connection, OptionalExtension};
 // ─── private helpers (testable without Tauri runtime) ────────────────────────
 
 pub(crate) fn create_food_with_conn(conn: &Connection, food: Food) -> Result<Food, String> {
+    // Deduplicate by barcode — return existing food if barcode matches
+    if !food.barcode.is_empty() {
+        if let Some(existing) = conn
+            .query_row(
+                "SELECT id, name, brand, category, source, ref_url, barcode, created_at, updated_at
+                 FROM foods WHERE barcode = ?1",
+                params![food.barcode],
+                |row| {
+                    Ok(Food {
+                        id: row.get(0)?,
+                        name: row.get(1)?,
+                        brand: row.get(2)?,
+                        category: row.get(3)?,
+                        source: row.get(4)?,
+                        ref_url: row.get(5)?,
+                        barcode: row.get(6)?,
+                        created_at: row.get(7)?,
+                        updated_at: row.get(8)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(|e| e.to_string())?
+        {
+            return Ok(existing);
+        }
+    }
+
     conn.execute(
         "INSERT INTO foods (name, brand, category, source, ref_url, barcode, created_at, updated_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
