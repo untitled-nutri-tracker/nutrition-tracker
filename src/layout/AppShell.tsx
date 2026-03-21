@@ -10,6 +10,13 @@ function usePageMeta() {
     };
   }
 
+  if (pathname.startsWith("/log")) {
+    return {
+      title: "Log Food",
+      subtitle: "Search and log food directly to your meal diary.",
+    };
+  }
+
   if (pathname.startsWith("/insights")) {
     return {
       title: "Insights",
@@ -78,6 +85,7 @@ export default function AppShell() {
 
         <nav className="nav">
           <NavItem to="/" end label="Daily Log" icon="🗓️" />
+          <NavItem to="/log" label="Log Food" icon="🍽️" />
           <NavItem to="/insights" label="Insights" icon="📈" />
           <NavItem to="/ai" label="AI Advisor" icon="🤖" />
           <NavItem to="/settings" label="Settings" icon="⚙️" />

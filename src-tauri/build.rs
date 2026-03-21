@@ -20,7 +20,7 @@ fn generate_bindings() {
         force: None,
     };
 
-    let files = generate_from_config(&config)
+    let _files = generate_from_config(&config)
         .expect("failed to generate bindings");
 }
 

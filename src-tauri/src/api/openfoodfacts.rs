@@ -1,9 +1,43 @@
 use nutrack_model::food::{Food, NutritionFacts, Serving};
 use nutrack_model::metric_unit::MetricUnit;
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+/// A single product returned from an OpenFoodFacts text search.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SearchProduct {
+    pub product_name: String,
+    pub barcode: String,
+    pub brands: String,
+    pub categories: String,
+    pub image_url: String,
+    pub calories_kcal: f32,
+    pub fat_g: f32,
+    pub saturated_fat_g: f32,
+    pub trans_fat_g: f32,
+    pub cholesterol_mg: f32,
+    pub sodium_mg: f32,
+    pub total_carbohydrate_g: f32,
+    pub dietary_fiber_g: f32,
+    pub total_sugars_g: f32,
+    pub added_sugars_g: f32,
+    pub protein_g: f32,
+    pub vitamin_d_mcg: f32,
+    pub calcium_mg: f32,
+    pub iron_mg: f32,
+}
+
+/// Paginated search results from OpenFoodFacts.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SearchResult {
+    pub count: u32,
+    pub page: u32,
+    pub page_size: u32,
+    pub products: Vec<SearchProduct>,
+}
 
 fn current_timestamp() -> i64 {
     SystemTime::now()
@@ -147,3 +181,95 @@ pub fn save_to_json_file(facts: &NutritionFacts, filepath: PathBuf) -> Result<()
 
     Ok(())
 }
+
+/// Searches OpenFoodFacts for products matching a text query.
+/// Uses the v1 search API because v2 does NOT support full text search.
+pub async fn search(query: &str, page: u32) -> Result<SearchResult, String> {
+    let url = format!(
+        "https://world.openfoodfacts.org/cgi/search.pl?search_terms={}&search_simple=1&action=process&json=1&fields=code,product_name,brands,categories,image_front_small_url,nutriments&page_size=20&page={}&sort_by=unique_scans_n",
+        urlencoding(query),
+        page
+    );
+
+    let client = Client::builder()
+        .user_agent("NutriLog/1.0 (vmarri25@vt.edu)")
+        .build()
+        .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("HTTP request failed: {}", e))?;
+
+    let json: Value = res
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse JSON: {}", e))?;
+
+    let count = json["count"].as_u64().unwrap_or(0) as u32;
+    let page_num = json["page"].as_u64().unwrap_or(1) as u32;
+    let page_size = json["page_size"].as_u64().unwrap_or(20) as u32;
+
+    let products = json["products"]
+        .as_array()
+        .unwrap_or(&vec![])
+        .iter()
+        .filter_map(|p| {
+            let name = p["product_name"].as_str().unwrap_or("").to_string();
+            if name.is_empty() {
+                return None;
+            }
+            let nut = &p["nutriments"];
+            let get_f32 = |key: &str| -> f32 { nut[key].as_f64().unwrap_or(0.0) as f32 };
+
+            Some(SearchProduct {
+                product_name: name,
+                barcode: p["code"].as_str().unwrap_or("").to_string(),
+                brands: p["brands"].as_str().unwrap_or("").to_string(),
+                categories: p["categories"]
+                    .as_str()
+                    .and_then(|c| c.split(',').next())
+                    .unwrap_or("")
+                    .to_string(),
+                image_url: p["image_front_small_url"]
+                    .as_str()
+                    .unwrap_or("")
+                    .to_string(),
+                calories_kcal: get_f32("energy-kcal_100g"),
+                fat_g: get_f32("fat_100g"),
+                saturated_fat_g: get_f32("saturated-fat_100g"),
+                trans_fat_g: get_f32("trans-fat_100g"),
+                cholesterol_mg: get_f32("cholesterol_100g") * 1000.0,
+                sodium_mg: get_f32("sodium_100g") * 1000.0,
+                total_carbohydrate_g: get_f32("carbohydrates_100g"),
+                dietary_fiber_g: get_f32("fiber_100g"),
+                total_sugars_g: get_f32("sugars_100g"),
+                added_sugars_g: get_f32("added-sugars_100g"),
+                protein_g: get_f32("proteins_100g"),
+                vitamin_d_mcg: get_f32("vitamin-d_100g") * 1_000_000.0,
+                calcium_mg: get_f32("calcium_100g") * 1000.0,
+                iron_mg: get_f32("iron_100g") * 1000.0,
+            })
+        })
+        .collect();
+
+    Ok(SearchResult {
+        count,
+        page: page_num,
+        page_size,
+        products,
+    })
+}
+
+/// Simple percent-encoding for URL query parameters.
+fn urlencoding(s: &str) -> String {
+    s.chars()
+        .map(|c| match c {
+            'A'..='Z' | 'a'..='z' | '0'..='9' | '-' | '_' | '.' | '~' => c.to_string(),
+            ' ' => "+".to_string(),
+            _ => format!("%{:02X}", c as u32),
+        })
+        .collect()
+}
+
