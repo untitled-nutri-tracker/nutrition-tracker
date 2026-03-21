@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.1] - 2026-03-20
+
+### Changed
+- `map_network_error` moved from `src-tauri/src/api/network_errors.rs` to `src-tauri/src/utils/network_errors.rs` — now crate-wide utility accessible to all subsystems, not just the API layer.
+- A new `utils` module (`src-tauri/src/utils/`) introduced as the home for shared, subsystem-agnostic helpers.
+- CI workflow (`.github/workflows/ci.yml`) overhauled: migrated to a multi-stage pipeline and switched to the official Tauri GitHub Action.
+
+---
+
 ## [0.4.0] - 2026-03-19
 
 ### Added

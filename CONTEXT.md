@@ -35,7 +35,8 @@
 │   └── src/
 │       ├── lib.rs              # App entry point and command registration
 │       ├── network_config.rs   # Global feature flags for external APIs
-│       └── api/                # External network integrations (reqwest)
+│       ├── api/                # External network integrations (reqwest)
+│       └── utils/              # Shared crate-wide helpers (e.g., network_errors.rs)
 ├── src-rust-crates/            # Core Rust logic (Workspace crates)
 │   ├── model/                  # Shared Serde data models
 │   └── database/               # SQLite connection management and CRUD operations
@@ -58,7 +59,7 @@ Communication between the React frontend and Rust backend strictly uses Tauri co
 
 ### 3. External Network & API Handling
 While the core app is fully local, specific features (like barcode lookups) require external network access.
-- **Fail Gracefully:** Any `reqwest` HTTP failures (DNS, timeout, status errors) should be intercepted via `.map_err(map_network_error)` to provide clean, user-friendly strings to the frontend (e.g., "You're currently offline.").
+- **Fail Gracefully:** Any `reqwest` HTTP failures (DNS, timeout, status errors) should be intercepted via `.map_err(map_network_error)` (from `crate::utils::network_errors`) to provide clean, user-friendly strings to the frontend (e.g., "You're currently offline.").
 - **Feature Toggles:** External APIs are securely gated behind internal feature flags managed in `NetworkConfig`.
 - **Frontend Awareness:** The `NetworkProvider` context allows the React frontend to adapt its UI (like disabling buttons or showing warnings) natively via `navigator.onLine`.
 
