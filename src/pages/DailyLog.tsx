@@ -2,59 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useNavigate } from "react-router-dom";
 import ProfileSummaryCard from "../components/ProfileSummaryCard";
-
-interface Meal {
-  id: number;
-  occurredAt: number;
-  mealType: string;
-  title: string;
-  note: string;
-  createdAt: number;
-  updatedAt: number;
-}
-
-interface Food { id: number; name: string; brand: string; }
-interface Serving { id: number; food: Food; amount: number; unit: string; gramsEquiv: number; }
-
-interface MealItem {
-  id: number;
-  meal: Meal;
-  food: Food;
-  serving: Serving;
-  quantity: number;
-  note: string;
-  createdAt: number;
-  updatedAt: number;
-}
-
-interface NutritionFacts {
-  SERVING: Serving;
-  CALORIES_KCAL: number;
-  PROTEIN_G: number;
-  TOTAL_CARBOHYDRATE_G: number;
-  FAT_G: number;
-  DIETARY_FIBER_G: number;
-  TOTAL_SUGARS_G: number;
-}
-
-const r = (n: number) => Math.round(n * 10) / 10;
-
-const MEAL_ORDER: Record<string, number> = {
-  BREAKFAST: 1, BRUNCH: 2, LUNCH: 3, DINNER: 4, SNACK: 5, NIGHTSNACK: 6, CUSTOM: 7,
-};
-
-const MEAL_ICONS: Record<string, string> = {
-  BREAKFAST: "🌅", BRUNCH: "🥂", LUNCH: "☀️", DINNER: "🌙",
-  SNACK: "🍿", NIGHTSNACK: "🌃", CUSTOM: "🍽️",
-};
-
-function dateToEpoch(d: string): number {
-  return Math.floor(new Date(d + "T00:00:00").getTime() / 1000);
-}
-
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+import {
+  Meal, MealItem, NutritionFacts,
+  MEAL_ORDER, MEAL_ICONS, r, todayStr, dateToEpoch,
+} from "../types";
 
 export default function DailyLog() {
   const navigate = useNavigate();

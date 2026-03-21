@@ -5,6 +5,23 @@ use rusqlite::{params, Connection, OptionalExtension};
 
 // ─── Meal helpers ────────────────────────────────────────────────────────────
 
+const MEAL_SELECT: &str =
+    "SELECT id, occurred_at, meal_type, title, note, created_at, updated_at FROM meals";
+
+/// Shared helper to read a Meal from a rusqlite row.
+fn meal_from_row(row: &rusqlite::Row) -> rusqlite::Result<Meal> {
+    let mt_val: i64 = row.get(2)?;
+    Ok(Meal {
+        id: row.get(0)?,
+        occurred_at: row.get(1)?,
+        meal_type: MealType::try_from(mt_val).unwrap_or(MealType::Custom),
+        title: row.get(3)?,
+        note: row.get(4)?,
+        created_at: row.get(5)?,
+        updated_at: row.get(6)?,
+    })
+}
+
 fn create_meal_with_conn(conn: &Connection, meal: Meal) -> Result<Meal, String> {
     let mt: i64 = meal.meal_type.into();
     conn.execute(
@@ -21,21 +38,9 @@ fn create_meal_with_conn(conn: &Connection, meal: Meal) -> Result<Meal, String> 
 
 fn get_meal_with_conn(conn: &Connection, id: i64) -> Result<Option<Meal>, String> {
     conn.query_row(
-        "SELECT id, occurred_at, meal_type, title, note, created_at, updated_at
-         FROM meals WHERE id = ?1",
+        &format!("{MEAL_SELECT} WHERE id = ?1"),
         params![id],
-        |row| {
-            let mt_val: i64 = row.get(2)?;
-            Ok(Meal {
-                id: row.get(0)?,
-                occurred_at: row.get(1)?,
-                meal_type: MealType::try_from(mt_val).unwrap_or(MealType::Custom),
-                title: row.get(3)?,
-                note: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
-            })
-        },
+        meal_from_row,
     )
     .optional()
     .map_err(|e| e.to_string())
@@ -43,27 +48,10 @@ fn get_meal_with_conn(conn: &Connection, id: i64) -> Result<Option<Meal>, String
 
 fn list_meals_with_conn(conn: &Connection) -> Result<Vec<Meal>, String> {
     let mut stmt = conn
-        .prepare(
-            "SELECT id, occurred_at, meal_type, title, note, created_at, updated_at
-             FROM meals ORDER BY occurred_at DESC",
-        )
+        .prepare(&format!("{MEAL_SELECT} ORDER BY occurred_at DESC"))
         .map_err(|e| e.to_string())?;
 
-    let rows = stmt
-        .query_map([], |row| {
-            let mt_val: i64 = row.get(2)?;
-            Ok(Meal {
-                id: row.get(0)?,
-                occurred_at: row.get(1)?,
-                meal_type: MealType::try_from(mt_val).unwrap_or(MealType::Custom),
-                title: row.get(3)?,
-                note: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
-            })
-        })
-        .map_err(|e| e.to_string())?;
-
+    let rows = stmt.query_map([], meal_from_row).map_err(|e| e.to_string())?;
     rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
 }
 
@@ -73,28 +61,12 @@ fn list_meals_by_date_range_with_conn(
     end: i64,
 ) -> Result<Vec<Meal>, String> {
     let mut stmt = conn
-        .prepare(
-            "SELECT id, occurred_at, meal_type, title, note, created_at, updated_at
-             FROM meals WHERE occurred_at >= ?1 AND occurred_at < ?2
-             ORDER BY occurred_at ASC",
-        )
+        .prepare(&format!(
+            "{MEAL_SELECT} WHERE occurred_at >= ?1 AND occurred_at < ?2 ORDER BY occurred_at ASC"
+        ))
         .map_err(|e| e.to_string())?;
 
-    let rows = stmt
-        .query_map(params![start, end], |row| {
-            let mt_val: i64 = row.get(2)?;
-            Ok(Meal {
-                id: row.get(0)?,
-                occurred_at: row.get(1)?,
-                meal_type: MealType::try_from(mt_val).unwrap_or(MealType::Custom),
-                title: row.get(3)?,
-                note: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
-            })
-        })
-        .map_err(|e| e.to_string())?;
-
+    let rows = stmt.query_map(params![start, end], meal_from_row).map_err(|e| e.to_string())?;
     rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
 }
 

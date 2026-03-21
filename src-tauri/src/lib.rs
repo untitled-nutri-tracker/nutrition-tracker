@@ -2,7 +2,6 @@ pub mod api;
 
 use api::ai::{self, AiResponse};
 use api::openfoodfacts::{self, SearchResult};
-use nutrack_database;
 use tauri::Manager;
 
 #[tauri::command]

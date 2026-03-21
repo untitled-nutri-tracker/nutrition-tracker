@@ -1,36 +1,9 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-
-interface SearchProduct {
-  product_name: string;
-  barcode: string;
-  brands: string;
-  categories: string;
-  image_url: string;
-  calories_kcal: number;
-  fat_g: number;
-  saturated_fat_g: number;
-  trans_fat_g: number;
-  cholesterol_mg: number;
-  sodium_mg: number;
-  total_carbohydrate_g: number;
-  dietary_fiber_g: number;
-  total_sugars_g: number;
-  added_sugars_g: number;
-  protein_g: number;
-  vitamin_d_mcg: number;
-  calcium_mg: number;
-  iron_mg: number;
-}
-
-interface SearchResult {
-  count: number;
-  page: number;
-  page_size: number;
-  products: SearchProduct[];
-}
-
-const r = (n: number) => Math.round(n * 10) / 10;
+import {
+  SearchProduct, SearchResult, MEAL_TYPES,
+  r, defaultMealType, todayStr,
+} from "../types";
 
 function relevanceScore(product: SearchProduct, query: string): number {
   const name = product.product_name.toLowerCase();
@@ -47,22 +20,6 @@ function rankResults(products: SearchProduct[], query: string): SearchProduct[] 
   return products
     .filter((p) => p.calories_kcal > 0 || p.protein_g > 0 || p.total_carbohydrate_g > 0)
     .sort((a, b) => relevanceScore(b, query) - relevanceScore(a, query));
-}
-
-const MEAL_TYPES = [
-  { value: "BREAKFAST", label: "🌅 Breakfast", hours: [0, 10] },
-  { value: "LUNCH", label: "☀️ Lunch", hours: [10, 14] },
-  { value: "DINNER", label: "🌙 Dinner", hours: [14, 21] },
-  { value: "SNACK", label: "🍿 Snack", hours: [21, 24] },
-];
-
-function defaultMealType(): string {
-  const h = new Date().getHours();
-  return MEAL_TYPES.find((m) => h >= m.hours[0] && h < m.hours[1])?.value || "SNACK";
-}
-
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 export default function LogFood() {
