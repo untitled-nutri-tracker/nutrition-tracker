@@ -1,0 +1,79 @@
+# NutriLog — Project Context
+
+> **Audience:** Human developers and AI coding agents.
+> This is a living document describing the overall architecture, tech stack, and established patterns of the NutriLog application.
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Notes |
+|---|---|---|
+| **Desktop Shell** | Tauri v2 | Rust backend providing local system access. |
+| **Frontend** | React 19 + TypeScript + Vite | Running on port 1420 during development. |
+| **Routing** | react-router-dom v7 | Client-side routing. |
+| **Database** | SQLite via `rusqlite` | Fully local DB; no remote sync. |
+| **HTTP Client** | `reqwest` | Used in Tauri *only* for external API calls (e.g., OpenFoodFacts). |
+| **Async Runtime**| `tokio` | Drives async Tauri commands. |
+| **AI Pipeline** | Vercel AI SDK + Ollama | Standalone background module (`src-ai/`). |
+| **Type Gen** | `tauri-typegen` | Synchronizes Rust models to TS interfaces. |
+
+---
+
+## Repository Structure
+
+```
+/
+├── src/                        # React frontend
+│   ├── components/             # Reusable UI elements
+│   ├── hooks/                  # Custom React hooks (e.g., useUserProfile)
+│   ├── lib/                    # Shared logic, stores, and context providers
+│   ├── pages/                  # Route-level views
+│   ├── generated/              # Auto-generated TS bindings from Rust (Do not edit manually)
+│   └── types/                  # Additional TypeScript definitions
+├── src-tauri/                  # Tauri app orchestration
+│   └── src/
+│       ├── lib.rs              # App entry point and command registration
+│       ├── network_config.rs   # Global feature flags for external APIs
+│       ├── api/                # External network integrations (reqwest)
+│       └── utils/              # Shared crate-wide helpers (e.g., network_errors.rs)
+├── src-rust-crates/            # Core Rust logic (Workspace crates)
+│   ├── model/                  # Shared Serde data models
+│   └── database/               # SQLite connection management and CRUD operations
+└── src-ai/                     # Standalone AI analysis pipelines (Node.js)
+```
+
+---
+
+## Core Architecture Patterns
+
+### 1. Local-First Database Strategy
+The app is designed to be **offline-first and local-first**. The database is a local SQLite file managed directly by the Rust backend.
+- **Singleton Access:** The SQLite connection is process-wide, held in `DatabaseConnectionManager::global()`.
+- **Command Structure:** Database operations are isolated in private `_with_conn(&Connection)` helper functions, which are then wrapped by thin `pub fn` Tauri commands. This separates DB logic from IPC concerns.
+
+### 2. Tauri IPC and Type Safety
+Communication between the React frontend and Rust backend strictly uses Tauri commands.
+- **Rust to TS:** `tauri-typegen` automatically generates `src/generated/types.ts` and `src/generated/commands.ts` from the Rust backend. When modifying Rust structs or command signatures, running `cargo build` updates the frontend bindings.
+- **Error Propagation:** Tauri commands should return `Result<T, String>`. Use `.map_err(|e| e.to_string())` to pass errors cleanly across the IPC boundary so they can be caught and displayed by the React UI.
+
+### 3. External Network & API Handling
+While the core app is fully local, specific features (like barcode lookups) require external network access.
+- **Fail Gracefully:** Any `reqwest` HTTP failures (DNS, timeout, status errors) should be intercepted via `.map_err(map_network_error)` (from `crate::utils::network_errors`) to provide clean, user-friendly strings to the frontend (e.g., "You're currently offline.").
+- **Feature Toggles:** External APIs are securely gated behind internal feature flags managed in `NetworkConfig`.
+- **Frontend Awareness:** The `NetworkProvider` context allows the React frontend to adapt its UI (like disabling buttons or showing warnings) natively via `navigator.onLine`.
+
+### 5. Rust Workspace & Modularization
+The Rust backend is intentionally split into separate crates and modules to isolate domains of logic:
+- **`nutrack-model` (Library Crate):** Contains pure Rust structs and Enums (e.g., `Food`, `UserProfile`) with `serde` implementations. No business or database logic. Completely pure, safe to share anywhere.
+- **`nutrack-database` (Library Crate):** Contains the SQLite schema, connection manager, and all database CRUD operations. The CRUD operations are split cleanly into separate files/modules (`food.rs`, `meal.rs`, `user_profile.rs`) to prevent monoliths.
+- **`src-tauri` (App Crate):** The Tauri application shell. It imports the database and model crates, acting only as the orchestrator. It handles IPC (commands), external APIs (`openfoodfacts.rs`), and system-level configuration.
+This separation of concerns makes unit testing the database layer extremely fast and decoupled from Tauri infrastructure.
+
+### 6. UI Error Handling Convention
+The frontend relies on consistent error presentation. Caught backend errors or local validations should be displayed contextually within the active page or component, typically using the standardized error card styling established in components like `Settings` and `AiAdvisor`.
+
+---
+
+**Note on Changelogs:**
+For a historical record of updates, features, and version bumps, please refer to [`CHANGELOG.md`](./CHANGELOG.md).
