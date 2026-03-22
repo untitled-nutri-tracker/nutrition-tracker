@@ -2,56 +2,18 @@ use nutrack_model::food::{Food, NutritionFacts, Serving};
 use nutrack_model::metric_unit::MetricUnit;
 use rusqlite::{params, Connection, OptionalExtension};
 
-// ─── private helpers (testable without Tauri runtime) ────────────────────────
-
-pub(crate) fn create_food_with_conn(conn: &Connection, food: Food) -> Result<Food, String> {
-    // Deduplicate by barcode — return existing food if barcode matches
-    if !food.barcode.is_empty() {
-        if let Some(existing) = conn
-            .query_row(
-                "SELECT id, name, brand, category, source, ref_url, barcode, created_at, updated_at
-                 FROM foods WHERE barcode = ?1",
-                params![food.barcode],
-                |row| {
-                    Ok(Food {
-                        id: row.get(0)?,
-                        name: row.get(1)?,
-                        brand: row.get(2)?,
-                        category: row.get(3)?,
-                        source: row.get(4)?,
-                        ref_url: row.get(5)?,
-                        barcode: row.get(6)?,
-                        created_at: row.get(7)?,
-                        updated_at: row.get(8)?,
-                    })
-                },
-            )
-            .optional()
-            .map_err(|e| e.to_string())?
-        {
-            return Ok(existing);
-        }
-    }
-
-    conn.execute(
-        "INSERT INTO foods (name, brand, category, source, ref_url, barcode, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-        params![
-            food.name,
-            food.brand,
-            food.category,
-            food.source,
-            food.ref_url,
-            food.barcode,
-            food.created_at,
-            food.updated_at,
-        ],
-    )
-    .map_err(|e| e.to_string())?;
-
-    let id = conn.last_insert_rowid();
-    get_food_with_conn(conn, id)?
-        .ok_or_else(|| format!("Food was inserted but could not be read back for id {id}"))
+fn food_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Food> {
+    Ok(Food {
+        id: row.get(0)?,
+        name: row.get(1)?,
+        brand: row.get(2)?,
+        category: row.get(3)?,
+        source: row.get(4)?,
+        ref_url: row.get(5)?,
+        barcode: row.get(6)?,
+        created_at: row.get(7)?,
+        updated_at: row.get(8)?,
+    })
 }
 
 fn get_food_with_conn(conn: &Connection, id: i64) -> Result<Option<Food>, String> {
@@ -59,56 +21,57 @@ fn get_food_with_conn(conn: &Connection, id: i64) -> Result<Option<Food>, String
         "SELECT id, name, brand, category, source, ref_url, barcode, created_at, updated_at
          FROM foods WHERE id = ?1",
         params![id],
-        |row| {
-            Ok(Food {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                brand: row.get(2)?,
-                category: row.get(3)?,
-                source: row.get(4)?,
-                ref_url: row.get(5)?,
-                barcode: row.get(6)?,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
-            })
-        },
+        food_from_row,
     )
     .optional()
     .map_err(|e| e.to_string())
+}
+
+fn create_food_with_conn(conn: &Connection, food: Food) -> Result<Food, String> {
+    let id = food.id;
+    conn.execute(
+        "INSERT INTO foods (
+            id, name, brand, category, source, ref_url, barcode, created_at, updated_at
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        params![
+            food.id,
+            food.name,
+            food.brand,
+            food.category,
+            food.source,
+            food.ref_url,
+            food.barcode,
+            food.created_at,
+            food.updated_at
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+
+    get_food_with_conn(conn, id)?
+        .ok_or_else(|| format!("Food was inserted but could not be read back for id {id}"))
 }
 
 fn list_foods_with_conn(conn: &Connection) -> Result<Vec<Food>, String> {
     let mut stmt = conn
         .prepare(
             "SELECT id, name, brand, category, source, ref_url, barcode, created_at, updated_at
-             FROM foods ORDER BY name",
+             FROM foods ORDER BY id",
         )
         .map_err(|e| e.to_string())?;
 
-    let rows = stmt
-        .query_map([], |row| {
-            Ok(Food {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                brand: row.get(2)?,
-                category: row.get(3)?,
-                source: row.get(4)?,
-                ref_url: row.get(5)?,
-                barcode: row.get(6)?,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
-            })
-        })
-        .map_err(|e| e.to_string())?;
-
-    rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+    let rows = stmt.query_map([], food_from_row).map_err(|e| e.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
 }
 
 fn update_food_with_conn(conn: &Connection, food: Food) -> Result<Food, String> {
+    let id = food.id;
     let changed = conn
         .execute(
-            "UPDATE foods SET name=?1, brand=?2, category=?3, source=?4, ref_url=?5, barcode=?6, updated_at=?7
-             WHERE id=?8",
+            "UPDATE foods
+             SET name = ?1, brand = ?2, category = ?3, source = ?4, ref_url = ?5,
+                 barcode = ?6, created_at = ?7, updated_at = ?8
+             WHERE id = ?9",
             params![
                 food.name,
                 food.brand,
@@ -116,18 +79,19 @@ fn update_food_with_conn(conn: &Connection, food: Food) -> Result<Food, String> 
                 food.source,
                 food.ref_url,
                 food.barcode,
+                food.created_at,
                 food.updated_at,
-                food.id,
+                id
             ],
         )
         .map_err(|e| e.to_string())?;
 
     if changed == 0 {
-        return Err(format!("Food not found for id {}", food.id));
+        return Err(format!("Food not found for id {id}"));
     }
 
-    get_food_with_conn(conn, food.id)?
-        .ok_or_else(|| format!("Food was updated but could not be read back for id {}", food.id))
+    get_food_with_conn(conn, id)?
+        .ok_or_else(|| format!("Food was updated but could not be read back for id {id}"))
 }
 
 fn delete_food_with_conn(conn: &Connection, id: i64) -> Result<bool, String> {
@@ -137,111 +101,114 @@ fn delete_food_with_conn(conn: &Connection, id: i64) -> Result<bool, String> {
     Ok(changed > 0)
 }
 
-// ─── Serving helpers ─────────────────────────────────────────────────────────
-
-fn read_serving_row(conn: &Connection, serving_id: i64) -> Result<Option<Serving>, String> {
-    conn.query_row(
-        "SELECT s.id, s.amount, s.unit, s.grams_equiv, s.is_default, s.created_at, s.updated_at,
-                f.id, f.name, f.brand, f.category, f.source, f.ref_url, f.barcode, f.created_at, f.updated_at
-         FROM servings s
-         JOIN foods f ON s.food_id = f.id
-         WHERE s.id = ?1",
-        params![serving_id],
-        |row| {
-            let food = Food {
-                id: row.get(7)?,
-                name: row.get(8)?,
-                brand: row.get(9)?,
-                category: row.get(10)?,
-                source: row.get(11)?,
-                ref_url: row.get(12)?,
-                barcode: row.get(13)?,
-                created_at: row.get(14)?,
-                updated_at: row.get(15)?,
-            };
-            let unit_val: i64 = row.get(2)?;
-            let is_default_val: i64 = row.get(4)?;
-            Ok(Serving {
-                id: row.get(0)?,
-                food,
-                amount: row.get(1)?,
-                unit: MetricUnit::try_from(unit_val).unwrap_or(MetricUnit::Gram),
-                grams_equiv: row.get(3)?,
-                is_default: is_default_val != 0,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
-            })
-        },
-    )
-    .optional()
-    .map_err(|e| e.to_string())
+fn serving_row_to_parts(row: &rusqlite::Row<'_>) -> rusqlite::Result<(i64, i64, i64, i64, i64, i64, i64, i64)> {
+    Ok((
+        row.get(0)?,
+        row.get(1)?,
+        row.get(2)?,
+        row.get(3)?,
+        row.get(4)?,
+        row.get(5)?,
+        row.get(6)?,
+        row.get(7)?,
+    ))
 }
 
-pub(crate) fn create_serving_with_conn(conn: &Connection, serving: Serving) -> Result<Serving, String> {
-    let unit_val: i64 = serving.unit.into();
+fn get_serving_with_conn(conn: &Connection, id: i64) -> Result<Option<Serving>, String> {
+    let row = conn
+        .query_row(
+            "SELECT id, food_id, amount, unit, grams_equiv, is_default, created_at, updated_at
+             FROM servings WHERE id = ?1",
+            params![id],
+            serving_row_to_parts,
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+
+    let Some((id, food_id, amount, unit, grams_equiv, is_default, created_at, updated_at)) = row
+    else {
+        return Ok(None);
+    };
+
+    let food = get_food_with_conn(conn, food_id)?
+        .ok_or_else(|| format!("Serving {id} references missing food {food_id}"))?;
+    Ok(Some(Serving {
+        id,
+        food,
+        amount,
+        unit: MetricUnit::try_from(unit)
+            .map_err(|_| format!("Invalid metric unit value in database: {unit}"))?,
+        grams_equiv,
+        is_default: is_default != 0,
+        created_at,
+        updated_at,
+    }))
+}
+
+fn create_serving_with_conn(conn: &Connection, serving: Serving) -> Result<Serving, String> {
+    let id = serving.id;
     conn.execute(
-        "INSERT INTO servings (food_id, amount, unit, grams_equiv, is_default, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        "INSERT INTO servings (
+            id, food_id, amount, unit, grams_equiv, is_default, created_at, updated_at
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
+            serving.id,
             serving.food.id,
             serving.amount,
-            unit_val,
+            i64::from(serving.unit),
             serving.grams_equiv,
-            serving.is_default as i64,
+            i64::from(serving.is_default as i32),
             serving.created_at,
-            serving.updated_at,
+            serving.updated_at
         ],
     )
     .map_err(|e| e.to_string())?;
 
-    let id = conn.last_insert_rowid();
-    read_serving_row(conn, id)?
+    get_serving_with_conn(conn, id)?
         .ok_or_else(|| format!("Serving was inserted but could not be read back for id {id}"))
 }
 
-fn get_serving_with_conn(conn: &Connection, id: i64) -> Result<Option<Serving>, String> {
-    read_serving_row(conn, id)
-}
-
-fn list_servings_by_food_with_conn(
-    conn: &Connection,
-    food_id: i64,
-) -> Result<Vec<Serving>, String> {
+fn list_servings_by_food_with_conn(conn: &Connection, food_id: i64) -> Result<Vec<Serving>, String> {
+    let food = get_food_with_conn(conn, food_id)?
+        .ok_or_else(|| format!("Food not found for id {food_id}"))?;
     let mut stmt = conn
         .prepare(
-            "SELECT s.id, s.amount, s.unit, s.grams_equiv, s.is_default, s.created_at, s.updated_at,
-                    f.id, f.name, f.brand, f.category, f.source, f.ref_url, f.barcode, f.created_at, f.updated_at
-             FROM servings s
-             JOIN foods f ON s.food_id = f.id
-             WHERE s.food_id = ?1
-             ORDER BY s.id",
+            "SELECT id, food_id, amount, unit, grams_equiv, is_default, created_at, updated_at
+             FROM servings WHERE food_id = ?1 ORDER BY id",
         )
         .map_err(|e| e.to_string())?;
 
     let rows = stmt
         .query_map(params![food_id], |row| {
-            let food = Food {
-                id: row.get(7)?,
-                name: row.get(8)?,
-                brand: row.get(9)?,
-                category: row.get(10)?,
-                source: row.get(11)?,
-                ref_url: row.get(12)?,
-                barcode: row.get(13)?,
-                created_at: row.get(14)?,
-                updated_at: row.get(15)?,
-            };
-            let unit_val: i64 = row.get(2)?;
-            let is_default_val: i64 = row.get(4)?;
+            let (id, _, amount, unit, grams_equiv, is_default, created_at, updated_at) =
+                serving_row_to_parts(row)?;
             Ok(Serving {
-                id: row.get(0)?,
-                food,
-                amount: row.get(1)?,
-                unit: MetricUnit::try_from(unit_val).unwrap_or(MetricUnit::Gram),
-                grams_equiv: row.get(3)?,
-                is_default: is_default_val != 0,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
+                id,
+                food: Food {
+                    id: food.id,
+                    name: food.name.clone(),
+                    brand: food.brand.clone(),
+                    category: food.category.clone(),
+                    source: food.source.clone(),
+                    ref_url: food.ref_url.clone(),
+                    barcode: food.barcode.clone(),
+                    created_at: food.created_at,
+                    updated_at: food.updated_at,
+                },
+                amount,
+                unit: MetricUnit::try_from(unit).map_err(|_| {
+                    rusqlite::Error::FromSqlConversionFailure(
+                        3,
+                        rusqlite::types::Type::Integer,
+                        Box::new(std::io::Error::other(format!(
+                            "Invalid metric unit value in database: {unit}"
+                        ))),
+                    )
+                })?,
+                grams_equiv,
+                is_default: is_default != 0,
+                created_at,
+                updated_at,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -250,29 +217,32 @@ fn list_servings_by_food_with_conn(
 }
 
 fn update_serving_with_conn(conn: &Connection, serving: Serving) -> Result<Serving, String> {
-    let unit_val: i64 = serving.unit.into();
+    let id = serving.id;
     let changed = conn
         .execute(
-            "UPDATE servings SET food_id=?1, amount=?2, unit=?3, grams_equiv=?4, is_default=?5, updated_at=?6
-             WHERE id=?7",
+            "UPDATE servings
+             SET food_id = ?1, amount = ?2, unit = ?3, grams_equiv = ?4, is_default = ?5,
+                 created_at = ?6, updated_at = ?7
+             WHERE id = ?8",
             params![
                 serving.food.id,
                 serving.amount,
-                unit_val,
+                i64::from(serving.unit),
                 serving.grams_equiv,
-                serving.is_default as i64,
+                i64::from(serving.is_default as i32),
+                serving.created_at,
                 serving.updated_at,
-                serving.id,
+                id
             ],
         )
         .map_err(|e| e.to_string())?;
 
     if changed == 0 {
-        return Err(format!("Serving not found for id {}", serving.id));
+        return Err(format!("Serving not found for id {id}"));
     }
 
-    read_serving_row(conn, serving.id)?
-        .ok_or_else(|| format!("Serving was updated but could not be read back for id {}", serving.id))
+    get_serving_with_conn(conn, id)?
+        .ok_or_else(|| format!("Serving was updated but could not be read back for id {id}"))
 }
 
 fn delete_serving_with_conn(conn: &Connection, id: i64) -> Result<bool, String> {
@@ -282,142 +252,194 @@ fn delete_serving_with_conn(conn: &Connection, id: i64) -> Result<bool, String> 
     Ok(changed > 0)
 }
 
-// ─── NutritionFacts helpers ──────────────────────────────────────────────────
+struct NutritionFactsRow {
+    serving_id: i64,
+    calories_kcal: f32,
+    fat_g: f32,
+    saturated_fat_g: f32,
+    trans_fat_g: f32,
+    cholesterol_mg: f32,
+    sodium_mg: f32,
+    total_carbohydrate_g: f32,
+    dietary_fiber_g: f32,
+    total_sugars_g: f32,
+    added_sugars_g: f32,
+    protein_g: f32,
+    vitamin_d_mcg: f32,
+    calcium_mg: f32,
+    iron_mg: f32,
+}
 
-fn create_nutrition_facts_with_conn(
+fn nutrition_facts_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<NutritionFactsRow> {
+    Ok(NutritionFactsRow {
+        serving_id: row.get(0)?,
+        calories_kcal: row.get(1)?,
+        fat_g: row.get(2)?,
+        saturated_fat_g: row.get(3)?,
+        trans_fat_g: row.get(4)?,
+        cholesterol_mg: row.get(5)?,
+        sodium_mg: row.get(6)?,
+        total_carbohydrate_g: row.get(7)?,
+        dietary_fiber_g: row.get(8)?,
+        total_sugars_g: row.get(9)?,
+        added_sugars_g: row.get(10)?,
+        protein_g: row.get(11)?,
+        vitamin_d_mcg: row.get(12)?,
+        calcium_mg: row.get(13)?,
+        iron_mg: row.get(14)?,
+    })
+}
+
+fn nutrition_facts_from_row(
     conn: &Connection,
-    nf: NutritionFacts,
+    facts_row: NutritionFactsRow,
 ) -> Result<NutritionFacts, String> {
-    conn.execute(
-        "INSERT INTO nutrition_facts (serving_id, calories_kcal, fat_g, saturated_fat_g, trans_fat_g,
-         cholesterol_mg, sodium_mg, total_carbohydrate_g, dietary_fiber_g, total_sugars_g,
-         added_sugars_g, protein_g, vitamin_d_mcg, calcium_mg, iron_mg)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
-        params![
-            nf.serving.id,
-            nf.calories_kcal,
-            nf.fat_g,
-            nf.saturated_fat_g,
-            nf.trans_fat_g,
-            nf.cholesterol_mg,
-            nf.sodium_mg,
-            nf.total_carbohydrate_g,
-            nf.dietary_fiber_g,
-            nf.total_sugars_g,
-            nf.added_sugars_g,
-            nf.protein_g,
-            nf.vitamin_d_mcg,
-            nf.calcium_mg,
-            nf.iron_mg,
-        ],
-    )
-    .map_err(|e| e.to_string())?;
-
-    get_nutrition_facts_with_conn(conn, nf.serving.id)?
-        .ok_or_else(|| "NutritionFacts was inserted but could not be read back".to_string())
+    let serving = get_serving_with_conn(conn, facts_row.serving_id)?.ok_or_else(|| {
+        format!(
+            "Nutrition facts reference missing serving {}",
+            facts_row.serving_id
+        )
+    })?;
+    Ok(NutritionFacts {
+        serving,
+        calories_kcal: facts_row.calories_kcal,
+        fat_g: facts_row.fat_g,
+        saturated_fat_g: facts_row.saturated_fat_g,
+        trans_fat_g: facts_row.trans_fat_g,
+        cholesterol_mg: facts_row.cholesterol_mg,
+        sodium_mg: facts_row.sodium_mg,
+        total_carbohydrate_g: facts_row.total_carbohydrate_g,
+        dietary_fiber_g: facts_row.dietary_fiber_g,
+        total_sugars_g: facts_row.total_sugars_g,
+        added_sugars_g: facts_row.added_sugars_g,
+        protein_g: facts_row.protein_g,
+        vitamin_d_mcg: facts_row.vitamin_d_mcg,
+        calcium_mg: facts_row.calcium_mg,
+        iron_mg: facts_row.iron_mg,
+    })
 }
 
 fn get_nutrition_facts_with_conn(
     conn: &Connection,
     serving_id: i64,
 ) -> Result<Option<NutritionFacts>, String> {
-    // First fetch the serving (which includes the food).
-    let serving = match read_serving_row(conn, serving_id)? {
-        Some(s) => s,
-        None => return Ok(None),
-    };
+    let row = conn
+        .query_row(
+            "SELECT serving_id, calories_kcal, fat_g, saturated_fat_g, trans_fat_g,
+                    cholesterol_mg, sodium_mg, total_carbohydrate_g, dietary_fiber_g,
+                    total_sugars_g, added_sugars_g, protein_g, vitamin_d_mcg, calcium_mg, iron_mg
+             FROM nutrition_facts WHERE serving_id = ?1",
+            params![serving_id],
+            nutrition_facts_row,
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
 
-    conn.query_row(
-        "SELECT calories_kcal, fat_g, saturated_fat_g, trans_fat_g,
-                cholesterol_mg, sodium_mg, total_carbohydrate_g, dietary_fiber_g,
-                total_sugars_g, added_sugars_g, protein_g, vitamin_d_mcg, calcium_mg, iron_mg
-         FROM nutrition_facts WHERE serving_id = ?1",
-        params![serving_id],
-        |row| {
-            Ok(NutritionFacts {
-                serving,
-                calories_kcal: row.get(0)?,
-                fat_g: row.get(1)?,
-                saturated_fat_g: row.get(2)?,
-                trans_fat_g: row.get(3)?,
-                cholesterol_mg: row.get(4)?,
-                sodium_mg: row.get(5)?,
-                total_carbohydrate_g: row.get(6)?,
-                dietary_fiber_g: row.get(7)?,
-                total_sugars_g: row.get(8)?,
-                added_sugars_g: row.get(9)?,
-                protein_g: row.get(10)?,
-                vitamin_d_mcg: row.get(11)?,
-                calcium_mg: row.get(12)?,
-                iron_mg: row.get(13)?,
-            })
-        },
+    row.map(|facts_row| nutrition_facts_from_row(conn, facts_row))
+        .transpose()
+}
+
+fn create_nutrition_facts_with_conn(
+    conn: &Connection,
+    nutrition_facts: NutritionFacts,
+) -> Result<NutritionFacts, String> {
+    let serving_id = nutrition_facts.serving.id;
+    conn.execute(
+        "INSERT INTO nutrition_facts (
+            serving_id, calories_kcal, fat_g, saturated_fat_g, trans_fat_g, cholesterol_mg,
+            sodium_mg, total_carbohydrate_g, dietary_fiber_g, total_sugars_g, added_sugars_g,
+            protein_g, vitamin_d_mcg, calcium_mg, iron_mg
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+        params![
+            serving_id,
+            nutrition_facts.calories_kcal,
+            nutrition_facts.fat_g,
+            nutrition_facts.saturated_fat_g,
+            nutrition_facts.trans_fat_g,
+            nutrition_facts.cholesterol_mg,
+            nutrition_facts.sodium_mg,
+            nutrition_facts.total_carbohydrate_g,
+            nutrition_facts.dietary_fiber_g,
+            nutrition_facts.total_sugars_g,
+            nutrition_facts.added_sugars_g,
+            nutrition_facts.protein_g,
+            nutrition_facts.vitamin_d_mcg,
+            nutrition_facts.calcium_mg,
+            nutrition_facts.iron_mg
+        ],
     )
-    .optional()
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+
+    get_nutrition_facts_with_conn(conn, serving_id)?.ok_or_else(|| {
+        format!(
+            "Nutrition facts were inserted but could not be read back for serving {serving_id}"
+        )
+    })
 }
 
 fn list_nutrition_facts_with_conn(conn: &Connection) -> Result<Vec<NutritionFacts>, String> {
-    let serving_ids: Vec<i64> = {
-        let mut stmt = conn
-            .prepare("SELECT serving_id FROM nutrition_facts ORDER BY serving_id")
-            .map_err(|e| e.to_string())?;
-        let ids = stmt.query_map([], |row| row.get(0))
-            .map_err(|e| e.to_string())?
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| e.to_string())?;
-        ids
-    };
+    let mut stmt = conn
+        .prepare(
+            "SELECT serving_id, calories_kcal, fat_g, saturated_fat_g, trans_fat_g,
+                    cholesterol_mg, sodium_mg, total_carbohydrate_g, dietary_fiber_g,
+                    total_sugars_g, added_sugars_g, protein_g, vitamin_d_mcg, calcium_mg, iron_mg
+             FROM nutrition_facts ORDER BY serving_id",
+        )
+        .map_err(|e| e.to_string())?;
 
-    let mut results = Vec::with_capacity(serving_ids.len());
-    for sid in serving_ids {
-        if let Some(nf) = get_nutrition_facts_with_conn(conn, sid)? {
-            results.push(nf);
-        }
+    let rows = stmt
+        .query_map([], nutrition_facts_row)
+        .map_err(|e| e.to_string())?;
+
+    let mut facts = Vec::new();
+    for row in rows {
+        facts.push(nutrition_facts_from_row(conn, row.map_err(|e| e.to_string())?)?);
     }
-    Ok(results)
+    Ok(facts)
 }
 
 fn update_nutrition_facts_with_conn(
     conn: &Connection,
-    nf: NutritionFacts,
+    nutrition_facts: NutritionFacts,
 ) -> Result<NutritionFacts, String> {
+    let serving_id = nutrition_facts.serving.id;
     let changed = conn
         .execute(
-            "UPDATE nutrition_facts SET calories_kcal=?1, fat_g=?2, saturated_fat_g=?3, trans_fat_g=?4,
-             cholesterol_mg=?5, sodium_mg=?6, total_carbohydrate_g=?7, dietary_fiber_g=?8,
-             total_sugars_g=?9, added_sugars_g=?10, protein_g=?11, vitamin_d_mcg=?12,
-             calcium_mg=?13, iron_mg=?14
-             WHERE serving_id=?15",
+            "UPDATE nutrition_facts
+             SET calories_kcal = ?1, fat_g = ?2, saturated_fat_g = ?3, trans_fat_g = ?4,
+                 cholesterol_mg = ?5, sodium_mg = ?6, total_carbohydrate_g = ?7,
+                 dietary_fiber_g = ?8, total_sugars_g = ?9, added_sugars_g = ?10,
+                 protein_g = ?11, vitamin_d_mcg = ?12, calcium_mg = ?13, iron_mg = ?14
+             WHERE serving_id = ?15",
             params![
-                nf.calories_kcal,
-                nf.fat_g,
-                nf.saturated_fat_g,
-                nf.trans_fat_g,
-                nf.cholesterol_mg,
-                nf.sodium_mg,
-                nf.total_carbohydrate_g,
-                nf.dietary_fiber_g,
-                nf.total_sugars_g,
-                nf.added_sugars_g,
-                nf.protein_g,
-                nf.vitamin_d_mcg,
-                nf.calcium_mg,
-                nf.iron_mg,
-                nf.serving.id,
+                nutrition_facts.calories_kcal,
+                nutrition_facts.fat_g,
+                nutrition_facts.saturated_fat_g,
+                nutrition_facts.trans_fat_g,
+                nutrition_facts.cholesterol_mg,
+                nutrition_facts.sodium_mg,
+                nutrition_facts.total_carbohydrate_g,
+                nutrition_facts.dietary_fiber_g,
+                nutrition_facts.total_sugars_g,
+                nutrition_facts.added_sugars_g,
+                nutrition_facts.protein_g,
+                nutrition_facts.vitamin_d_mcg,
+                nutrition_facts.calcium_mg,
+                nutrition_facts.iron_mg,
+                serving_id
             ],
         )
         .map_err(|e| e.to_string())?;
 
     if changed == 0 {
-        return Err(format!(
-            "NutritionFacts not found for serving_id {}",
-            nf.serving.id
-        ));
+        return Err(format!("Nutrition facts not found for serving_id {serving_id}"));
     }
 
-    get_nutrition_facts_with_conn(conn, nf.serving.id)?
-        .ok_or_else(|| "NutritionFacts was updated but could not be read back".to_string())
+    get_nutrition_facts_with_conn(conn, serving_id)?.ok_or_else(|| {
+        format!(
+            "Nutrition facts were updated but could not be read back for serving {serving_id}"
+        )
+    })
 }
 
 fn delete_nutrition_facts_with_conn(conn: &Connection, serving_id: i64) -> Result<bool, String> {
@@ -429,8 +451,6 @@ fn delete_nutrition_facts_with_conn(conn: &Connection, serving_id: i64) -> Resul
         .map_err(|e| e.to_string())?;
     Ok(changed > 0)
 }
-
-// ─── Tauri commands ──────────────────────────────────────────────────────────
 
 #[tauri::command]
 pub async fn create_food(food: Food) -> Result<Food, String> {
@@ -541,11 +561,10 @@ pub async fn delete_nutrition_facts(serving_id: i64) -> Result<bool, String> {
     delete_nutrition_facts_with_conn(&conn, serving_id)
 }
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
     const TEST_SCHEMA_SQL: &str = include_str!("../sql/init.sql");
 
     fn setup_conn() -> Connection {
@@ -554,160 +573,184 @@ mod tests {
         conn
     }
 
-    fn sample_food() -> Food {
+    fn sample_food(id: i64, name: &str) -> Food {
         Food {
-            id: 0,
-            name: "Banana".to_string(),
-            brand: "Dole".to_string(),
-            category: "Fruit".to_string(),
-            source: "openfoodfacts".to_string(),
+            id,
+            name: name.to_string(),
+            brand: "Brand".to_string(),
+            category: "Snack".to_string(),
+            source: "user".to_string(),
             ref_url: "https://example.com".to_string(),
-            barcode: "1234567890".to_string(),
-            created_at: 1000,
-            updated_at: 1000,
+            barcode: format!("barcode-{id}"),
+            created_at: 1000 + id,
+            updated_at: 2000 + id,
+        }
+    }
+
+    fn sample_serving(id: i64, food: Food, is_default: bool) -> Serving {
+        Serving {
+            id,
+            food,
+            amount: 1,
+            unit: MetricUnit::Serving,
+            grams_equiv: 50,
+            is_default,
+            created_at: 3000 + id,
+            updated_at: 4000 + id,
+        }
+    }
+
+    fn sample_facts(serving: Serving) -> NutritionFacts {
+        NutritionFacts {
+            serving,
+            calories_kcal: 120.0,
+            fat_g: 4.0,
+            saturated_fat_g: 1.0,
+            trans_fat_g: 0.0,
+            cholesterol_mg: 5.0,
+            sodium_mg: 80.0,
+            total_carbohydrate_g: 18.0,
+            dietary_fiber_g: 2.0,
+            total_sugars_g: 7.0,
+            added_sugars_g: 4.0,
+            protein_g: 3.0,
+            vitamin_d_mcg: 0.5,
+            calcium_mg: 20.0,
+            iron_mg: 1.5,
         }
     }
 
     #[test]
-    fn test_create_and_get_food() {
+    fn test_food_crud() {
         let conn = setup_conn();
-        let food = sample_food();
-        let created = create_food_with_conn(&conn, food).unwrap();
-        assert!(created.id > 0);
-        assert_eq!(created.name, "Banana");
 
-        let fetched = get_food_with_conn(&conn, created.id).unwrap().unwrap();
-        assert_eq!(fetched.name, "Banana");
-        assert_eq!(fetched.brand, "Dole");
+        let created = create_food_with_conn(&conn, sample_food(1, "Apple")).unwrap();
+        assert_eq!(created.id, 1);
+        assert_eq!(created.name, "Apple");
 
-        let missing = get_food_with_conn(&conn, 999).unwrap();
-        assert!(missing.is_none());
+        let fetched = get_food_with_conn(&conn, 1).unwrap().unwrap();
+        assert_eq!(fetched.brand, "Brand");
+
+        let listed = list_foods_with_conn(&conn).unwrap();
+        assert_eq!(listed.len(), 1);
+
+        let updated = update_food_with_conn(
+            &conn,
+            Food {
+                id: 1,
+                name: "Green Apple".to_string(),
+                brand: "Fresh".to_string(),
+                category: "Fruit".to_string(),
+                source: "usda".to_string(),
+                ref_url: "https://example.com/apple".to_string(),
+                barcode: "new-barcode".to_string(),
+                created_at: 1001,
+                updated_at: 5001,
+            },
+        )
+        .unwrap();
+        assert_eq!(updated.name, "Green Apple");
+        assert_eq!(updated.category, "Fruit");
+
+        assert!(delete_food_with_conn(&conn, 1).unwrap());
+        assert!(get_food_with_conn(&conn, 1).unwrap().is_none());
+        assert!(!delete_food_with_conn(&conn, 1).unwrap());
     }
 
     #[test]
-    fn test_list_foods() {
+    fn test_serving_crud() {
         let conn = setup_conn();
-        let mut food1 = sample_food();
-        food1.name = "Apple".to_string();
-        let mut food2 = sample_food();
-        food2.name = "Banana".to_string();
+        let food = create_food_with_conn(&conn, sample_food(10, "Bread")).unwrap();
 
-        create_food_with_conn(&conn, food1).unwrap();
-        create_food_with_conn(&conn, food2).unwrap();
+        let created = create_serving_with_conn(&conn, sample_serving(20, food, true)).unwrap();
+        assert_eq!(created.id, 20);
+        assert_eq!(created.food.id, 10);
+        assert!(created.is_default);
 
-        let foods = list_foods_with_conn(&conn).unwrap();
-        assert_eq!(foods.len(), 2);
-        assert_eq!(foods[0].name, "Apple"); // Ordered by name
-        assert_eq!(foods[1].name, "Banana");
+        let fetched = get_serving_with_conn(&conn, 20).unwrap().unwrap();
+        assert_eq!(fetched.food.name, "Bread");
+
+        let listed = list_servings_by_food_with_conn(&conn, 10).unwrap();
+        assert_eq!(listed.len(), 1);
+
+        let updated = update_serving_with_conn(
+            &conn,
+            Serving {
+                id: 20,
+                food: get_food_with_conn(&conn, 10).unwrap().unwrap(),
+                amount: 2,
+                unit: MetricUnit::Cup,
+                grams_equiv: 60,
+                is_default: false,
+                created_at: 3020,
+                updated_at: 4021,
+            },
+        )
+        .unwrap();
+        assert_eq!(updated.amount, 2);
+        assert!(matches!(updated.unit, MetricUnit::Cup));
+        assert!(!updated.is_default);
+
+        assert!(delete_serving_with_conn(&conn, 20).unwrap());
+        assert!(get_serving_with_conn(&conn, 20).unwrap().is_none());
+        assert!(!delete_serving_with_conn(&conn, 20).unwrap());
     }
 
     #[test]
-    fn test_update_food() {
+    fn test_nutrition_facts_crud() {
         let conn = setup_conn();
-        let food = sample_food();
-        let created = create_food_with_conn(&conn, food).unwrap();
+        let food = create_food_with_conn(&conn, sample_food(30, "Yogurt")).unwrap();
+        let serving = create_serving_with_conn(&conn, sample_serving(40, food, true)).unwrap();
 
-        let mut updated_food = created;
-        updated_food.name = "Plantain".to_string();
-        updated_food.updated_at = 2000;
-        let updated = update_food_with_conn(&conn, updated_food).unwrap();
-        assert_eq!(updated.name, "Plantain");
-        assert_eq!(updated.updated_at, 2000);
+        let created =
+            create_nutrition_facts_with_conn(&conn, sample_facts(serving)).unwrap();
+        assert_eq!(created.serving.id, 40);
+        assert_eq!(created.calories_kcal, 120.0);
+
+        let fetched = get_nutrition_facts_with_conn(&conn, 40).unwrap().unwrap();
+        assert_eq!(fetched.serving.food.name, "Yogurt");
+
+        let listed = list_nutrition_facts_with_conn(&conn).unwrap();
+        assert_eq!(listed.len(), 1);
+
+        let updated = update_nutrition_facts_with_conn(
+            &conn,
+            NutritionFacts {
+                serving: get_serving_with_conn(&conn, 40).unwrap().unwrap(),
+                calories_kcal: 150.0,
+                fat_g: 5.0,
+                saturated_fat_g: 2.0,
+                trans_fat_g: 0.0,
+                cholesterol_mg: 8.0,
+                sodium_mg: 90.0,
+                total_carbohydrate_g: 20.0,
+                dietary_fiber_g: 1.0,
+                total_sugars_g: 12.0,
+                added_sugars_g: 6.0,
+                protein_g: 6.0,
+                vitamin_d_mcg: 1.0,
+                calcium_mg: 150.0,
+                iron_mg: 0.2,
+            },
+        )
+        .unwrap();
+        assert_eq!(updated.calories_kcal, 150.0);
+        assert_eq!(updated.protein_g, 6.0);
+
+        assert!(delete_nutrition_facts_with_conn(&conn, 40).unwrap());
+        assert!(get_nutrition_facts_with_conn(&conn, 40).unwrap().is_none());
+        assert!(!delete_nutrition_facts_with_conn(&conn, 40).unwrap());
     }
 
     #[test]
-    fn test_delete_food_cascades() {
+    fn test_delete_food_cascades_to_servings_and_nutrition_facts() {
         let conn = setup_conn();
-        let food = create_food_with_conn(&conn, sample_food()).unwrap();
+        let food = create_food_with_conn(&conn, sample_food(50, "Cereal")).unwrap();
+        let serving = create_serving_with_conn(&conn, sample_serving(60, food, true)).unwrap();
+        create_nutrition_facts_with_conn(&conn, sample_facts(serving)).unwrap();
 
-        let serving = Serving {
-            id: 0,
-            food: food.clone(),
-            amount: 100,
-            unit: MetricUnit::Gram,
-            grams_equiv: 100,
-            is_default: true,
-            created_at: 1000,
-            updated_at: 1000,
-        };
-        let created_serving = create_serving_with_conn(&conn, serving).unwrap();
-
-        let nf = NutritionFacts {
-            serving: created_serving.clone(),
-            calories_kcal: 89.0,
-            fat_g: 0.3,
-            saturated_fat_g: 0.1,
-            trans_fat_g: 0.0,
-            cholesterol_mg: 0.0,
-            sodium_mg: 1.0,
-            total_carbohydrate_g: 22.8,
-            dietary_fiber_g: 2.6,
-            total_sugars_g: 12.2,
-            added_sugars_g: 0.0,
-            protein_g: 1.1,
-            vitamin_d_mcg: 0.0,
-            calcium_mg: 5.0,
-            iron_mg: 0.3,
-        };
-        create_nutrition_facts_with_conn(&conn, nf).unwrap();
-
-        // Delete the food — cascading should remove serving and nutrition_facts
-        let deleted = delete_food_with_conn(&conn, food.id).unwrap();
-        assert!(deleted);
-
-        // Verify cascade
-        assert!(get_food_with_conn(&conn, food.id).unwrap().is_none());
-        assert!(get_serving_with_conn(&conn, created_serving.id).unwrap().is_none());
-        assert!(get_nutrition_facts_with_conn(&conn, created_serving.id).unwrap().is_none());
-    }
-
-    #[test]
-    fn test_create_serving_and_nutrition_facts() {
-        let conn = setup_conn();
-        let food = create_food_with_conn(&conn, sample_food()).unwrap();
-
-        let serving = Serving {
-            id: 0,
-            food: food.clone(),
-            amount: 100,
-            unit: MetricUnit::Gram,
-            grams_equiv: 100,
-            is_default: true,
-            created_at: 1000,
-            updated_at: 1000,
-        };
-        let created_serving = create_serving_with_conn(&conn, serving).unwrap();
-        assert!(created_serving.id > 0);
-        assert_eq!(created_serving.food.name, "Banana");
-
-        let nf = NutritionFacts {
-            serving: created_serving.clone(),
-            calories_kcal: 89.0,
-            fat_g: 0.3,
-            saturated_fat_g: 0.1,
-            trans_fat_g: 0.0,
-            cholesterol_mg: 0.0,
-            sodium_mg: 1.0,
-            total_carbohydrate_g: 22.8,
-            dietary_fiber_g: 2.6,
-            total_sugars_g: 12.2,
-            added_sugars_g: 0.0,
-            protein_g: 1.1,
-            vitamin_d_mcg: 0.0,
-            calcium_mg: 5.0,
-            iron_mg: 0.3,
-        };
-        let created_nf = create_nutrition_facts_with_conn(&conn, nf).unwrap();
-        assert_eq!(created_nf.calories_kcal, 89.0);
-        assert_eq!(created_nf.protein_g, 1.1);
-        assert_eq!(created_nf.serving.food.name, "Banana");
-
-        // list servings
-        let servings = list_servings_by_food_with_conn(&conn, food.id).unwrap();
-        assert_eq!(servings.len(), 1);
-
-        // list nutrition facts
-        let all_nf = list_nutrition_facts_with_conn(&conn).unwrap();
-        assert_eq!(all_nf.len(), 1);
+        assert!(delete_food_with_conn(&conn, 50).unwrap());
+        assert!(get_serving_with_conn(&conn, 60).unwrap().is_none());
+        assert!(get_nutrition_facts_with_conn(&conn, 60).unwrap().is_none());
     }
 }

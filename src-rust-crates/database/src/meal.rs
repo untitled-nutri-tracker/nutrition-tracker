@@ -3,89 +3,111 @@ use nutrack_model::meal::{Meal, MealItem, MealType};
 use nutrack_model::metric_unit::MetricUnit;
 use rusqlite::{params, Connection, OptionalExtension};
 
-// ─── Meal helpers ────────────────────────────────────────────────────────────
-
-const MEAL_SELECT: &str =
-    "SELECT id, occurred_at, meal_type, title, note, created_at, updated_at FROM meals";
-
-/// Shared helper to read a Meal from a rusqlite row.
-fn meal_from_row(row: &rusqlite::Row) -> rusqlite::Result<Meal> {
-    let mt_val: i64 = row.get(2)?;
+fn meal_from_row(row: &rusqlite::Row<'_>) -> Result<Meal, String> {
+    let meal_type = row.get::<_, i64>(2).map_err(|e| e.to_string())?;
     Ok(Meal {
-        id: row.get(0)?,
-        occurred_at: row.get(1)?,
-        meal_type: MealType::try_from(mt_val).unwrap_or(MealType::Custom),
-        title: row.get(3)?,
-        note: row.get(4)?,
-        created_at: row.get(5)?,
-        updated_at: row.get(6)?,
+        id: row.get(0).map_err(|e| e.to_string())?,
+        occurred_at: row.get(1).map_err(|e| e.to_string())?,
+        meal_type: MealType::try_from(meal_type)
+            .map_err(|_| format!("Invalid meal_type value in database: {meal_type}"))?,
+        title: row.get(3).map_err(|e| e.to_string())?,
+        note: row.get(4).map_err(|e| e.to_string())?,
+        created_at: row.get(5).map_err(|e| e.to_string())?,
+        updated_at: row.get(6).map_err(|e| e.to_string())?,
     })
-}
-
-fn create_meal_with_conn(conn: &Connection, meal: Meal) -> Result<Meal, String> {
-    let mt: i64 = meal.meal_type.into();
-    conn.execute(
-        "INSERT INTO meals (occurred_at, meal_type, title, note, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        params![meal.occurred_at, mt, meal.title, meal.note, meal.created_at, meal.updated_at],
-    )
-    .map_err(|e| e.to_string())?;
-
-    let id = conn.last_insert_rowid();
-    get_meal_with_conn(conn, id)?
-        .ok_or_else(|| format!("Meal inserted but not found for id {id}"))
 }
 
 fn get_meal_with_conn(conn: &Connection, id: i64) -> Result<Option<Meal>, String> {
     conn.query_row(
-        &format!("{MEAL_SELECT} WHERE id = ?1"),
+        "SELECT id, occurred_at, meal_type, title, note, created_at, updated_at
+         FROM meals WHERE id = ?1",
         params![id],
-        meal_from_row,
+        |row| meal_from_row(row).map_err(|e| {
+            rusqlite::Error::FromSqlConversionFailure(
+                0,
+                rusqlite::types::Type::Integer,
+                Box::new(std::io::Error::other(e)),
+            )
+        }),
     )
     .optional()
     .map_err(|e| e.to_string())
 }
 
-fn list_meals_with_conn(conn: &Connection) -> Result<Vec<Meal>, String> {
-    let mut stmt = conn
-        .prepare(&format!("{MEAL_SELECT} ORDER BY occurred_at DESC"))
-        .map_err(|e| e.to_string())?;
+fn create_meal_with_conn(conn: &Connection, meal: Meal) -> Result<Meal, String> {
+    let id = meal.id;
+    conn.execute(
+        "INSERT INTO meals (id, occurred_at, meal_type, title, note, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![
+            meal.id,
+            meal.occurred_at,
+            i64::from(meal.meal_type),
+            meal.title,
+            meal.note,
+            meal.created_at,
+            meal.updated_at
+        ],
+    )
+    .map_err(|e| e.to_string())?;
 
-    let rows = stmt.query_map([], meal_from_row).map_err(|e| e.to_string())?;
-    rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+    get_meal_with_conn(conn, id)?
+        .ok_or_else(|| format!("Meal was inserted but could not be read back for id {id}"))
 }
 
-fn list_meals_by_date_range_with_conn(
-    conn: &Connection,
-    start: i64,
-    end: i64,
-) -> Result<Vec<Meal>, String> {
+fn list_meals_with_conn(conn: &Connection) -> Result<Vec<Meal>, String> {
     let mut stmt = conn
-        .prepare(&format!(
-            "{MEAL_SELECT} WHERE occurred_at >= ?1 AND occurred_at < ?2 ORDER BY occurred_at ASC"
-        ))
+        .prepare(
+            "SELECT id, occurred_at, meal_type, title, note, created_at, updated_at
+             FROM meals ORDER BY occurred_at, id",
+        )
         .map_err(|e| e.to_string())?;
 
-    let rows = stmt.query_map(params![start, end], meal_from_row).map_err(|e| e.to_string())?;
-    rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+    let rows = stmt
+        .query_map([], |row| {
+            meal_from_row(row).map_err(|e| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    0,
+                    rusqlite::types::Type::Integer,
+                    Box::new(std::io::Error::other(e)),
+                )
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut meals = Vec::new();
+    for row in rows {
+        meals.push(row.map_err(|e| e.to_string())?);
+    }
+    Ok(meals)
 }
 
 fn update_meal_with_conn(conn: &Connection, meal: Meal) -> Result<Meal, String> {
-    let mt: i64 = meal.meal_type.into();
+    let id = meal.id;
     let changed = conn
         .execute(
-            "UPDATE meals SET occurred_at=?1, meal_type=?2, title=?3, note=?4, updated_at=?5
-             WHERE id=?6",
-            params![meal.occurred_at, mt, meal.title, meal.note, meal.updated_at, meal.id],
+            "UPDATE meals
+             SET occurred_at = ?1, meal_type = ?2, title = ?3, note = ?4,
+                 created_at = ?5, updated_at = ?6
+             WHERE id = ?7",
+            params![
+                meal.occurred_at,
+                i64::from(meal.meal_type),
+                meal.title,
+                meal.note,
+                meal.created_at,
+                meal.updated_at,
+                id
+            ],
         )
         .map_err(|e| e.to_string())?;
 
     if changed == 0 {
-        return Err(format!("Meal not found for id {}", meal.id));
+        return Err(format!("Meal not found for id {id}"));
     }
 
-    get_meal_with_conn(conn, meal.id)?
-        .ok_or_else(|| format!("Meal updated but not found for id {}", meal.id))
+    get_meal_with_conn(conn, id)?
+        .ok_or_else(|| format!("Meal was updated but could not be read back for id {id}"))
 }
 
 fn delete_meal_with_conn(conn: &Connection, id: i64) -> Result<bool, String> {
@@ -95,63 +117,22 @@ fn delete_meal_with_conn(conn: &Connection, id: i64) -> Result<bool, String> {
     Ok(changed > 0)
 }
 
-// ─── MealItem helpers ────────────────────────────────────────────────────────
-
-fn read_meal_item_row(conn: &Connection, item_id: i64) -> Result<Option<MealItem>, String> {
+fn get_food_with_conn(conn: &Connection, id: i64) -> Result<Option<Food>, String> {
     conn.query_row(
-        "SELECT mi.id, mi.quantity, mi.note, mi.created_at, mi.updated_at,
-                m.id, m.occurred_at, m.meal_type, m.title, m.note, m.created_at, m.updated_at,
-                f.id, f.name, f.brand, f.category, f.source, f.ref_url, f.barcode, f.created_at, f.updated_at,
-                s.id, s.amount, s.unit, s.grams_equiv, s.is_default, s.created_at, s.updated_at
-         FROM meal_items mi
-         JOIN meals m ON mi.meal_id = m.id
-         JOIN foods f ON mi.food_id = f.id
-         JOIN servings s ON mi.serving_id = s.id
-         WHERE mi.id = ?1",
-        params![item_id],
+        "SELECT id, name, brand, category, source, ref_url, barcode, created_at, updated_at
+         FROM foods WHERE id = ?1",
+        params![id],
         |row| {
-            let mt_val: i64 = row.get(7)?;
-            let meal = Meal {
-                id: row.get(5)?,
-                occurred_at: row.get(6)?,
-                meal_type: MealType::try_from(mt_val).unwrap_or(MealType::Custom),
-                title: row.get(8)?,
-                note: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
-            };
-            let food = Food {
-                id: row.get(12)?,
-                name: row.get(13)?,
-                brand: row.get(14)?,
-                category: row.get(15)?,
-                source: row.get(16)?,
-                ref_url: row.get(17)?,
-                barcode: row.get(18)?,
-                created_at: row.get(19)?,
-                updated_at: row.get(20)?,
-            };
-            let unit_val: i64 = row.get(23)?;
-            let is_default_val: i64 = row.get(25)?;
-            let serving = Serving {
-                id: row.get(21)?,
-                food: food.clone(),
-                amount: row.get(22)?,
-                unit: MetricUnit::try_from(unit_val).unwrap_or(MetricUnit::Gram),
-                grams_equiv: row.get(24)?,
-                is_default: is_default_val != 0,
-                created_at: row.get(26)?,
-                updated_at: row.get(27)?,
-            };
-            Ok(MealItem {
+            Ok(Food {
                 id: row.get(0)?,
-                meal,
-                food,
-                serving,
-                quantity: row.get(1)?,
-                note: row.get(2)?,
-                created_at: row.get(3)?,
-                updated_at: row.get(4)?,
+                name: row.get(1)?,
+                brand: row.get(2)?,
+                category: row.get(3)?,
+                source: row.get(4)?,
+                ref_url: row.get(5)?,
+                barcode: row.get(6)?,
+                created_at: row.get(7)?,
+                updated_at: row.get(8)?,
             })
         },
     )
@@ -159,81 +140,185 @@ fn read_meal_item_row(conn: &Connection, item_id: i64) -> Result<Option<MealItem
     .map_err(|e| e.to_string())
 }
 
-fn create_meal_item_with_conn(conn: &Connection, item: MealItem) -> Result<MealItem, String> {
+fn get_serving_with_conn(conn: &Connection, id: i64) -> Result<Option<Serving>, String> {
+    let row = conn
+        .query_row(
+            "SELECT id, food_id, amount, unit, grams_equiv, is_default, created_at, updated_at
+             FROM servings WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, i64>(2)?,
+                    row.get::<_, i64>(3)?,
+                    row.get::<_, i64>(4)?,
+                    row.get::<_, i64>(5)?,
+                    row.get::<_, i64>(6)?,
+                    row.get::<_, i64>(7)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+
+    let Some((id, food_id, amount, unit, grams_equiv, is_default, created_at, updated_at)) = row
+    else {
+        return Ok(None);
+    };
+
+    let food = get_food_with_conn(conn, food_id)?
+        .ok_or_else(|| format!("Serving {id} references missing food {food_id}"))?;
+    Ok(Some(Serving {
+        id,
+        food,
+        amount,
+        unit: MetricUnit::try_from(unit)
+            .map_err(|_| format!("Invalid metric unit value in database: {unit}"))?,
+        grams_equiv,
+        is_default: is_default != 0,
+        created_at,
+        updated_at,
+    }))
+}
+
+struct MealItemRow {
+    id: i64,
+    meal_id: i64,
+    food_id: i64,
+    serving_id: i64,
+    quantity: f32,
+    note: String,
+    created_at: i64,
+    updated_at: i64,
+}
+
+fn meal_item_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<MealItemRow> {
+    Ok(MealItemRow {
+        id: row.get(0)?,
+        meal_id: row.get(1)?,
+        food_id: row.get(2)?,
+        serving_id: row.get(3)?,
+        quantity: row.get(4)?,
+        note: row.get(5)?,
+        created_at: row.get(6)?,
+        updated_at: row.get(7)?,
+    })
+}
+
+fn meal_item_from_row(conn: &Connection, row: MealItemRow) -> Result<MealItem, String> {
+    let meal = get_meal_with_conn(conn, row.meal_id)?
+        .ok_or_else(|| format!("Meal item {} references missing meal {}", row.id, row.meal_id))?;
+    let food = get_food_with_conn(conn, row.food_id)?
+        .ok_or_else(|| format!("Meal item {} references missing food {}", row.id, row.food_id))?;
+    let serving = get_serving_with_conn(conn, row.serving_id)?.ok_or_else(|| {
+        format!(
+            "Meal item {} references missing serving {}",
+            row.id, row.serving_id
+        )
+    })?;
+
+    Ok(MealItem {
+        id: row.id,
+        meal,
+        food,
+        serving,
+        quantity: row.quantity,
+        note: row.note,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    })
+}
+
+fn get_meal_item_with_conn(conn: &Connection, id: i64) -> Result<Option<MealItem>, String> {
+    let row = conn
+        .query_row(
+            "SELECT id, meal_id, food_id, serving_id, quantity, note, created_at, updated_at
+             FROM meal_items WHERE id = ?1",
+            params![id],
+            meal_item_row,
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+
+    row.map(|row| meal_item_from_row(conn, row)).transpose()
+}
+
+fn create_meal_item_with_conn(conn: &Connection, meal_item: MealItem) -> Result<MealItem, String> {
+    let id = meal_item.id;
     conn.execute(
-        "INSERT INTO meal_items (meal_id, food_id, serving_id, quantity, note, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        "INSERT INTO meal_items (
+            id, meal_id, food_id, serving_id, quantity, note, created_at, updated_at
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
-            item.meal.id,
-            item.food.id,
-            item.serving.id,
-            item.quantity,
-            item.note,
-            item.created_at,
-            item.updated_at,
+            meal_item.id,
+            meal_item.meal.id,
+            meal_item.food.id,
+            meal_item.serving.id,
+            meal_item.quantity,
+            meal_item.note,
+            meal_item.created_at,
+            meal_item.updated_at
         ],
     )
     .map_err(|e| e.to_string())?;
 
-    let id = conn.last_insert_rowid();
-    read_meal_item_row(conn, id)?
-        .ok_or_else(|| format!("MealItem inserted but not found for id {id}"))
-}
-
-fn get_meal_item_with_conn(conn: &Connection, id: i64) -> Result<Option<MealItem>, String> {
-    read_meal_item_row(conn, id)
+    get_meal_item_with_conn(conn, id)?
+        .ok_or_else(|| format!("Meal item was inserted but could not be read back for id {id}"))
 }
 
 fn list_meal_items_by_meal_with_conn(
     conn: &Connection,
     meal_id: i64,
 ) -> Result<Vec<MealItem>, String> {
-    // Get the item IDs first, then read each one fully
-    let ids: Vec<i64> = {
-        let mut stmt = conn
-            .prepare("SELECT id FROM meal_items WHERE meal_id = ?1 ORDER BY id")
-            .map_err(|e| e.to_string())?;
-        let id_rows = stmt
-            .query_map(params![meal_id], |row| row.get(0))
-            .map_err(|e| e.to_string())?;
-        let collected = id_rows
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| e.to_string())?;
-        collected
-    };
+    get_meal_with_conn(conn, meal_id)?
+        .ok_or_else(|| format!("Meal not found for id {meal_id}"))?;
 
-    let mut results = Vec::with_capacity(ids.len());
-    for id in ids {
-        if let Some(item) = read_meal_item_row(conn, id)? {
-            results.push(item);
-        }
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, meal_id, food_id, serving_id, quantity, note, created_at, updated_at
+             FROM meal_items WHERE meal_id = ?1 ORDER BY id",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![meal_id], meal_item_row)
+        .map_err(|e| e.to_string())?;
+
+    let mut items = Vec::new();
+    for row in rows {
+        items.push(meal_item_from_row(conn, row.map_err(|e| e.to_string())?)?);
     }
-    Ok(results)
+    Ok(items)
 }
 
-fn update_meal_item_with_conn(conn: &Connection, item: MealItem) -> Result<MealItem, String> {
+fn update_meal_item_with_conn(conn: &Connection, meal_item: MealItem) -> Result<MealItem, String> {
+    let id = meal_item.id;
     let changed = conn
         .execute(
-            "UPDATE meal_items SET meal_id=?1, food_id=?2, serving_id=?3, quantity=?4, note=?5, updated_at=?6
-             WHERE id=?7",
+            "UPDATE meal_items
+             SET meal_id = ?1, food_id = ?2, serving_id = ?3, quantity = ?4,
+                 note = ?5, created_at = ?6, updated_at = ?7
+             WHERE id = ?8",
             params![
-                item.meal.id,
-                item.food.id,
-                item.serving.id,
-                item.quantity,
-                item.note,
-                item.updated_at,
-                item.id,
+                meal_item.meal.id,
+                meal_item.food.id,
+                meal_item.serving.id,
+                meal_item.quantity,
+                meal_item.note,
+                meal_item.created_at,
+                meal_item.updated_at,
+                id
             ],
         )
         .map_err(|e| e.to_string())?;
 
     if changed == 0 {
-        return Err(format!("MealItem not found for id {}", item.id));
+        return Err(format!("Meal item not found for id {id}"));
     }
 
-    read_meal_item_row(conn, item.id)?
-        .ok_or_else(|| format!("MealItem updated but not found for id {}", item.id))
+    get_meal_item_with_conn(conn, id)?
+        .ok_or_else(|| format!("Meal item was updated but could not be read back for id {id}"))
 }
 
 fn delete_meal_item_with_conn(conn: &Connection, id: i64) -> Result<bool, String> {
@@ -242,8 +327,6 @@ fn delete_meal_item_with_conn(conn: &Connection, id: i64) -> Result<bool, String
         .map_err(|e| e.to_string())?;
     Ok(changed > 0)
 }
-
-// ─── Tauri commands ──────────────────────────────────────────────────────────
 
 #[tauri::command]
 pub async fn create_meal(meal: Meal) -> Result<Meal, String> {
@@ -264,13 +347,6 @@ pub async fn list_meals() -> Result<Vec<Meal>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
     list_meals_with_conn(&conn)
-}
-
-#[tauri::command]
-pub async fn list_meals_by_date_range(start: i64, end: i64) -> Result<Vec<Meal>, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
-    list_meals_by_date_range_with_conn(&conn, start, end)
 }
 
 #[tauri::command]
@@ -321,7 +397,49 @@ pub async fn delete_meal_item(id: i64) -> Result<bool, String> {
     let conn = manager.connection().map_err(|e| e.to_string())?;
     delete_meal_item_with_conn(&conn, id)
 }
-// ─── .nlog builder ───────────────────────────────────────────────────────────
+
+// ─── Date-range queries ─────────────────────────────────────────────────────
+
+fn list_meals_by_date_range_with_conn(
+    conn: &Connection,
+    start: i64,
+    end: i64,
+) -> Result<Vec<Meal>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, occurred_at, meal_type, title, note, created_at, updated_at
+             FROM meals WHERE occurred_at >= ?1 AND occurred_at < ?2
+             ORDER BY occurred_at ASC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![start, end], |row| {
+            meal_from_row(row).map_err(|e| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    0,
+                    rusqlite::types::Type::Integer,
+                    Box::new(std::io::Error::other(e)),
+                )
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut meals = Vec::new();
+    for row in rows {
+        meals.push(row.map_err(|e| e.to_string())?);
+    }
+    Ok(meals)
+}
+
+#[tauri::command]
+pub async fn list_meals_by_date_range(start: i64, end: i64) -> Result<Vec<Meal>, String> {
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
+    let conn = manager.connection().map_err(|e| e.to_string())?;
+    list_meals_by_date_range_with_conn(&conn, start, end)
+}
+
+// ─── .nlog builder ──────────────────────────────────────────────────────────
 
 fn r64(n: f64) -> f64 {
     (n * 10.0).round() / 10.0
@@ -420,11 +538,10 @@ pub async fn build_nlog(days: i64) -> Result<String, String> {
     build_nlog_with_conn(&conn, days)
 }
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
     const TEST_SCHEMA_SQL: &str = include_str!("../sql/init.sql");
 
     fn setup_conn() -> Connection {
@@ -433,85 +550,166 @@ mod tests {
         conn
     }
 
-    #[test]
-    fn test_create_and_list_meals() {
-        let conn = setup_conn();
-        let now = 1700000000;
-        let meal = Meal {
-            id: 0,
-            occurred_at: now,
-            meal_type: MealType::Breakfast,
-            title: "Morning meal".to_string(),
-            note: "".to_string(),
-            created_at: now,
-            updated_at: now,
-        };
-        let created = create_meal_with_conn(&conn, meal).unwrap();
-        assert!(created.id > 0);
-        assert_eq!(created.title, "Morning meal");
+    fn seed_food(conn: &Connection, id: i64, name: &str) -> Food {
+        conn.execute(
+            "INSERT INTO foods (
+                id, name, brand, category, source, ref_url, barcode, created_at, updated_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![
+                id,
+                name,
+                "Brand",
+                "Category",
+                "user",
+                "https://example.com",
+                format!("barcode-{id}"),
+                1000 + id,
+                2000 + id
+            ],
+        )
+        .unwrap();
 
-        let meals = list_meals_with_conn(&conn).unwrap();
-        assert_eq!(meals.len(), 1);
+        get_food_with_conn(conn, id).unwrap().unwrap()
+    }
+
+    fn seed_serving(conn: &Connection, id: i64, food_id: i64) -> Serving {
+        conn.execute(
+            "INSERT INTO servings (
+                id, food_id, amount, unit, grams_equiv, is_default, created_at, updated_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![id, food_id, 1, i64::from(MetricUnit::Serving), 100, 1, 3000 + id, 4000 + id],
+        )
+        .unwrap();
+
+        get_serving_with_conn(conn, id).unwrap().unwrap()
+    }
+
+    fn sample_meal(id: i64, meal_type: MealType, title: &str) -> Meal {
+        Meal {
+            id,
+            occurred_at: 1_700_000_000 + id,
+            meal_type,
+            title: title.to_string(),
+            note: format!("note-{id}"),
+            created_at: 5000 + id,
+            updated_at: 6000 + id,
+        }
     }
 
     #[test]
-    fn test_meal_date_range() {
+    fn test_meal_crud() {
         let conn = setup_conn();
-        let day1 = 1700000000;
-        let day2 = day1 + 86400;
 
-        create_meal_with_conn(&conn, Meal {
-            id: 0, occurred_at: day1, meal_type: MealType::Lunch,
-            title: "Day 1 Lunch".to_string(), note: "".to_string(),
-            created_at: day1, updated_at: day1,
-        }).unwrap();
+        let created = create_meal_with_conn(&conn, sample_meal(1, MealType::Breakfast, "Breakfast"))
+            .unwrap();
+        assert_eq!(created.id, 1);
+        assert!(matches!(created.meal_type, MealType::Breakfast));
 
-        create_meal_with_conn(&conn, Meal {
-            id: 0, occurred_at: day2, meal_type: MealType::Dinner,
-            title: "Day 2 Dinner".to_string(), note: "".to_string(),
-            created_at: day2, updated_at: day2,
-        }).unwrap();
+        let fetched = get_meal_with_conn(&conn, 1).unwrap().unwrap();
+        assert_eq!(fetched.title, "Breakfast");
 
-        let day1_meals = list_meals_by_date_range_with_conn(&conn, day1, day1 + 86400).unwrap();
-        assert_eq!(day1_meals.len(), 1);
-        assert_eq!(day1_meals[0].title, "Day 1 Lunch");
+        create_meal_with_conn(&conn, sample_meal(2, MealType::Dinner, "Dinner")).unwrap();
+        let listed = list_meals_with_conn(&conn).unwrap();
+        assert_eq!(listed.len(), 2);
+        assert_eq!(listed[0].id, 1);
+
+        let updated = update_meal_with_conn(
+            &conn,
+            Meal {
+                id: 1,
+                occurred_at: 1_700_100_000,
+                meal_type: MealType::Brunch,
+                title: "Late Breakfast".to_string(),
+                note: "updated".to_string(),
+                created_at: 5001,
+                updated_at: 7001,
+            },
+        )
+        .unwrap();
+        assert!(matches!(updated.meal_type, MealType::Brunch));
+        assert_eq!(updated.title, "Late Breakfast");
+
+        assert!(delete_meal_with_conn(&conn, 2).unwrap());
+        assert!(get_meal_with_conn(&conn, 2).unwrap().is_none());
+        assert!(!delete_meal_with_conn(&conn, 2).unwrap());
     }
 
     #[test]
-    fn test_delete_meal_cascades_items() {
+    fn test_meal_item_crud() {
         let conn = setup_conn();
-        let now = 1700000000;
+        let meal = create_meal_with_conn(&conn, sample_meal(10, MealType::Lunch, "Lunch")).unwrap();
+        let food = seed_food(&conn, 20, "Rice");
+        let serving = seed_serving(&conn, 30, food.id);
 
-        let meal = create_meal_with_conn(&conn, Meal {
-            id: 0, occurred_at: now, meal_type: MealType::Snack,
-            title: "Snack".to_string(), note: "".to_string(),
-            created_at: now, updated_at: now,
-        }).unwrap();
+        let created = create_meal_item_with_conn(
+            &conn,
+            MealItem {
+                id: 40,
+                meal,
+                food,
+                serving,
+                quantity: 1.5,
+                note: "first".to_string(),
+                created_at: 8000,
+                updated_at: 9000,
+            },
+        )
+        .unwrap();
+        assert_eq!(created.id, 40);
+        assert_eq!(created.food.name, "Rice");
+        assert_eq!(created.serving.food.id, created.food.id);
 
-        // Create a food + serving for the meal item
-        use crate::food::{create_food_with_conn, create_serving_with_conn};
-        let food = create_food_with_conn(&conn, Food {
-            id: 0, name: "Apple".to_string(), brand: "".to_string(),
-            category: "Fruit".to_string(), source: "test".to_string(),
-            ref_url: "".to_string(), barcode: "".to_string(),
-            created_at: now, updated_at: now,
-        }).unwrap();
+        let fetched = get_meal_item_with_conn(&conn, 40).unwrap().unwrap();
+        assert_eq!(fetched.meal.title, "Lunch");
 
-        let serving = create_serving_with_conn(&conn, Serving {
-            id: 0, food: food.clone(), amount: 100,
-            unit: MetricUnit::Gram, grams_equiv: 100, is_default: true,
-            created_at: now, updated_at: now,
-        }).unwrap();
+        let listed = list_meal_items_by_meal_with_conn(&conn, 10).unwrap();
+        assert_eq!(listed.len(), 1);
 
-        let item = create_meal_item_with_conn(&conn, MealItem {
-            id: 0, meal: meal.clone(), food: food.clone(), serving: serving.clone(),
-            quantity: 1.0, note: "".to_string(), created_at: now, updated_at: now,
-        }).unwrap();
-        assert!(item.id > 0);
+        let updated = update_meal_item_with_conn(
+            &conn,
+            MealItem {
+                id: 40,
+                meal: get_meal_with_conn(&conn, 10).unwrap().unwrap(),
+                food: get_food_with_conn(&conn, 20).unwrap().unwrap(),
+                serving: get_serving_with_conn(&conn, 30).unwrap().unwrap(),
+                quantity: 2.0,
+                note: "updated".to_string(),
+                created_at: 8000,
+                updated_at: 9100,
+            },
+        )
+        .unwrap();
+        assert_eq!(updated.quantity, 2.0);
+        assert_eq!(updated.note, "updated");
 
-        // Delete meal — should cascade delete items
-        delete_meal_with_conn(&conn, meal.id).unwrap();
-        let items = list_meal_items_by_meal_with_conn(&conn, meal.id).unwrap();
-        assert!(items.is_empty());
+        assert!(delete_meal_item_with_conn(&conn, 40).unwrap());
+        assert!(get_meal_item_with_conn(&conn, 40).unwrap().is_none());
+        assert!(!delete_meal_item_with_conn(&conn, 40).unwrap());
+    }
+
+    #[test]
+    fn test_delete_meal_cascades_to_meal_items() {
+        let conn = setup_conn();
+        let meal = create_meal_with_conn(&conn, sample_meal(50, MealType::Dinner, "Dinner")).unwrap();
+        let food = seed_food(&conn, 60, "Soup");
+        let serving = seed_serving(&conn, 70, food.id);
+
+        create_meal_item_with_conn(
+            &conn,
+            MealItem {
+                id: 80,
+                meal,
+                food,
+                serving,
+                quantity: 1.0,
+                note: String::new(),
+                created_at: 8000,
+                updated_at: 9000,
+            },
+        )
+        .unwrap();
+
+        assert!(delete_meal_with_conn(&conn, 50).unwrap());
+        assert!(get_meal_item_with_conn(&conn, 80).unwrap().is_none());
     }
 }
