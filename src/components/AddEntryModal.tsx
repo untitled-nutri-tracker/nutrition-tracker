@@ -4,7 +4,7 @@
 import { useState, useCallback } from "react";
 import type { FoodEntryDraft, MealType } from "../types/foodLog";
 import { MEAL_TYPE_LABELS, MEAL_TYPE_ORDER } from "../types/foodLog";
-import Modal, { bodyStyle, footerStyle } from "./ui/Modal";
+import Modal from "./ui/Modal";
 import Input, { fieldStyle } from "./ui/Input";
 import Button from "./ui/Button";
 
