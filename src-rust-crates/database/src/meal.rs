@@ -329,6 +329,9 @@ fn delete_meal_item_with_conn(conn: &Connection, id: i64) -> Result<bool, String
 }
 
 #[tauri::command]
+/// Creates a meal record and returns the stored meal.
+///
+/// A meal is the parent record for zero or more [`MealItem`] rows.
 pub async fn create_meal(meal: Meal) -> Result<Meal, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
@@ -336,6 +339,9 @@ pub async fn create_meal(meal: Meal) -> Result<Meal, String> {
 }
 
 #[tauri::command]
+/// Fetches a meal by id.
+///
+/// Returns `Ok(None)` when no meal exists for the provided id.
 pub async fn get_meal(id: i64) -> Result<Option<Meal>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
@@ -343,6 +349,7 @@ pub async fn get_meal(id: i64) -> Result<Option<Meal>, String> {
 }
 
 #[tauri::command]
+/// Lists all meals ordered by occurrence time and id.
 pub async fn list_meals() -> Result<Vec<Meal>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
@@ -350,6 +357,9 @@ pub async fn list_meals() -> Result<Vec<Meal>, String> {
 }
 
 #[tauri::command]
+/// Updates an existing meal and returns the refreshed row.
+///
+/// Returns an error when the target meal does not exist.
 pub async fn update_meal(meal: Meal) -> Result<Meal, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
@@ -357,6 +367,9 @@ pub async fn update_meal(meal: Meal) -> Result<Meal, String> {
 }
 
 #[tauri::command]
+/// Deletes a meal by id.
+///
+/// Returns `true` when a row was deleted and `false` when the id was not found.
 pub async fn delete_meal(id: i64) -> Result<bool, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
@@ -364,6 +377,10 @@ pub async fn delete_meal(id: i64) -> Result<bool, String> {
 }
 
 #[tauri::command]
+/// Creates a meal item and returns the stored row with its related meal, food, and serving.
+///
+/// A single meal can contain multiple meal items. Each meal item belongs to exactly one meal
+/// and references one food together with one selected serving.
 pub async fn create_meal_item(meal_item: MealItem) -> Result<MealItem, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
@@ -371,6 +388,9 @@ pub async fn create_meal_item(meal_item: MealItem) -> Result<MealItem, String> {
 }
 
 #[tauri::command]
+/// Fetches a meal item by id.
+///
+/// Returns `Ok(None)` when no meal item exists for the provided id.
 pub async fn get_meal_item(id: i64) -> Result<Option<MealItem>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
@@ -378,6 +398,9 @@ pub async fn get_meal_item(id: i64) -> Result<Option<MealItem>, String> {
 }
 
 #[tauri::command]
+/// Lists all meal items that belong to a meal.
+///
+/// Returns an error when the parent meal does not exist.
 pub async fn list_meal_items_by_meal(meal_id: i64) -> Result<Vec<MealItem>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
@@ -385,6 +408,9 @@ pub async fn list_meal_items_by_meal(meal_id: i64) -> Result<Vec<MealItem>, Stri
 }
 
 #[tauri::command]
+/// Updates an existing meal item and returns the refreshed row.
+///
+/// Returns an error when the target meal item does not exist.
 pub async fn update_meal_item(meal_item: MealItem) -> Result<MealItem, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
@@ -392,6 +418,9 @@ pub async fn update_meal_item(meal_item: MealItem) -> Result<MealItem, String> {
 }
 
 #[tauri::command]
+/// Deletes a meal item by id.
+///
+/// Returns `true` when a row was deleted and `false` when the id was not found.
 pub async fn delete_meal_item(id: i64) -> Result<bool, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
