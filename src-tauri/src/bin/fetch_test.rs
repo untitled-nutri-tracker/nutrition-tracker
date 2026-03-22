@@ -1,5 +1,4 @@
 use nutrition_tracker_lib::api::openfoodfacts;
-use std::path::PathBuf;
 
 #[tokio::main]
 async fn main() {
@@ -9,13 +8,13 @@ async fn main() {
     match openfoodfacts::fetch(barcode).await {
         Ok(facts) => {
             println!("Successfully fetched: {}", facts.serving.food.name);
-
-            // Save JSON into src-ai/data/ where the TypeScript pipeline reads it.
-            let path = PathBuf::from("src-ai/data/sample_food.json");
-            match openfoodfacts::save_to_json_file(&facts, path.clone()) {
-                Ok(_) => println!("Saved structured JSON to {:?}", path),
-                Err(e) => eprintln!("Failed to save JSON: {}", e),
-            }
+            println!(
+                "  Calories: {} kcal | Protein: {}g | Carbs: {}g | Fat: {}g",
+                facts.calories_kcal,
+                facts.protein_g,
+                facts.total_carbohydrate_g,
+                facts.fat_g,
+            );
         }
         Err(e) => eprintln!("Error: {}", e),
     }
