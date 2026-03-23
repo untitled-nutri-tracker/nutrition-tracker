@@ -1,4 +1,5 @@
 use nutrack_model::user_profile::{Sex, UserProfile};
+use nutrack_model::validate::Validate;
 use rusqlite::{params, Connection, OptionalExtension};
 
 fn get_profile_with_conn(conn: &Connection, id: i16) -> Result<Option<UserProfile>, String> {
@@ -37,6 +38,10 @@ fn create_profile_with_conn(
     conn: &Connection,
     user_profile: UserProfile,
 ) -> Result<UserProfile, String> {
+    // Validate all struct fields at the IPC boundary before touching the database —
+    // rejects empty names, negative weights, etc. with a user-friendly error.
+    user_profile.validate()?;
+
     let id = user_profile.id;
     let name = user_profile.name;
     let sex = user_profile.sex;
@@ -90,6 +95,10 @@ fn update_profile_with_conn(
     conn: &Connection,
     user_profile: UserProfile,
 ) -> Result<UserProfile, String> {
+    // Validate all struct fields at the IPC boundary before modifying the database —
+    // ensures the update payload meets the same constraints as creation.
+    user_profile.validate()?;
+
     let id = user_profile.id;
     let name = user_profile.name;
     let sex = user_profile.sex;
@@ -318,5 +327,68 @@ mod tests {
             params![10_i64, "Invalid", 9_i64, 50.0_f32, 160.0_f32],
         );
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_create_profile_rejects_empty_name() {
+        let conn = setup_conn();
+        let result = create_profile_with_conn(
+            &conn,
+            UserProfile {
+                id: 20,
+                name: "   ".to_string(),
+                sex: Sex::Male,
+                weight: 70.0,
+                height: 175.0,
+            },
+        );
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("empty"));
+    }
+
+    #[test]
+    fn test_create_profile_rejects_negative_weight() {
+        let conn = setup_conn();
+        let result = create_profile_with_conn(
+            &conn,
+            UserProfile {
+                id: 21,
+                name: "Test".to_string(),
+                sex: Sex::Female,
+                weight: -5.0,
+                height: 165.0,
+            },
+        );
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("positive"));
+    }
+
+    #[test]
+    fn test_update_profile_rejects_oversized_name() {
+        let conn = setup_conn();
+        create_profile_with_conn(
+            &conn,
+            UserProfile {
+                id: 22,
+                name: "Valid".to_string(),
+                sex: Sex::Male,
+                weight: 80.0,
+                height: 180.0,
+            },
+        )
+        .unwrap();
+
+        let result = update_profile_with_conn(
+            &conn,
+            UserProfile {
+                id: 22,
+                name: "a".repeat(101),
+                sex: Sex::Male,
+                weight: 80.0,
+                height: 180.0,
+            },
+        );
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("too long"));
     }
 }
