@@ -63,6 +63,13 @@ While the core app is fully local, specific features (like barcode lookups) requ
 - **Feature Toggles:** External APIs are securely gated behind internal feature flags managed in `NetworkConfig`.
 - **Frontend Awareness:** The `NetworkProvider` context allows the React frontend to adapt its UI (like disabling buttons or showing warnings) natively via `navigator.onLine`.
 
+### 4. IPC Input Validation
+Every Tauri command must validate its inputs before processing. Two mechanisms are available:
+- **Model structs:** Implement the `Validate` trait (from `nutrack_model::validate`) and call `.validate()?` as the first line of the command. This covers all CRUD operations.
+- **Primitive args** (strings, numerics): Use guard functions from `crate::utils::ipc_guards` (e.g., `sanitize_string`, `require_positive_i64`, `validate_barcode`). This covers API search, AI advice, and barcode lookup commands.
+
+Validation errors return clean, user-friendly strings — never raw database or system errors. The `crate::utils::ipc_errors::sanitize_db_error` helper is available for wrapping raw SQLite errors at the IPC boundary.
+
 ### 5. Rust Workspace & Modularization
 The Rust backend is intentionally split into separate crates and modules to isolate domains of logic:
 - **`nutrack-model` (Library Crate):** Contains pure Rust structs and Enums (e.g., `Food`, `UserProfile`) with `serde` implementations. No business or database logic. Completely pure, safe to share anywhere.
