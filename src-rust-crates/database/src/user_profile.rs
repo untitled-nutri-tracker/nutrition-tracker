@@ -131,6 +131,7 @@ fn delete_profile_with_conn(conn: &Connection, id: i16) -> Result<bool, String> 
 }
 
 #[tauri::command]
+/// Creates a user profile record and returns the stored profile.
 pub async fn create_profile(user_profile: UserProfile) -> Result<UserProfile, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
@@ -138,6 +139,9 @@ pub async fn create_profile(user_profile: UserProfile) -> Result<UserProfile, St
 }
 
 #[tauri::command]
+/// Fetches a user profile by its id.
+///
+/// Returns `Ok(None)` when no profile exists for the provided id.
 pub async fn get_profile(id: i16) -> Result<Option<UserProfile>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
@@ -145,6 +149,7 @@ pub async fn get_profile(id: i16) -> Result<Option<UserProfile>, String> {
 }
 
 #[tauri::command]
+/// Lists all user profiles ordered by id.
 pub async fn list_profiles() -> Result<Vec<UserProfile>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
@@ -152,6 +157,9 @@ pub async fn list_profiles() -> Result<Vec<UserProfile>, String> {
 }
 
 #[tauri::command]
+/// Updates an existing user profile and returns the refreshed row.
+///
+/// Returns an error when the target profile does not exist.
 pub async fn update_profile(user_profile: UserProfile) -> Result<UserProfile, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
@@ -159,6 +167,9 @@ pub async fn update_profile(user_profile: UserProfile) -> Result<UserProfile, St
 }
 
 #[tauri::command]
+/// Deletes a user profile by id.
+///
+/// Returns `true` when a row was deleted and `false` when the id was not found.
 pub async fn delete_profile(id: i16) -> Result<bool, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
