@@ -10,11 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.0] - 2026-03-22
 
 ### Added
-- `Validate` trait in `nutrack-model` — IPC input validation for all model structs (`UserProfile`, `Food`, `Serving`, `NutritionFacts`, `Meal`, `MealItem`).
-- `ipc_guards` utility module (`src-tauri/src/utils/ipc_guards.rs`) — reusable guard functions for validating primitive IPC arguments (strings, numerics, barcodes).
-- `ipc_errors` utility module (`src-tauri/src/utils/ipc_errors.rs`) — sanitises raw database errors before they cross the IPC boundary.
-- Validation wired into all create/update database commands with inline documentation.
-- Unit tests
+- **Security & IPC:** `Validate` trait in `nutrack-model` and new `ipc_guards`/`ipc_errors` modules to securely sanitize Tauri command inputs and database errors.
+- **Database CRUD:** Full backend implementation of `Food`, `Serving`, `NutritionFacts`, `Meal`, and `MealItem` operations, completely replacing previous stubs (merged from `#66`).
+- **Validation Wiring:** IPC validation securely wired into all active database create/update commands.
+- Comprehensive unit and integration test suites for both validation rules and database queries.
 
 ---
 
