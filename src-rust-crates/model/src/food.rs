@@ -5,7 +5,8 @@ use crate::metric_unit::MetricUnit;
 A food may contain multiple servings (1 package, 1 party-size bag, 1oz)
 A serving links with a nutrition facts table
 */
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Food {
     pub id: i64,
     pub name: String,
@@ -18,7 +19,8 @@ pub struct Food {
     pub updated_at: i64, // timestamp
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Serving {
     pub id: i64,
     pub food: Food,
@@ -30,7 +32,7 @@ pub struct Serving {
     pub updated_at: i64, // timestamp
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct NutritionFacts {
     pub serving: Serving,

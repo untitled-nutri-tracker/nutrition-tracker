@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS meal_items (
 );
 
 CREATE INDEX IF NOT EXISTS idx_servings_food_id ON servings (food_id);
+CREATE INDEX IF NOT EXISTS idx_meals_occurred_at ON meals (occurred_at);
 CREATE INDEX IF NOT EXISTS idx_meal_items_meal_id ON meal_items (meal_id);
 CREATE INDEX IF NOT EXISTS idx_meal_items_food_id ON meal_items (food_id);
 CREATE INDEX IF NOT EXISTS idx_meal_items_serving_id ON meal_items (serving_id);
