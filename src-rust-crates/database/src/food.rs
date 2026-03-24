@@ -28,13 +28,13 @@ fn get_food_with_conn(conn: &Connection, id: i64) -> Result<Option<Food>, String
 }
 
 fn create_food_with_conn(conn: &Connection, food: Food) -> Result<Food, String> {
-    let id = food.id;
+    let id_param: Option<i64> = if food.id == 0 { None } else { Some(food.id) };
     conn.execute(
         "INSERT INTO foods (
             id, name, brand, category, source, ref_url, barcode, created_at, updated_at
          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
-            food.id,
+            id_param,
             food.name,
             food.brand,
             food.category,
@@ -47,8 +47,9 @@ fn create_food_with_conn(conn: &Connection, food: Food) -> Result<Food, String> 
     )
     .map_err(|e| e.to_string())?;
 
-    get_food_with_conn(conn, id)?
-        .ok_or_else(|| format!("Food was inserted but could not be read back for id {id}"))
+    let row_id = if food.id == 0 { conn.last_insert_rowid() } else { food.id };
+    get_food_with_conn(conn, row_id)?
+        .ok_or_else(|| format!("Food was inserted but could not be read back for id {row_id}"))
 }
 
 fn list_foods_with_conn(conn: &Connection) -> Result<Vec<Food>, String> {
@@ -146,13 +147,13 @@ fn get_serving_with_conn(conn: &Connection, id: i64) -> Result<Option<Serving>, 
 }
 
 fn create_serving_with_conn(conn: &Connection, serving: Serving) -> Result<Serving, String> {
-    let id = serving.id;
+    let id_param: Option<i64> = if serving.id == 0 { None } else { Some(serving.id) };
     conn.execute(
         "INSERT INTO servings (
             id, food_id, amount, unit, grams_equiv, is_default, created_at, updated_at
          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
-            serving.id,
+            id_param,
             serving.food.id,
             serving.amount,
             i64::from(serving.unit),
@@ -164,8 +165,9 @@ fn create_serving_with_conn(conn: &Connection, serving: Serving) -> Result<Servi
     )
     .map_err(|e| e.to_string())?;
 
-    get_serving_with_conn(conn, id)?
-        .ok_or_else(|| format!("Serving was inserted but could not be read back for id {id}"))
+    let row_id = if serving.id == 0 { conn.last_insert_rowid() } else { serving.id };
+    get_serving_with_conn(conn, row_id)?
+        .ok_or_else(|| format!("Serving was inserted but could not be read back for id {row_id}"))
 }
 
 fn list_servings_by_food_with_conn(conn: &Connection, food_id: i64) -> Result<Vec<Serving>, String> {

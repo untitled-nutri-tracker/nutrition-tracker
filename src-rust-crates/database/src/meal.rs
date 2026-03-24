@@ -35,12 +35,12 @@ fn get_meal_with_conn(conn: &Connection, id: i64) -> Result<Option<Meal>, String
 }
 
 fn create_meal_with_conn(conn: &Connection, meal: Meal) -> Result<Meal, String> {
-    let id = meal.id;
+    let id_param: Option<i64> = if meal.id == 0 { None } else { Some(meal.id) };
     conn.execute(
         "INSERT INTO meals (id, occurred_at, meal_type, title, note, created_at, updated_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![
-            meal.id,
+            id_param,
             meal.occurred_at,
             i64::from(meal.meal_type),
             meal.title,
@@ -51,8 +51,9 @@ fn create_meal_with_conn(conn: &Connection, meal: Meal) -> Result<Meal, String> 
     )
     .map_err(|e| e.to_string())?;
 
-    get_meal_with_conn(conn, id)?
-        .ok_or_else(|| format!("Meal was inserted but could not be read back for id {id}"))
+    let row_id = if meal.id == 0 { conn.last_insert_rowid() } else { meal.id };
+    get_meal_with_conn(conn, row_id)?
+        .ok_or_else(|| format!("Meal was inserted but could not be read back for id {row_id}"))
 }
 
 fn list_meals_with_conn(conn: &Connection) -> Result<Vec<Meal>, String> {
@@ -245,13 +246,13 @@ fn get_meal_item_with_conn(conn: &Connection, id: i64) -> Result<Option<MealItem
 }
 
 fn create_meal_item_with_conn(conn: &Connection, meal_item: MealItem) -> Result<MealItem, String> {
-    let id = meal_item.id;
+    let id_param: Option<i64> = if meal_item.id == 0 { None } else { Some(meal_item.id) };
     conn.execute(
         "INSERT INTO meal_items (
             id, meal_id, food_id, serving_id, quantity, note, created_at, updated_at
          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
-            meal_item.id,
+            id_param,
             meal_item.meal.id,
             meal_item.food.id,
             meal_item.serving.id,
@@ -263,8 +264,9 @@ fn create_meal_item_with_conn(conn: &Connection, meal_item: MealItem) -> Result<
     )
     .map_err(|e| e.to_string())?;
 
-    get_meal_item_with_conn(conn, id)?
-        .ok_or_else(|| format!("Meal item was inserted but could not be read back for id {id}"))
+    let row_id = if meal_item.id == 0 { conn.last_insert_rowid() } else { meal_item.id };
+    get_meal_item_with_conn(conn, row_id)?
+        .ok_or_else(|| format!("Meal item was inserted but could not be read back for id {row_id}"))
 }
 
 fn list_meal_items_by_meal_with_conn(
@@ -425,6 +427,146 @@ pub async fn delete_meal_item(id: i64) -> Result<bool, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let conn = manager.connection().map_err(|e| e.to_string())?;
     delete_meal_item_with_conn(&conn, id)
+}
+
+// ─── Date-range queries ─────────────────────────────────────────────────────
+
+fn list_meals_by_date_range_with_conn(
+    conn: &Connection,
+    start: i64,
+    end: i64,
+) -> Result<Vec<Meal>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, occurred_at, meal_type, title, note, created_at, updated_at
+             FROM meals WHERE occurred_at >= ?1 AND occurred_at < ?2
+             ORDER BY occurred_at ASC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![start, end], |row| {
+            meal_from_row(row).map_err(|e| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    0,
+                    rusqlite::types::Type::Integer,
+                    Box::new(std::io::Error::other(e)),
+                )
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut meals = Vec::new();
+    for row in rows {
+        meals.push(row.map_err(|e| e.to_string())?);
+    }
+    Ok(meals)
+}
+
+#[tauri::command]
+pub async fn list_meals_by_date_range(start: i64, end: i64) -> Result<Vec<Meal>, String> {
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
+    let conn = manager.connection().map_err(|e| e.to_string())?;
+    list_meals_by_date_range_with_conn(&conn, start, end)
+}
+
+// ─── .nlog builder ──────────────────────────────────────────────────────────
+
+fn r64(n: f64) -> f64 {
+    (n * 10.0).round() / 10.0
+}
+
+fn ts_to_yymmdd(ts: i64) -> String {
+    let days = ts / 86400;
+    let mut y: i64 = 1970;
+    let mut remaining = days;
+    loop {
+        let diy = if y % 4 == 0 && (y % 100 != 0 || y % 400 == 0) { 366 } else { 365 };
+        if remaining < diy { break; }
+        remaining -= diy;
+        y += 1;
+    }
+    let leap = y % 4 == 0 && (y % 100 != 0 || y % 400 == 0);
+    let md: [i64; 12] = if leap {
+        [31,29,31,30,31,30,31,31,30,31,30,31]
+    } else {
+        [31,28,31,30,31,30,31,31,30,31,30,31]
+    };
+    let mut m = 12;
+    for (i, &d) in md.iter().enumerate() {
+        if remaining < d { m = i + 1; break; }
+        remaining -= d;
+    }
+    format!("{:02}{:02}{:02}", y % 100, m, remaining + 1)
+}
+
+fn meal_type_label(val: i64) -> &'static str {
+    match val {
+        1 => "Breakfast", 2 => "Brunch", 3 => "Lunch", 4 => "Dinner",
+        8 => "NightSnack", 10 => "Snack", _ => "Custom",
+    }
+}
+
+fn build_nlog_with_conn(conn: &Connection, days: i64) -> Result<String, String> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| e.to_string())?
+        .as_secs() as i64;
+    let start = now - (days * 86400);
+
+    let mut stmt = conn.prepare(
+        "SELECT m.occurred_at, m.meal_type, f.name,
+                COALESCE(nf.calories_kcal, 0), COALESCE(nf.protein_g, 0),
+                COALESCE(nf.total_carbohydrate_g, 0), COALESCE(nf.fat_g, 0),
+                COALESCE(nf.saturated_fat_g, 0), COALESCE(nf.total_sugars_g, 0),
+                COALESCE(nf.dietary_fiber_g, 0), COALESCE(nf.sodium_mg, 0),
+                COALESCE(nf.cholesterol_mg, 0), mi.quantity
+         FROM meal_items mi
+         JOIN meals m ON mi.meal_id = m.id
+         JOIN foods f ON mi.food_id = f.id
+         JOIN servings s ON mi.serving_id = s.id
+         LEFT JOIN nutrition_facts nf ON nf.serving_id = s.id
+         WHERE m.occurred_at >= ?1
+         ORDER BY m.occurred_at ASC"
+    ).map_err(|e: rusqlite::Error| e.to_string())?;
+
+    let rows = stmt.query_map(params![start], |row: &rusqlite::Row| {
+        let occ: i64 = row.get(0)?;
+        let mt: i64 = row.get(1)?;
+        let name: String = row.get(2)?;
+        let cal: f64 = row.get(3)?;
+        let pro: f64 = row.get(4)?;
+        let carb: f64 = row.get(5)?;
+        let fat: f64 = row.get(6)?;
+        let sf: f64 = row.get(7)?;
+        let sug: f64 = row.get(8)?;
+        let fib: f64 = row.get(9)?;
+        let sod: f64 = row.get(10)?;
+        let chol: f64 = row.get(11)?;
+        let qty: f64 = row.get(12)?;
+
+        Ok(format!(
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+            ts_to_yymmdd(occ), name,
+            r64(cal*qty), r64(pro*qty), r64(carb*qty), r64(fat*qty),
+            r64(sf*qty), r64(sug*qty), r64(fib*qty), r64(sod*qty), r64(chol*qty),
+            meal_type_label(mt),
+        ))
+    }).map_err(|e: rusqlite::Error| e.to_string())?;
+
+    let lines: Vec<String> = rows.collect::<Result<Vec<_>, _>>().map_err(|e: rusqlite::Error| e.to_string())?;
+
+    if lines.is_empty() {
+        return Ok("(No meals logged yet)".to_string());
+    }
+    Ok(lines.join("\n"))
+}
+
+#[tauri::command]
+pub async fn build_nlog(days: i64) -> Result<String, String> {
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
+    let conn = manager.connection().map_err(|e| e.to_string())?;
+    build_nlog_with_conn(&conn, days)
 }
 
 #[cfg(test)]
