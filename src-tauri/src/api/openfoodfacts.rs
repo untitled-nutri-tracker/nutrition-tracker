@@ -110,6 +110,10 @@ pub async fn fetch(barcode: &str) -> Result<NutritionFacts, String> {
         .await
         .map_err(map_network_error)?; // user-friendly offline/timeout errors
 
+    if !res.status().is_success() {
+        return Err(format!("OpenFoodFacts API error: HTTP {}", res.status()));
+    }
+
     let json: Value = res
         .json()
         .await
@@ -188,6 +192,10 @@ pub async fn search(query: &str, page: u32) -> Result<SearchResult, String> {
         .send()
         .await
         .map_err(|e| format!("HTTP request failed: {}", e))?;
+
+    if !res.status().is_success() {
+        return Err(format!("OpenFoodFacts API error: HTTP {}", res.status()));
+    }
 
     let json: Value = res
         .json()
