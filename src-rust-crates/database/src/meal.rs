@@ -35,12 +35,12 @@ fn get_meal_with_conn(conn: &Connection, id: i64) -> Result<Option<Meal>, String
 }
 
 fn create_meal_with_conn(conn: &Connection, meal: Meal) -> Result<Meal, String> {
-    let id = meal.id;
+    let id_param: Option<i64> = if meal.id == 0 { None } else { Some(meal.id) };
     conn.execute(
         "INSERT INTO meals (id, occurred_at, meal_type, title, note, created_at, updated_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![
-            meal.id,
+            id_param,
             meal.occurred_at,
             i64::from(meal.meal_type),
             meal.title,
@@ -51,8 +51,9 @@ fn create_meal_with_conn(conn: &Connection, meal: Meal) -> Result<Meal, String> 
     )
     .map_err(|e| e.to_string())?;
 
-    get_meal_with_conn(conn, id)?
-        .ok_or_else(|| format!("Meal was inserted but could not be read back for id {id}"))
+    let row_id = if meal.id == 0 { conn.last_insert_rowid() } else { meal.id };
+    get_meal_with_conn(conn, row_id)?
+        .ok_or_else(|| format!("Meal was inserted but could not be read back for id {row_id}"))
 }
 
 fn list_meals_with_conn(conn: &Connection) -> Result<Vec<Meal>, String> {
@@ -245,13 +246,13 @@ fn get_meal_item_with_conn(conn: &Connection, id: i64) -> Result<Option<MealItem
 }
 
 fn create_meal_item_with_conn(conn: &Connection, meal_item: MealItem) -> Result<MealItem, String> {
-    let id = meal_item.id;
+    let id_param: Option<i64> = if meal_item.id == 0 { None } else { Some(meal_item.id) };
     conn.execute(
         "INSERT INTO meal_items (
             id, meal_id, food_id, serving_id, quantity, note, created_at, updated_at
          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
-            meal_item.id,
+            id_param,
             meal_item.meal.id,
             meal_item.food.id,
             meal_item.serving.id,
@@ -263,8 +264,9 @@ fn create_meal_item_with_conn(conn: &Connection, meal_item: MealItem) -> Result<
     )
     .map_err(|e| e.to_string())?;
 
-    get_meal_item_with_conn(conn, id)?
-        .ok_or_else(|| format!("Meal item was inserted but could not be read back for id {id}"))
+    let row_id = if meal_item.id == 0 { conn.last_insert_rowid() } else { meal_item.id };
+    get_meal_item_with_conn(conn, row_id)?
+        .ok_or_else(|| format!("Meal item was inserted but could not be read back for id {row_id}"))
 }
 
 fn list_meal_items_by_meal_with_conn(

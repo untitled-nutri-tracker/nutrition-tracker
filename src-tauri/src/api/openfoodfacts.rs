@@ -86,6 +86,7 @@ fn current_timestamp() -> i64 {
 fn build_client() -> Result<Client, String> {
     Client::builder()
         .user_agent("NutriLog/1.0 (vmarri25@vt.edu)")
+        .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| format!("Failed to build HTTP client: {}", e))
 }
@@ -171,7 +172,7 @@ pub async fn fetch(barcode: &str) -> Result<NutritionFacts, String> {
 /// Uses the v1 search API because v2 does NOT support full text search.
 pub async fn search(query: &str, page: u32) -> Result<SearchResult, String> {
     let url = format!(
-        "https://world.openfoodfacts.org/cgi/search.pl?search_terms={}&search_simple=1&action=process&json=1&fields=code,product_name,brands,categories,image_front_small_url,nutriments&page_size=20&page={}&sort_by=unique_scans_n",
+        "https://world.openfoodfacts.org/cgi/search.pl?search_terms={}&search_simple=1&action=process&json=1&fields=code,product_name,brands,categories,nutriments&page_size=10&page={}&sort_by=unique_scans_n",
         urlencoding(query),
         page
     );

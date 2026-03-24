@@ -26,7 +26,7 @@ export default function LogFood() {
   const [query, setQuery] = useState("");
   const [barcode, setBarcode] = useState("");
   const [results, setResults] = useState<SearchProduct[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loggedIds, setLoggedIds] = useState<Set<string>>(new Set());
@@ -45,7 +45,6 @@ export default function LogFood() {
         page: 1,
       });
       setResults(rankResults(result.products, query));
-      setTotalCount(result.count);
     } catch (e: any) {
       setError(e?.toString() ?? "Search failed");
       setResults([]);
@@ -63,7 +62,7 @@ export default function LogFood() {
         barcode: barcode.trim(),
       });
       setResults(result.products);
-      setTotalCount(result.count);
+
     } catch (e: any) {
       setError(e?.toString() ?? "Barcode lookup failed");
       setResults([]);
@@ -266,7 +265,7 @@ export default function LogFood() {
       {results.length > 0 && (
         <div style={{ maxWidth: 900 }}>
           <div style={{ fontSize: 13, color: "var(--muted2)", marginBottom: 10 }}>
-            {totalCount.toLocaleString()} result{totalCount !== 1 ? "s" : ""} found — showing {results.length}
+            Top {results.length} results for "{query}"
           </div>
 
           <div style={{ display: "grid", gap: 10 }}>
