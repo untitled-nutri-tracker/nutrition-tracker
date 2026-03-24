@@ -1,4 +1,6 @@
 pub mod api;
+pub mod network_config;
+pub mod utils;
 
 use api::ai::{self, AiResponse};
 use api::openfoodfacts::{self, SearchResult};
@@ -74,6 +76,10 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            // Initialize network feature-flag configuration
+            network_config::NetworkConfig::initialize();
+
+            // Resolve the platform-specific AppData directory dynamically
             let app_data_dir = app.path().app_data_dir().map_err(|e| {
                 Box::<dyn std::error::Error>::from(format!(
                     "Failed to locate app data directory on this OS: {}",
@@ -97,6 +103,7 @@ pub fn run() {
             search_food_online,
             fetch_food_by_barcode,
             get_ai_advice,
+            network_config::get_network_config,
             // Food CRUD
             nutrack_database::food::create_food,
             nutrack_database::food::get_food,
@@ -131,7 +138,6 @@ pub fn run() {
             nutrack_database::user_profile::get_profile,
             nutrack_database::user_profile::list_profiles,
             nutrack_database::user_profile::update_profile,
-            nutrack_database::user_profile::delete_profile,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

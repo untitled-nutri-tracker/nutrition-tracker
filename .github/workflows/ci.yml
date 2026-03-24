@@ -7,11 +7,20 @@ on:
     branches: [ "main", "dev" ]
 
 jobs:
-  build:
+  # Stage 1: Fast frontend check
+  test-frontend:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18 # You were using 18 before
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
 
     # Install Linux dependencies required by Tauri
     - name: Install system dependencies for Tauri
@@ -26,22 +35,51 @@ jobs:
           libgdk-pixbuf-2.0-dev \
           patchelf
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Install Node
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18
-
-    - name: Install frontend deps
-      run: npm install
-
     - name: Build frontend
       run: npm run build
 
-    - name: Build Tauri
-      run: cargo build --release
+  # Stage 2: Tauri Rust build & test
+  test-tauri:
+    needs: test-frontend # Only run if frontend build succeeds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Run Rust tests
-      run: cargo test
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      # Extremely helpful for speeding up Rust builds in Github Actions
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri"
+
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run Rust tests
+        run: cargo test
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Just builds the app without uploading any release assets
+          args: ''

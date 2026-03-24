@@ -1,3 +1,4 @@
+import { useNetwork } from "../lib/NetworkContext";
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -22,6 +23,7 @@ const QUICK_PROMPTS = [
 ];
 
 export default function AiAdvisor() {
+  const { isOnline } = useNetwork();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -71,6 +73,22 @@ export default function AiAdvisor() {
 
   return (
     <div style={{ display: "grid", gap: 14, maxWidth: 900 }}>
+      {!isOnline && (
+        <div
+          className="card"
+          style={{
+            border: "1px solid rgba(255, 180, 0, 0.3)",
+            background: "rgba(255, 180, 0, 0.06)",
+          }}
+        >
+          <div style={{ fontWeight: 600 }}>You're offline</div>
+          <div style={{ marginTop: 6, color: "var(--muted)" }}>
+            AI nutrition advice requires an internet connection. Connect to the
+            network, then come back.
+          </div>
+        </div>
+      )}
+
       {/* Info card */}
       <div className="card">
         <div style={{ fontWeight: 700, fontSize: 16 }}>🤖 AI Nutrition Advisor</div>
