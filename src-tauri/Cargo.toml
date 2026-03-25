@@ -6,7 +6,6 @@ license.workspace = true
 description = "A Tauri App"
 default-run = "nutrition-tracker"
 authors = ["you"]
-default-run = "nutrition-tracker"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
