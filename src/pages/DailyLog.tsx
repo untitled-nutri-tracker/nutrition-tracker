@@ -1,292 +1,263 @@
-import { useState, useEffect, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { useNavigate } from "react-router-dom";
+// src/pages/DailyLog.tsx
+// Sprint 2.7 — Refactored to use ui component library
+
+import { useState } from "react";
+import { useDailyLog } from "../hooks/useDailyLog";
+import { localDateString } from "../lib/foodLogStore";
+import { MEAL_TYPE_ORDER, MEAL_TYPE_LABELS, MEAL_TYPE_ICONS } from "../types/foodLog";
+import type { MealType } from "../types/foodLog";
+import AddEntryModal from "../components/AddEntryModal";
+import FoodEntryRow from "../components/FoodEntryRow";
 import ProfileSummaryCard from "../components/ProfileSummaryCard";
-import {
-  Meal, MealItem, NutritionFacts,
-  MEAL_ORDER, MEAL_ICONS, r, todayStr, dateToEpoch,
-} from "../types";
+import Button from "../components/ui/Button";
+import StatCard from "../components/ui/StatCard";
+import EmptyState from "../components/ui/EmptyState";
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const TODAY = localDateString();
+
+function formatDisplayDate(dateStr: string): string {
+  if (dateStr === TODAY) return "Today";
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month:   "short",
+    day:     "numeric",
+  });
+}
+
+function prevDay(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() - 1);
+  return localDateString(d);
+}
+
+function nextDay(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + 1);
+  return localDateString(d);
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function DailyLog() {
-  const navigate = useNavigate();
-  const [date, setDate] = useState(todayStr());
-  const [meals, setMeals] = useState<Meal[]>([]);
-  const [mealItems, setMealItems] = useState<Record<number, MealItem[]>>({});
-  const [nutrition, setNutrition] = useState<Record<number, NutritionFacts>>({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [editingQty, setEditingQty] = useState<number | null>(null);
-  const [editQtyValue, setEditQtyValue] = useState("");
+  const {
+    entries, date, setDate, totals,
+    loading, saving, error,
+    addEntry, removeEntry,
+  } = useDailyLog();
 
-  const loadDay = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const start = dateToEpoch(date);
-      const end = start + 86400;
-      const dayMeals = await invoke<Meal[]>("list_meals_by_date_range", { start, end });
-      setMeals(dayMeals.sort((a, b) => (MEAL_ORDER[a.mealType] || 99) - (MEAL_ORDER[b.mealType] || 99)));
+  const [modalOpen, setModalOpen] = useState(false);
 
-      const itemMap: Record<number, MealItem[]> = {};
-      const nutMap: Record<number, NutritionFacts> = {};
+  const grouped = MEAL_TYPE_ORDER.reduce<Record<MealType, typeof entries>>(
+    (acc, mt) => { acc[mt] = entries.filter((e) => e.mealType === mt); return acc; },
+    { breakfast: [], lunch: [], dinner: [], snack: [] }
+  );
 
-      for (const meal of dayMeals) {
-        const items = await invoke<MealItem[]>("list_meal_items_by_meal", { mealId: meal.id });
-        itemMap[meal.id] = items;
+  const isToday  = date === TODAY;
+  const isFuture = date > TODAY;
 
-        for (const item of items) {
-          if (!nutMap[item.serving.id]) {
-            try {
-              const nf = await invoke<NutritionFacts | null>("get_nutrition_facts", { servingId: item.serving.id });
-              if (nf) nutMap[item.serving.id] = nf;
-            } catch (_) {}
-          }
-        }
-      }
-      setMealItems(itemMap);
-      setNutrition(nutMap);
-    } catch (e: any) {
-      setError(e?.toString() ?? "Failed to load");
-    } finally {
-      setLoading(false);
-    }
-  }, [date]);
-
-  useEffect(() => { loadDay(); }, [loadDay]);
-
-  async function handleDeleteItem(id: number) {
-    try {
-      await invoke("delete_meal_item", { id });
-      await loadDay();
-    } catch (e: any) {
-      setError(e?.toString() ?? "Failed to delete");
-    }
-  }
-
-  async function handleSaveQty(item: MealItem) {
-    const newQty = parseFloat(editQtyValue) || 1;
-    if (newQty === item.quantity) { setEditingQty(null); return; }
-    try {
-      const ts = Math.floor(Date.now() / 1000);
-      await invoke("update_meal_item", {
-        mealItem: { ...item, quantity: newQty, updatedAt: ts },
-      });
-      setEditingQty(null);
-      await loadDay();
-    } catch (e: any) {
-      setError(e?.toString() ?? "Failed to update");
-    }
-  }
-
-  // Daily totals
-  let totalCal = 0, totalPro = 0, totalCarbs = 0, totalFat = 0;
-  for (const items of Object.values(mealItems)) {
-    for (const item of items) {
-      const nf = nutrition[item.serving.id];
-      if (nf) {
-        totalCal += nf.CALORIES_KCAL * item.quantity;
-        totalPro += nf.PROTEIN_G * item.quantity;
-        totalCarbs += nf.TOTAL_CARBOHYDRATE_G * item.quantity;
-        totalFat += nf.FAT_G * item.quantity;
-      }
-    }
-  }
-
-  const totalItems = Object.values(mealItems).reduce((s, items) => s + items.length, 0);
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
+
+      {/* Profile summary */}
       <ProfileSummaryCard />
 
-      {/* Header + date + summary */}
-      <div className="card" style={{ maxWidth: 900 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>Daily Log</div>
-            <div style={{ fontSize: 12, color: "var(--muted2)", marginTop: 2 }}>
-              {totalItems} item{totalItems !== 1 ? "s" : ""} logged
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button onClick={() => { const d = new Date(date); d.setDate(d.getDate() - 1); setDate(d.toISOString().slice(0,10)); }} style={navBtnStyle}>◀</button>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              style={{ padding: "7px 10px", borderRadius: 10, border: "1px solid var(--border)", background: "rgba(255,255,255,0.04)", color: "var(--text)", fontSize: 13 }}
-            />
-            <button onClick={() => { const d = new Date(date); d.setDate(d.getDate() + 1); setDate(d.toISOString().slice(0,10)); }} style={navBtnStyle}>▶</button>
-          </div>
+      {/* Error banner */}
+      {error && (
+        <div style={errorBannerStyle}>
+          <span style={{ fontWeight: 600 }}>Error</span> — {error}
+        </div>
+      )}
+
+      {/* Date nav + Add button */}
+      <div style={dateNavRowStyle}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setDate(prevDay(date))}
+            style={{ fontSize: 16, padding: "3px 10px" }}
+          >
+            ‹
+          </Button>
+
+          <span style={dateTextStyle}>{formatDisplayDate(date)}</span>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={isToday}
+            onClick={() => setDate(nextDay(date))}
+            style={{ fontSize: 16, padding: "3px 10px" }}
+          >
+            ›
+          </Button>
+
+          {!isToday && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDate(TODAY)}
+              style={{
+                color:       "rgba(124,92,255,0.9)",
+                borderColor: "rgba(124,92,255,0.3)",
+                background:  "rgba(124,92,255,0.10)",
+                border:      "1px solid rgba(124,92,255,0.3)",
+              }}
+            >
+              Jump to today
+            </Button>
+          )}
         </div>
 
-        {totalCal > 0 && (
-          <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <MacroPill label="Calories" value={r(totalCal)} unit="kcal" color="rgba(255,170,50,0.18)" />
-            <MacroPill label="Protein" value={r(totalPro)} unit="g" color="rgba(80,200,120,0.18)" />
-            <MacroPill label="Carbs" value={r(totalCarbs)} unit="g" color="rgba(100,149,237,0.18)" />
-            <MacroPill label="Fat" value={r(totalFat)} unit="g" color="rgba(255,99,132,0.18)" />
-          </div>
-        )}
+        <Button
+          onClick={() => setModalOpen(true)}
+          disabled={isFuture || saving}
+          iconLeft="+"
+        >
+          Add food
+        </Button>
       </div>
 
-      {error && (
-        <div className="card" style={{ maxWidth: 900, border: "1px solid rgba(255,80,80,0.35)", background: "rgba(255,80,80,0.08)" }}>
-          <div style={{ fontSize: 13 }}>{error}</div>
+      {/* Daily totals bar — only shown when there are entries */}
+      {entries.length > 0 && (
+        <div style={totalsGridStyle}>
+          <StatCard label="Calories" value={totals.calories} unit="kcal" accent />
+          <StatCard label="Protein"  value={totals.proteinG} unit="g" />
+          <StatCard label="Carbs"    value={totals.carbsG}   unit="g" />
+          <StatCard label="Fat"      value={totals.fatG}     unit="g" />
+          <StatCard label="Entries"  value={totals.entryCount} />
         </div>
       )}
 
+      {/* Loading state */}
       {loading && (
-        <div className="card" style={{ maxWidth: 900 }}>
-          <div style={{ color: "var(--muted2)", fontSize: 13 }}>Loading…</div>
+        <div style={cardStyle}>
+          <div style={{ color: "var(--muted)", fontSize: 13 }}>Loading…</div>
         </div>
       )}
 
-      {/* Meals grouped by type */}
-      {!loading && meals.length === 0 && (
-        <div className="card" style={{ maxWidth: 900 }}>
-          <div style={{ color: "var(--muted2)", fontSize: 14 }}>
-            No meals logged for this day.
-          </div>
-          <button
-            onClick={() => navigate("/log")}
-            style={{ ...logMoreBtn, marginTop: 10 }}
-          >
-            🍽️ Log Food
-          </button>
-        </div>
+      {/* Empty state */}
+      {!loading && entries.length === 0 && (
+        <EmptyState
+          icon={isFuture ? "📅" : "🍽️"}
+          title={isFuture ? "No entries for a future date" : "No entries yet"}
+          description={
+            isFuture
+              ? "Navigate back to today to start logging."
+              : "Tap \"Add food\" to log your first meal."
+          }
+          action={
+            !isFuture
+              ? { label: "+ Add food", onClick: () => setModalOpen(true) }
+              : undefined
+          }
+        />
       )}
 
-      {meals.map((meal) => {
-        const items = mealItems[meal.id] || [];
-        if (items.length === 0) return null;
-
-        // Meal-level totals
-        let mealCal = 0;
-        items.forEach((it) => { const nf = nutrition[it.serving.id]; if (nf) mealCal += nf.CALORIES_KCAL * it.quantity; });
+      {/* Meal type groups */}
+      {!loading && MEAL_TYPE_ORDER.map((mt) => {
+        const group = grouped[mt];
+        if (group.length === 0) return null;
+        const groupCals = group.reduce((sum, e) => sum + e.calories, 0);
 
         return (
-          <div key={meal.id} className="card" style={{ maxWidth: 900 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>
-                {MEAL_ICONS[meal.mealType] || "🍽️"} {meal.mealType.charAt(0) + meal.mealType.slice(1).toLowerCase()}
+          <div key={mt} style={cardStyle}>
+            {/* Group header */}
+            <div style={groupHeaderStyle}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={mealIconStyle}>{MEAL_TYPE_ICONS[mt]}</span>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>
+                  {MEAL_TYPE_LABELS[mt]}
+                </span>
               </div>
-              <span style={{ fontSize: 12, color: "var(--muted2)" }}>
-                {r(mealCal)} kcal
-              </span>
+              <span style={groupCalStyle}>{groupCals} kcal</span>
             </div>
 
-            {items.map((item) => {
-              const nf = nutrition[item.serving.id];
-              const isEditing = editingQty === item.id;
-
-              return (
-                <div
-                  key={item.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid var(--border)",
-                    marginBottom: 6,
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>
-                      {item.food.name}
-                      {item.food.brand && (
-                        <span style={{ fontWeight: 400, color: "var(--muted2)", fontSize: 11, marginLeft: 6 }}>
-                          {item.food.brand}
-                        </span>
-                      )}
-                    </div>
-                    {nf && (
-                      <div style={{ fontSize: 11, color: "var(--muted2)", marginTop: 3 }}>
-                        {r(nf.CALORIES_KCAL * item.quantity)} kcal · {r(nf.PROTEIN_G * item.quantity)}g P · {r(nf.TOTAL_CARBOHYDRATE_G * item.quantity)}g C · {r(nf.FAT_G * item.quantity)}g F
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Editable quantity */}
-                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                    {isEditing ? (
-                      <input
-                        autoFocus
-                        type="number"
-                        min="0.1"
-                        step="0.5"
-                        value={editQtyValue}
-                        onChange={(e) => setEditQtyValue(e.target.value)}
-                        onBlur={() => handleSaveQty(item)}
-                        onKeyDown={(e) => { if (e.key === "Enter") handleSaveQty(item); if (e.key === "Escape") setEditingQty(null); }}
-                        style={{ width: 50, padding: "3px 6px", borderRadius: 6, border: "1px solid rgba(124,92,255,0.4)", background: "rgba(255,255,255,0.06)", color: "var(--text)", fontSize: 12, textAlign: "center" }}
-                      />
-                    ) : (
-                      <button
-                        onClick={() => { setEditingQty(item.id); setEditQtyValue(String(item.quantity)); }}
-                        style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "3px 8px", color: "var(--text)", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
-                        title="Click to edit quantity"
-                      >
-                        ×{item.quantity}
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => handleDeleteItem(item.id)}
-                      style={{ background: "none", border: "none", color: "rgba(255,80,80,0.7)", cursor: "pointer", fontSize: 14, padding: "2px 4px" }}
-                      title="Remove"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {/* Entry rows */}
+            <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
+              {group.map((entry) => (
+                <FoodEntryRow
+                  key={entry.id}
+                  entry={entry}
+                  onDelete={removeEntry}
+                  deleting={saving}
+                />
+              ))}
+            </div>
           </div>
         );
       })}
 
-      {/* Log more food link */}
-      {!loading && meals.length > 0 && (
-        <div style={{ maxWidth: 900, textAlign: "center" }}>
-          <button onClick={() => navigate("/log")} style={logMoreBtn}>
-            + Log more food
-          </button>
-        </div>
-      )}
+      {/* Add entry modal */}
+      <AddEntryModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onAdd={addEntry}
+        saving={saving}
+      />
+
     </div>
   );
 }
 
-function MacroPill({ label, value, unit, color }: { label: string; value: number; unit: string; color: string }) {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "baseline", gap: 4, padding: "5px 12px", borderRadius: 12, background: color, border: "1px solid rgba(255,255,255,0.08)", fontSize: 13 }}>
-      <span style={{ color: "var(--muted2)", fontSize: 11 }}>{label}</span>
-      <span style={{ fontWeight: 700 }}>{value}<span style={{ fontWeight: 400, fontSize: 10, marginLeft: 1 }}>{unit}</span></span>
-    </span>
-  );
-}
+// ── Styles ────────────────────────────────────────────────────────────────────
 
-const navBtnStyle: React.CSSProperties = {
-  padding: "5px 10px",
-  borderRadius: 8,
-  border: "1px solid var(--border)",
-  background: "rgba(255,255,255,0.04)",
-  color: "var(--text)",
-  cursor: "pointer",
-  fontSize: 14,
+const cardStyle: React.CSSProperties = {
+  border:       "1px solid var(--border)",
+  background:   "rgba(255,255,255,0.04)",
+  borderRadius: 14,
+  padding:      "14px 16px",
 };
 
-const logMoreBtn: React.CSSProperties = {
-  padding: "8px 18px",
-  borderRadius: 10,
-  border: "1px solid rgba(124,92,255,0.3)",
-  background: "linear-gradient(135deg, rgba(124,92,255,0.15), rgba(0,209,255,0.08))",
-  color: "var(--text)",
-  cursor: "pointer",
-  fontSize: 13,
+const errorBannerStyle: React.CSSProperties = {
+  ...cardStyle,
+  border:     "1px solid rgba(255,80,80,0.35)",
+  background: "rgba(255,80,80,0.08)",
+  fontSize:   13,
+};
+
+const dateNavRowStyle: React.CSSProperties = {
+  display:        "flex",
+  alignItems:     "center",
+  justifyContent: "space-between",
+  gap:            12,
+};
+
+const dateTextStyle: React.CSSProperties = {
+  fontSize:  14,
+  fontWeight: 700,
+  minWidth:  90,
+  textAlign: "center",
+};
+
+const totalsGridStyle: React.CSSProperties = {
+  display:             "grid",
+  gridTemplateColumns: "repeat(5, 1fr)",
+  gap:                 10,
+};
+
+const groupHeaderStyle: React.CSSProperties = {
+  display:        "flex",
+  alignItems:     "center",
+  justifyContent: "space-between",
+};
+
+const mealIconStyle: React.CSSProperties = {
+  fontSize:     16,
+  lineHeight:   1,
+  background:   "rgba(255,255,255,0.06)",
+  border:       "1px solid var(--border)",
+  borderRadius: 8,
+  padding:      "4px 6px",
+};
+
+const groupCalStyle: React.CSSProperties = {
+  fontSize:   12,
   fontWeight: 600,
+  color:      "var(--muted)",
 };
