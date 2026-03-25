@@ -1,5 +1,6 @@
 use nutrack_model::food::{Food, NutritionFacts, Serving};
 use nutrack_model::metric_unit::MetricUnit;
+use nutrack_model::validate::Validate;
 use rusqlite::{params, Connection, OptionalExtension};
 
 fn food_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Food> {
@@ -24,10 +25,12 @@ fn get_food_with_conn(conn: &Connection, id: i64) -> Result<Option<Food>, String
         food_from_row,
     )
     .optional()
-    .map_err(|e| e.to_string())
+    .map_err(|e| crate::sanitize_db_error(e.to_string()))
 }
 
 fn create_food_with_conn(conn: &Connection, food: Food) -> Result<Food, String> {
+    // Validate struct fields at the IPC boundary before any DB operation
+    food.validate()?;
     let id_param: Option<i64> = if food.id == 0 { None } else { Some(food.id) };
     conn.execute(
         "INSERT INTO foods (
@@ -45,7 +48,7 @@ fn create_food_with_conn(conn: &Connection, food: Food) -> Result<Food, String> 
             food.updated_at
         ],
     )
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     let row_id = if food.id == 0 { conn.last_insert_rowid() } else { food.id };
     get_food_with_conn(conn, row_id)?
@@ -58,14 +61,16 @@ fn list_foods_with_conn(conn: &Connection) -> Result<Vec<Food>, String> {
             "SELECT id, name, brand, category, source, ref_url, barcode, created_at, updated_at
              FROM foods ORDER BY id",
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
-    let rows = stmt.query_map([], food_from_row).map_err(|e| e.to_string())?;
+    let rows = stmt.query_map([], food_from_row).map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     rows.collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))
 }
 
 fn update_food_with_conn(conn: &Connection, food: Food) -> Result<Food, String> {
+    // Validate struct fields at the IPC boundary before modifying the database
+    food.validate()?;
     let id = food.id;
     let changed = conn
         .execute(
@@ -85,7 +90,7 @@ fn update_food_with_conn(conn: &Connection, food: Food) -> Result<Food, String> 
                 id
             ],
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     if changed == 0 {
         return Err(format!("Food not found for id {id}"));
@@ -98,7 +103,7 @@ fn update_food_with_conn(conn: &Connection, food: Food) -> Result<Food, String> 
 fn delete_food_with_conn(conn: &Connection, id: i64) -> Result<bool, String> {
     let changed = conn
         .execute("DELETE FROM foods WHERE id = ?1", params![id])
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     Ok(changed > 0)
 }
 
@@ -124,7 +129,7 @@ fn get_serving_with_conn(conn: &Connection, id: i64) -> Result<Option<Serving>, 
             serving_row_to_parts,
         )
         .optional()
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     let Some((id, food_id, amount, unit, grams_equiv, is_default, created_at, updated_at)) = row
     else {
@@ -147,6 +152,8 @@ fn get_serving_with_conn(conn: &Connection, id: i64) -> Result<Option<Serving>, 
 }
 
 fn create_serving_with_conn(conn: &Connection, serving: Serving) -> Result<Serving, String> {
+    // Validate serving fields (amount > 0, grams_equiv > 0) before DB insertion
+    serving.validate()?;
     let id_param: Option<i64> = if serving.id == 0 { None } else { Some(serving.id) };
     conn.execute(
         "INSERT INTO servings (
@@ -163,7 +170,7 @@ fn create_serving_with_conn(conn: &Connection, serving: Serving) -> Result<Servi
             serving.updated_at
         ],
     )
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     let row_id = if serving.id == 0 { conn.last_insert_rowid() } else { serving.id };
     get_serving_with_conn(conn, row_id)?
@@ -178,7 +185,7 @@ fn list_servings_by_food_with_conn(conn: &Connection, food_id: i64) -> Result<Ve
             "SELECT id, food_id, amount, unit, grams_equiv, is_default, created_at, updated_at
              FROM servings WHERE food_id = ?1 ORDER BY id",
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     let rows = stmt
         .query_map(params![food_id], |row| {
@@ -213,12 +220,14 @@ fn list_servings_by_food_with_conn(conn: &Connection, food_id: i64) -> Result<Ve
                 updated_at,
             })
         })
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
-    rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+    rows.collect::<Result<Vec<_>, _>>().map_err(|e| crate::sanitize_db_error(e.to_string()))
 }
 
 fn update_serving_with_conn(conn: &Connection, serving: Serving) -> Result<Serving, String> {
+    // Validate serving fields at the IPC boundary before modifying the database
+    serving.validate()?;
     let id = serving.id;
     let changed = conn
         .execute(
@@ -237,7 +246,7 @@ fn update_serving_with_conn(conn: &Connection, serving: Serving) -> Result<Servi
                 id
             ],
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     if changed == 0 {
         return Err(format!("Serving not found for id {id}"));
@@ -250,7 +259,7 @@ fn update_serving_with_conn(conn: &Connection, serving: Serving) -> Result<Servi
 fn delete_serving_with_conn(conn: &Connection, id: i64) -> Result<bool, String> {
     let changed = conn
         .execute("DELETE FROM servings WHERE id = ?1", params![id])
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     Ok(changed > 0)
 }
 
@@ -335,7 +344,7 @@ fn get_nutrition_facts_with_conn(
             nutrition_facts_row,
         )
         .optional()
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     row.map(|facts_row| nutrition_facts_from_row(conn, facts_row))
         .transpose()
@@ -345,6 +354,8 @@ fn create_nutrition_facts_with_conn(
     conn: &Connection,
     nutrition_facts: NutritionFacts,
 ) -> Result<NutritionFacts, String> {
+    // Validate all nutritional values are non-negative before DB insertion
+    nutrition_facts.validate()?;
     let serving_id = nutrition_facts.serving.id;
     conn.execute(
         "INSERT INTO nutrition_facts (
@@ -370,7 +381,7 @@ fn create_nutrition_facts_with_conn(
             nutrition_facts.iron_mg
         ],
     )
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     get_nutrition_facts_with_conn(conn, serving_id)?.ok_or_else(|| {
         format!(
@@ -387,15 +398,15 @@ fn list_nutrition_facts_with_conn(conn: &Connection) -> Result<Vec<NutritionFact
                     total_sugars_g, added_sugars_g, protein_g, vitamin_d_mcg, calcium_mg, iron_mg
              FROM nutrition_facts ORDER BY serving_id",
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     let rows = stmt
         .query_map([], nutrition_facts_row)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     let mut facts = Vec::new();
     for row in rows {
-        facts.push(nutrition_facts_from_row(conn, row.map_err(|e| e.to_string())?)?);
+        facts.push(nutrition_facts_from_row(conn, row.map_err(|e| crate::sanitize_db_error(e.to_string()))?)?);
     }
     Ok(facts)
 }
@@ -404,6 +415,8 @@ fn update_nutrition_facts_with_conn(
     conn: &Connection,
     nutrition_facts: NutritionFacts,
 ) -> Result<NutritionFacts, String> {
+    // Validate all nutritional values at the IPC boundary before modifying the database
+    nutrition_facts.validate()?;
     let serving_id = nutrition_facts.serving.id;
     let changed = conn
         .execute(
@@ -431,7 +444,7 @@ fn update_nutrition_facts_with_conn(
                 serving_id
             ],
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     if changed == 0 {
         return Err(format!("Nutrition facts not found for serving_id {serving_id}"));
@@ -450,7 +463,7 @@ fn delete_nutrition_facts_with_conn(conn: &Connection, serving_id: i64) -> Resul
             "DELETE FROM nutrition_facts WHERE serving_id = ?1",
             params![serving_id],
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     Ok(changed > 0)
 }
 
@@ -459,8 +472,8 @@ fn delete_nutrition_facts_with_conn(conn: &Connection, serving_id: i64) -> Resul
 ///
 /// A food is the parent record for one or more servings.
 pub async fn create_food(food: Food) -> Result<Food, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     create_food_with_conn(&conn, food)
 }
 
@@ -469,16 +482,16 @@ pub async fn create_food(food: Food) -> Result<Food, String> {
 ///
 /// Returns `Ok(None)` when no food exists for the provided id.
 pub async fn get_food(id: i64) -> Result<Option<Food>, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     get_food_with_conn(&conn, id)
 }
 
 #[tauri::command]
 /// Lists all foods ordered by id.
 pub async fn list_foods() -> Result<Vec<Food>, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     list_foods_with_conn(&conn)
 }
 
@@ -487,8 +500,8 @@ pub async fn list_foods() -> Result<Vec<Food>, String> {
 ///
 /// Returns an error when the target food does not exist.
 pub async fn update_food(food: Food) -> Result<Food, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     update_food_with_conn(&conn, food)
 }
 
@@ -497,8 +510,8 @@ pub async fn update_food(food: Food) -> Result<Food, String> {
 ///
 /// Returns `true` when a row was deleted and `false` when the id was not found.
 pub async fn delete_food(id: i64) -> Result<bool, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     delete_food_with_conn(&conn, id)
 }
 
@@ -508,8 +521,8 @@ pub async fn delete_food(id: i64) -> Result<bool, String> {
 /// A single food can have multiple servings. Each serving belongs to exactly one food and can
 /// have one associated [`NutritionFacts`] record.
 pub async fn create_serving(serving: Serving) -> Result<Serving, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     create_serving_with_conn(&conn, serving)
 }
 
@@ -518,8 +531,8 @@ pub async fn create_serving(serving: Serving) -> Result<Serving, String> {
 ///
 /// Returns `Ok(None)` when no serving exists for the provided id.
 pub async fn get_serving(id: i64) -> Result<Option<Serving>, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     get_serving_with_conn(&conn, id)
 }
 
@@ -528,8 +541,8 @@ pub async fn get_serving(id: i64) -> Result<Option<Serving>, String> {
 ///
 /// Returns an error when the parent food does not exist.
 pub async fn list_servings_by_food(food_id: i64) -> Result<Vec<Serving>, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     list_servings_by_food_with_conn(&conn, food_id)
 }
 
@@ -538,8 +551,8 @@ pub async fn list_servings_by_food(food_id: i64) -> Result<Vec<Serving>, String>
 ///
 /// Returns an error when the target serving does not exist.
 pub async fn update_serving(serving: Serving) -> Result<Serving, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     update_serving_with_conn(&conn, serving)
 }
 
@@ -548,8 +561,8 @@ pub async fn update_serving(serving: Serving) -> Result<Serving, String> {
 ///
 /// Returns `true` when a row was deleted and `false` when the id was not found.
 pub async fn delete_serving(id: i64) -> Result<bool, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     delete_serving_with_conn(&conn, id)
 }
 
@@ -560,8 +573,8 @@ pub async fn delete_serving(id: i64) -> Result<bool, String> {
 pub async fn create_nutrition_facts(
     nutrition_facts: NutritionFacts,
 ) -> Result<NutritionFacts, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     create_nutrition_facts_with_conn(&conn, nutrition_facts)
 }
 
@@ -570,16 +583,16 @@ pub async fn create_nutrition_facts(
 ///
 /// Returns `Ok(None)` when the serving has no nutrition-facts row.
 pub async fn get_nutrition_facts(serving_id: i64) -> Result<Option<NutritionFacts>, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     get_nutrition_facts_with_conn(&conn, serving_id)
 }
 
 #[tauri::command]
 /// Lists all nutrition-facts rows ordered by serving id.
 pub async fn list_nutrition_facts() -> Result<Vec<NutritionFacts>, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     list_nutrition_facts_with_conn(&conn)
 }
 
@@ -590,8 +603,8 @@ pub async fn list_nutrition_facts() -> Result<Vec<NutritionFacts>, String> {
 pub async fn update_nutrition_facts(
     nutrition_facts: NutritionFacts,
 ) -> Result<NutritionFacts, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     update_nutrition_facts_with_conn(&conn, nutrition_facts)
 }
 
@@ -600,8 +613,8 @@ pub async fn update_nutrition_facts(
 ///
 /// Returns `true` when a row was deleted and `false` when the serving had no nutrition-facts row.
 pub async fn delete_nutrition_facts(serving_id: i64) -> Result<bool, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     delete_nutrition_facts_with_conn(&conn, serving_id)
 }
 

@@ -17,6 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI component library (`src/components/ui/`) — `Button`, `Input`, `Select`, `Modal`, `StatCard`, `EmptyState` primitives for consistent styling across all pages.
 
 
+## [0.5.0] - 2026-03-22
+
+### Added
+- **Security & IPC:** `Validate` trait in `nutrack-model` and new `ipc_guards`/`ipc_errors` modules to securely sanitize Tauri command inputs and database errors.
+- **Database CRUD:** Full backend implementation of `Food`, `Serving`, `NutritionFacts`, `Meal`, and `MealItem` operations, completely replacing previous stubs (merged from `#66`).
+- **Validation Wiring:** IPC validation securely wired into all active database create/update commands.
+- Comprehensive unit and integration test suites for both validation rules and database queries.
+
+---
+
 ## [0.4.1] - 2026-03-20
 
 ### Changed
