@@ -73,19 +73,6 @@ This separation of concerns makes unit testing the database layer extremely fast
 ### 6. UI Error Handling Convention
 The frontend relies on consistent error presentation. Caught backend errors or local validations should be displayed contextually within the active page or component, typically using the standardized error card styling established in components like `Settings` and `AiAdvisor`.
 
-### 7. Frontend Data Persistence Pattern
-The frontend uses a dual-mode persistence pattern for all local state:
-- **`USE_TAURI = false`:** Data is stored in `localStorage` using versioned keys (e.g., `nutrilog.foodLog.v1.YYYY-MM-DD`). This allows the full UI to work without any Rust backend.
-- **`USE_TAURI = true`:** A single flag flip switches all reads/writes to Tauri IPC commands. No other code changes are required.
-- This pattern is established in `profileStore.ts` (Sprint 1.4) and `foodLogStore.ts` (Sprint 2.1), and should be followed by all future frontend data layers.
-
-### 8. UI Component Library
-Shared UI primitives live in `src/components/ui/` and must be used instead of writing one-off inline styles:
-- `Button` — variants: `primary`, `secondary`, `ghost`, `danger`. Sizes: `sm`, `md`, `lg`.
-- `Input` / `Select` — with `label`, `error`, and `hint` props.
-- `Modal` — handles ESC close, backdrop click, and body scroll lock.
-- `StatCard` — for displaying numeric metrics with optional accent color.
-- `EmptyState` — for zero-data views with optional CTA button.
 ---
 
 **Note on Changelogs:**

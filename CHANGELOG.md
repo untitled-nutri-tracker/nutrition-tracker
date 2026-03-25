@@ -6,16 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
-## [0.5.0] - 2026-03-22
-
-### Added
-- `FoodEntry` type definitions and `foodLogStore` persistence layer (`src/types/foodLog.ts`, `src/lib/foodLogStore.ts`) — localStorage-backed with `USE_TAURI` toggle, ready to connect to Rust CRUD commands.
-- `useDailyLog` React hook (`src/hooks/useDailyLog.ts`) — manages daily entry state, add/remove/edit operations, and real-time macro totals.
-- `AddEntryModal` component — meal type selection, macro inputs, and form validation.
-- `FoodEntryRow` component — displays a single food entry with macro chips and delete action.
-- Daily Log page (`src/pages/DailyLog.tsx`) — date navigation, grouped meal sections, daily totals bar, and empty state.
-- UI component library (`src/components/ui/`) — `Button`, `Input`, `Select`, `Modal`, `StatCard`, `EmptyState` primitives for consistent styling across all pages.
-
 
 ## [0.4.1] - 2026-03-20
 
