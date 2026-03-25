@@ -8,3 +8,4 @@
 ///
 /// See [`openfoodfacts`] for a reference implementation.
 pub mod openfoodfacts;
+pub mod ai;
