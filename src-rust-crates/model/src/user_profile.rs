@@ -38,14 +38,14 @@ impl crate::validate::Validate for UserProfile {
         if name.len() > 100 {
             return Err("Name is too long (max 100 characters).".into());
         }
-        if self.weight <= 0.0 {
-            return Err("Weight must be a positive number.".into());
+        if !self.weight.is_finite() || self.weight <= 0.0 {
+            return Err("Weight must be a positive finite number.".into());
         }
         if self.weight > 1000.0 {
             return Err("Weight exceeds maximum allowed value (1000).".into());
         }
-        if self.height <= 0.0 {
-            return Err("Height must be a positive number.".into());
+        if !self.height.is_finite() || self.height <= 0.0 {
+            return Err("Height must be a positive finite number.".into());
         }
         if self.height > 400.0 {
             return Err("Height exceeds maximum allowed value (400).".into());

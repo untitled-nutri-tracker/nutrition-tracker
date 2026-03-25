@@ -94,24 +94,48 @@ impl crate::validate::Validate for Serving {
 
 impl crate::validate::Validate for NutritionFacts {
     fn validate(&self) -> Result<(), String> {
-        if self.calories_kcal < 0.0 {
-            return Err("Calories cannot be negative.".into());
+        if !self.calories_kcal.is_finite() || self.calories_kcal < 0.0 {
+            return Err("Calories cannot be negative or non-finite.".into());
         }
-        if self.fat_g < 0.0 || self.saturated_fat_g < 0.0 || self.trans_fat_g < 0.0 {
-            return Err("Fat values cannot be negative.".into());
+        if !self.fat_g.is_finite()
+            || self.fat_g < 0.0
+            || !self.saturated_fat_g.is_finite()
+            || self.saturated_fat_g < 0.0
+            || !self.trans_fat_g.is_finite()
+            || self.trans_fat_g < 0.0
+        {
+            return Err("Fat values cannot be negative or non-finite.".into());
         }
-        if self.protein_g < 0.0 {
-            return Err("Protein cannot be negative.".into());
+        if !self.protein_g.is_finite() || self.protein_g < 0.0 {
+            return Err("Protein cannot be negative or non-finite.".into());
         }
-        if self.total_carbohydrate_g < 0.0
+        if !self.total_carbohydrate_g.is_finite()
+            || self.total_carbohydrate_g < 0.0
+            || !self.dietary_fiber_g.is_finite()
             || self.dietary_fiber_g < 0.0
+            || !self.total_sugars_g.is_finite()
             || self.total_sugars_g < 0.0
+            || !self.added_sugars_g.is_finite()
             || self.added_sugars_g < 0.0
         {
-            return Err("Carbohydrate values cannot be negative.".into());
+            return Err("Carbohydrate values cannot be negative or non-finite.".into());
         }
-        if self.cholesterol_mg < 0.0 || self.sodium_mg < 0.0 {
-            return Err("Cholesterol and sodium cannot be negative.".into());
+        if !self.cholesterol_mg.is_finite()
+            || self.cholesterol_mg < 0.0
+            || !self.sodium_mg.is_finite()
+            || self.sodium_mg < 0.0
+        {
+            return Err("Cholesterol and sodium cannot be negative or non-finite.".into());
+        }
+        if !self.vitamin_d_mcg.is_finite()
+            || self.vitamin_d_mcg < 0.0
+            || !self.calcium_mg.is_finite()
+            || self.calcium_mg < 0.0
+            || !self.iron_mg.is_finite()
+            || self.iron_mg < 0.0
+        {
+            return Err("Vitamin D, calcium, and iron values cannot be negative or non-finite."
+                .into());
         }
         self.serving.validate()?;
         Ok(())

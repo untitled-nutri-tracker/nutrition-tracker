@@ -18,7 +18,7 @@ fn get_profile_with_conn(conn: &Connection, id: i16) -> Result<Option<UserProfil
             },
         )
         .optional()
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     let Some((id, name, sex, weight, height)) = row else {
         return Ok(None);
@@ -52,7 +52,7 @@ fn create_profile_with_conn(
         "INSERT INTO user_profiles (id, name, sex, weight, height) VALUES (?1, ?2, ?3, ?4, ?5)",
         params![i64::from(id), name, i64::from(sex), weight, height],
     )
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     get_profile_with_conn(conn, id)?
         .ok_or_else(|| format!("Profile was inserted but could not be read back for id {id}"))
@@ -61,7 +61,7 @@ fn create_profile_with_conn(
 fn list_profiles_with_conn(conn: &Connection) -> Result<Vec<UserProfile>, String> {
     let mut stmt = conn
         .prepare("SELECT id, name, sex, weight, height FROM user_profiles ORDER BY id")
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     let rows = stmt
         .query_map([], |row| {
@@ -73,11 +73,11 @@ fn list_profiles_with_conn(conn: &Connection) -> Result<Vec<UserProfile>, String
                 row.get::<_, f32>(4)?,
             ))
         })
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     let mut profiles = Vec::new();
     for row in rows {
-        let (id, name, sex, weight, height) = row.map_err(|e| e.to_string())?;
+        let (id, name, sex, weight, height) = row.map_err(|e| crate::sanitize_db_error(e.to_string()))?;
         let id = i16::try_from(id).map_err(|_| format!("Profile id out of i16 range: {id}"))?;
         profiles.push(UserProfile {
             id,
@@ -110,7 +110,7 @@ fn update_profile_with_conn(
             "UPDATE user_profiles SET name = ?1, sex = ?2, weight = ?3, height = ?4 WHERE id = ?5",
             params![name, i64::from(sex), weight, height, i64::from(id)],
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
 
     if changed == 0 {
         return Err(format!("Profile not found for id {id}"));
@@ -126,15 +126,15 @@ fn delete_profile_with_conn(conn: &Connection, id: i16) -> Result<bool, String> 
             "DELETE FROM user_profiles WHERE id = ?1",
             params![i64::from(id)],
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     Ok(changed > 0)
 }
 
 #[tauri::command]
 /// Creates a user profile record and returns the stored profile.
 pub async fn create_profile(user_profile: UserProfile) -> Result<UserProfile, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     create_profile_with_conn(&conn, user_profile)
 }
 
@@ -143,16 +143,16 @@ pub async fn create_profile(user_profile: UserProfile) -> Result<UserProfile, St
 ///
 /// Returns `Ok(None)` when no profile exists for the provided id.
 pub async fn get_profile(id: i16) -> Result<Option<UserProfile>, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     get_profile_with_conn(&conn, id)
 }
 
 #[tauri::command]
 /// Lists all user profiles ordered by id.
 pub async fn list_profiles() -> Result<Vec<UserProfile>, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     list_profiles_with_conn(&conn)
 }
 
@@ -161,8 +161,8 @@ pub async fn list_profiles() -> Result<Vec<UserProfile>, String> {
 ///
 /// Returns an error when the target profile does not exist.
 pub async fn update_profile(user_profile: UserProfile) -> Result<UserProfile, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     update_profile_with_conn(&conn, user_profile)
 }
 
@@ -171,8 +171,8 @@ pub async fn update_profile(user_profile: UserProfile) -> Result<UserProfile, St
 ///
 /// Returns `true` when a row was deleted and `false` when the id was not found.
 pub async fn delete_profile(id: i16) -> Result<bool, String> {
-    let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
-    let conn = manager.connection().map_err(|e| e.to_string())?;
+    let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     delete_profile_with_conn(&conn, id)
 }
 

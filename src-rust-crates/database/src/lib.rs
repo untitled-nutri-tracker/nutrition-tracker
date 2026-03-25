@@ -108,6 +108,21 @@ pub fn init_db(db_path: &Path) -> Result<Connection, DatabaseError> {
     Ok(conn)
 }
 
+/// Sanitises raw database errors before they cross the IPC boundary.
+pub fn sanitize_db_error(raw: String) -> String {
+    eprintln!("[DB ERROR] {raw}");
+
+    #[cfg(debug_assertions)]
+    {
+        return raw;
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        "Database operation failed. Please try again.".into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

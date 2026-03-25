@@ -61,12 +61,15 @@ impl crate::validate::Validate for Meal {
 
 impl crate::validate::Validate for MealItem {
     fn validate(&self) -> Result<(), String> {
-        if self.quantity <= 0.0 {
-            return Err("Meal item quantity must be positive.".into());
+        if !self.quantity.is_finite() || self.quantity <= 0.0 {
+            return Err("Meal item quantity must be positive and finite.".into());
         }
         if self.note.len() > 2000 {
             return Err("Meal item note is too long (max 2000 characters).".into());
         }
+        self.meal.validate()?;
+        self.food.validate()?;
+        self.serving.validate()?;
         Ok(())
     }
 }
