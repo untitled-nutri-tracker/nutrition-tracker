@@ -40,8 +40,11 @@ export default function AiAdvisor() {
     setLoading(true);
 
     try {
+      const today = new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const contextualQuestion = `(System Context: Today is ${today}. Only reference items matching this context if the user asks about today or specific dates.)\n\nUser Question: ${question.trim()}`;
+
       const result = await invoke<AiResponse>("get_ai_advice", {
-        question: question.trim(),
+        question: contextualQuestion,
         days: 7,
       });
 

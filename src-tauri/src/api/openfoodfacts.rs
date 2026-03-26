@@ -98,7 +98,7 @@ fn build_client() -> Result<Client, String> {
 /// do any special error handling for offline/timeout scenarios.
 pub async fn fetch(barcode: &str) -> Result<NutritionFacts, String> {
     let url = format!(
-        "https://world.openfoodfacts.org/api/v2/product/{}.json",
+        "https://world.openfoodfacts.net/api/v2/product/{}.json",
         barcode
     );
 
@@ -106,6 +106,7 @@ pub async fn fetch(barcode: &str) -> Result<NutritionFacts, String> {
 
     let res = client
         .get(&url)
+        .basic_auth("off", Some("off"))
         .send()
         .await
         .map_err(map_network_error)?; // user-friendly offline/timeout errors
@@ -180,7 +181,7 @@ pub async fn fetch(barcode: &str) -> Result<NutritionFacts, String> {
 /// Uses the v1 search API because v2 does NOT support full text search.
 pub async fn search(query: &str, page: u32) -> Result<SearchResult, String> {
     let url = format!(
-        "https://world.openfoodfacts.org/cgi/search.pl?search_terms={}&search_simple=1&action=process&json=1&fields=code,product_name,brands,categories,nutriments&page_size=10&page={}&sort_by=unique_scans_n",
+        "https://world.openfoodfacts.net/cgi/search.pl?search_terms={}&search_simple=1&action=process&json=1&fields=code,product_name,brands,categories,nutriments&page_size=10&page={}&sort_by=unique_scans_n",
         urlencoding(query),
         page
     );
@@ -189,6 +190,7 @@ pub async fn search(query: &str, page: u32) -> Result<SearchResult, String> {
 
     let res = client
         .get(&url)
+        .basic_auth("off", Some("off"))
         .send()
         .await
         .map_err(|e| format!("HTTP request failed: {}", e))?;

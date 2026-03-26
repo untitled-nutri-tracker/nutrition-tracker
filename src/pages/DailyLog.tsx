@@ -2,6 +2,7 @@
 // Sprint 2.7 — Refactored to use ui component library
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDailyLog } from "../hooks/useDailyLog";
 import { localDateString } from "../lib/foodLogStore";
 import { MEAL_TYPE_ORDER, MEAL_TYPE_LABELS, MEAL_TYPE_ICONS } from "../types/foodLog";
@@ -42,6 +43,7 @@ function nextDay(dateStr: string): string {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function DailyLog() {
+  const navigate = useNavigate();
   const {
     entries, date, setDate, totals,
     loading, saving, error,
@@ -115,11 +117,12 @@ export default function DailyLog() {
         </div>
 
         <Button
-          onClick={() => setModalOpen(true)}
+          variant="primary"
+          onClick={() => navigate("/log")}
           disabled={isFuture || saving}
-          iconLeft="+"
+          iconLeft="🔍"
         >
-          Add food
+          Search Food
         </Button>
       </div>
 
