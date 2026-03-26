@@ -117,9 +117,13 @@ export function defaultMealType(): string {
   return MEAL_TYPES.find((m) => h >= m.hours[0] && h < m.hours[1])?.value || "SNACK";
 }
 
-/** Today as YYYY-MM-DD string. */
+/** Today as YYYY-MM-DD string in local time. */
 export function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
 }
 
 /** Convert YYYY-MM-DD to UNIX epoch (start of day). */
