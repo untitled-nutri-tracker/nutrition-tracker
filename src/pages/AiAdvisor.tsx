@@ -1,11 +1,13 @@
 import { useNetwork } from "../lib/NetworkContext";
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { LLM_PROVIDERS } from "../hooks/useCredentials";
 
 interface AiResponse {
   nlog_data: string;
   advice: string;
   token_count: number;
+  provider: string;
 }
 
 interface ChatMessage {
@@ -30,6 +32,10 @@ export default function AiAdvisor() {
   const [error, setError] = useState<string | null>(null);
   const [showNlog, setShowNlog] = useState<number | null>(null);
 
+  // Read selected provider from localStorage (set in Settings)
+  const selectedProvider = localStorage.getItem("nutrilog_ai_provider") || "ollama";
+  const providerConfig = LLM_PROVIDERS.find((p) => p.id === selectedProvider) || LLM_PROVIDERS[0];
+
   async function sendQuestion(question: string) {
     if (!question.trim() || loading) return;
     setInput("");
@@ -46,6 +52,7 @@ export default function AiAdvisor() {
       const result = await invoke<AiResponse>("get_ai_advice", {
         question: contextualQuestion,
         days: 7,
+        provider: selectedProvider,
       });
 
       const aiMsg: ChatMessage = {
@@ -58,9 +65,18 @@ export default function AiAdvisor() {
     } catch (e: any) {
       const errMsg = e?.toString() ?? "Failed to get AI advice";
       setError(errMsg);
+
+      // Provider-aware error help
+      let helpText = errMsg;
+      if (selectedProvider === "ollama") {
+        helpText += "\n\nMake sure Ollama is running locally:\n```\nollama serve\nollama pull llama3.2\n```";
+      } else {
+        helpText += `\n\nCheck that your ${providerConfig.name} API key is configured correctly in Settings → AI Provider Configuration.`;
+      }
+
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: `⚠️ ${errMsg}\n\nMake sure Ollama is running locally:\n\`\`\`\nollama serve\nollama pull llama3.2\n\`\`\`` },
+        { role: "assistant", content: `⚠️ ${helpText}` },
       ]);
     } finally {
       setLoading(false);
@@ -96,8 +112,11 @@ export default function AiAdvisor() {
       <div className="card">
         <div style={{ fontWeight: 700, fontSize: 16 }}>🤖 AI Nutrition Advisor</div>
         <div style={{ marginTop: 4, fontSize: 12, color: "var(--muted2)" }}>
-          Powered by a local LLM (Ollama). Your data never leaves your device.
-          Ask questions about your nutrition and get personalized advice based on your meal log.
+          Powered by {providerConfig.name}.
+          {selectedProvider === "ollama"
+            ? " Your data never leaves your device."
+            : " Meal data is sent securely to the provider for analysis."}
+          {" "}Ask questions about your nutrition and get personalized advice.
         </div>
       </div>
 
