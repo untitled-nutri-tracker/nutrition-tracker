@@ -152,7 +152,6 @@ impl CredentialStore for SecureFileStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
 
     fn temp_vault() -> SecureFileStore {
         let path = std::env::temp_dir().join(format!(
