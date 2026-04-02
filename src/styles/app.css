@@ -17,14 +17,30 @@
 html, body { height: 100%; }
 body{
   margin: 0;
+  color: var(--text);
+  font-family: var(--font), serif;
+}
+
+body::before{
+  content: "";
+  position: fixed;
+  inset: 0;
   background: radial-gradient(1200px 700px at 20% -10%, rgba(124,92,255,0.22), transparent 55%),
               radial-gradient(1000px 650px at 90% 0%, rgba(0,209,255,0.18), transparent 55%),
               var(--bg);
-  color: var(--text);
-  font-family: var(--font);
+  z-index: -1;
+  pointer-events: none;
 }
 
 a{ color: inherit; }
+
+.appLoading{
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  color: var(--muted);
+}
 
 .app{
   height: 100vh;
@@ -122,6 +138,35 @@ a{ color: inherit; }
   color: var(--muted2);
 }
 
+.dbStatusLabel{
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted2);
+}
+
+.dbStatusPath{
+  margin-top: 6px;
+  line-height: 1.4;
+  word-break: break-all;
+  color: var(--text);
+}
+
+.disconnectButton{
+  margin-top: 10px;
+  width: 100%;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 9px 10px;
+  cursor: pointer;
+}
+
+.disconnectButton:hover{
+  background: rgba(255,255,255,0.09);
+}
+
 .main{
   border: 1px solid var(--border);
   background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
@@ -162,4 +207,207 @@ a{ color: inherit; }
   background: rgba(255,255,255,0.04);
   border-radius: var(--radius-sm);
   padding: 16px;
+}
+
+.landingShell{
+  min-height: 100vh;
+  padding: 32px;
+  display: grid;
+  gap: 22px;
+  align-content: start;
+}
+
+.landingHero{
+  max-width: 760px;
+}
+
+.landingHero h1{
+  margin: 8px 0 0;
+  font-size: clamp(32px, 5vw, 54px);
+  line-height: 1.02;
+}
+
+.landingHero p{
+  margin: 14px 0 0;
+  max-width: 640px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.landingEyebrow{
+  color: #8bdcff;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.landingGrid{
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.landingMenu{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 300px));
+  gap: 18px;
+  width: 100%;
+  max-width: 618px;
+}
+
+.landingChoiceCard{
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+  border-radius: 22px;
+  width: 100%;
+  min-height: 200px;
+  padding: 20px;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  box-shadow: var(--shadow);
+  transition: transform .12s ease, border-color .12s ease, background .12s ease;
+}
+
+.landingChoiceCard:hover{
+  transform: translateY(-2px);
+  border-color: rgba(139,220,255,0.35);
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.05));
+}
+
+.landingChoiceCard:disabled{
+  opacity: 0.65;
+  cursor: default;
+  transform: none;
+}
+
+.landingChoiceCard strong{
+  font-size: clamp(20px, 3vw, 28px);
+  line-height: 1.05;
+}
+
+.landingChoiceCard span:last-child{
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 30ch;
+}
+
+.landingChoiceEyebrow{
+  color: #8bdcff;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.landingCreateWrap{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 18px;
+  align-items: start;
+}
+
+.landingCard{
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+}
+
+.landingOpenHint{
+  min-height: 100%;
+}
+
+.landingCardHeader{
+  margin-bottom: 16px;
+}
+
+.landingCardTitle{
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.landingCardText{
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.landingPath{
+  margin-top: 8px;
+  font-size: 12px;
+  color: #8bdcff;
+  word-break: break-all;
+}
+
+.landingLabel{
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: var(--muted2);
+}
+
+.landingInput{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+  outline: none;
+}
+
+.landingPrimaryButton,
+.landingSecondaryButton{
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.landingPrimaryButton{
+  border: 1px solid rgba(124,92,255,0.35);
+  background: linear-gradient(135deg, rgba(124,92,255,0.28), rgba(0,209,255,0.14));
+}
+
+.landingPrimaryButton:disabled{
+  opacity: 0.6;
+  cursor: default;
+}
+
+.landingSecondaryButton{
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.05);
+}
+
+.landingButtonRow{
+  display: grid;
+  gap: 10px;
+}
+
+.landingError{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(255,80,80,0.35);
+  background: rgba(255,80,80,0.08);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+@media (max-width: 500px){
+  .landingMenu{
+    grid-template-columns: 1fr;
+    max-width: 300px;
+  }
+
+  .landingCreateWrap,
+  .landingGrid{
+    grid-template-columns: 1fr;
+  }
 }

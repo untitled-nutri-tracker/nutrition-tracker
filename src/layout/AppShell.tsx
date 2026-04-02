@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { useDatabaseSession } from "../lib/DatabaseSessionContext";
 
 function usePageMeta() {
   const { pathname } = useLocation();
@@ -71,6 +72,7 @@ function NavItem({
 
 export default function AppShell() {
   const { title, subtitle } = usePageMeta();
+  const { session, closeDatabase } = useDatabaseSession();
 
   return (
     <div className="app">
@@ -91,7 +93,15 @@ export default function AppShell() {
           <NavItem to="/settings" label="Settings" icon="⚙️" />
         </nav>
 
-        <div className="footerHint"> </div>
+        <div className="footerHint">
+          <div className="dbStatusLabel">Connected database</div>
+          <div className="dbStatusPath" title={session.connectedPath ?? ""}>
+            {session.connectedPath}
+          </div>
+          <button className="disconnectButton" onClick={closeDatabase} type="button">
+            Close database
+          </button>
+        </div>
       </aside>
 
       <section className="main">
@@ -108,7 +118,7 @@ export default function AppShell() {
           </div>
 
           <div style={{ fontSize: 12, color: "var(--muted2)" }}>
-            nutrition-tracker
+            {session.connectedPath?.split("/").pop()}
           </div>
         </header>
 

@@ -4,21 +4,10 @@ pub mod utils;
 
 use api::ai::{self, AiResponse};
 use api::openfoodfacts::{self, SearchResult};
-use tauri::Manager;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
-#[tauri::command]
-fn get_db_path(app: tauri::AppHandle) -> Result<String, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to locate app data directory: {}", e))?;
-    let db_path = app_data_dir.join("nutrition.db");
-    Ok(db_path.to_string_lossy().into_owned())
 }
 
 /// Search OpenFoodFacts by text query.
@@ -74,36 +63,35 @@ async fn get_ai_advice(question: String, days: i64) -> Result<AiResponse, String
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // Initialize network feature-flag configuration
             network_config::NetworkConfig::initialize();
-
-            // Resolve the platform-specific AppData directory dynamically
-            let app_data_dir = app.path().app_data_dir().map_err(|e| {
-                Box::<dyn std::error::Error>::from(format!(
-                    "Failed to locate app data directory on this OS: {}",
-                    e
-                ))
+            nutrack_database::DatabaseConnectionManager::initialize().map_err(|e| {
+                Box::<dyn std::error::Error>::from(format!("Failed to initialize: {e}"))
             })?;
 
-            let db_path = app_data_dir.join("nutrition.db");
-
-            nutrack_database::DatabaseConnectionManager::initialize(&db_path).map_err(|e| {
-                Box::<dyn std::error::Error>::from(format!("Failed to initialize: {}", e))
-            })?;
-
-            println!("Successfully initialized DB at: {:?}", db_path);
+            if let Err(err) = nutrack_database::session::reconnect_last_database(app.handle()) {
+                eprintln!("Failed to reconnect database at startup: {err}");
+            }
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             greet,
-            get_db_path,
             search_food_online,
             fetch_food_by_barcode,
             get_ai_advice,
             network_config::get_network_config,
+            nutrack_database::session::get_db_path,
+            nutrack_database::session::get_database_session,
+            nutrack_database::session::create_database,
+            nutrack_database::session::open_database,
+            nutrack_database::session::close_database,
+            nutrack_database::session::load_profile,
+            nutrack_database::session::save_profile,
+            nutrack_database::session::clear_profile,
             // Food CRUD
             nutrack_database::food::create_food,
             nutrack_database::food::get_food,
@@ -138,6 +126,7 @@ pub fn run() {
             nutrack_database::user_profile::get_profile,
             nutrack_database::user_profile::list_profiles,
             nutrack_database::user_profile::update_profile,
+            nutrack_database::user_profile::delete_profile,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -22,8 +22,20 @@ export default function ProfileForm(props: {
   initial?: UserProfile | null;
   onSave: (profile: UserProfile) => Promise<void>;
   saving?: boolean;
+  title?: string;
+  description?: string;
+  submitLabel?: string;
+  disableSubmit?: boolean;
 }) {
-  const { initial, onSave, saving } = props;
+  const {
+    initial,
+    onSave,
+    saving,
+    title = "Profile",
+    description = "Used to calculate BMR & TDEE.",
+    submitLabel = "Save profile",
+    disableSubmit = false,
+  } = props;
 
   const [name, setName] = useState(initial?.name ?? "");
   const [sex, setSex] = useState<Sex>(initial?.sex ?? "male");
@@ -62,9 +74,9 @@ export default function ProfileForm(props: {
     <div className="card" style={{ maxWidth: 720 }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 600 }}>Profile</div>
+          <div style={{ fontSize: 16, fontWeight: 600 }}>{title}</div>
           <div style={{ fontSize: 12, color: "var(--muted2)", marginTop: 4 }}>
-            Used to calculate BMR & TDEE.
+            {description}
           </div>
         </div>
       </div>
@@ -157,13 +169,13 @@ export default function ProfileForm(props: {
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
           <button
             onClick={submit}
-            disabled={!validation.ok || !!saving}
+            disabled={!validation.ok || !!saving || disableSubmit}
             style={{
               ...buttonStyle,
-              opacity: !validation.ok || saving ? 0.6 : 1,
+              opacity: !validation.ok || saving || disableSubmit ? 0.6 : 1,
             }}
           >
-            {saving ? "Saving..." : "Save profile"}
+            {saving ? "Saving..." : submitLabel}
           </button>
         </div>
       </div>
