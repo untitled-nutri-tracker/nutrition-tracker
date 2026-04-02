@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   SearchProduct, SearchResult, MEAL_TYPES,
@@ -6,6 +6,32 @@ import {
 } from "../types";
 import BarcodeScanner from "../components/BarcodeScanner";
 import "../styles/barcode-scanner.css";
+
+/* ------------------------------------------------------------------ */
+/*  Barcode validation helpers                                         */
+/* ------------------------------------------------------------------ */
+const BARCODE_FORMATS: { name: string; length: number }[] = [
+  { name: "UPC-E", length: 8 },
+  { name: "EAN-8", length: 8 },
+  { name: "UPC-A", length: 12 },
+  { name: "EAN-13", length: 13 },
+];
+
+function detectBarcodeFormat(code: string): string | null {
+  const digits = code.replace(/\D/g, "");
+  const match = BARCODE_FORMATS.find((f) => f.length === digits.length);
+  return match ? match.name : null;
+}
+
+function isBarcodeValid(code: string): boolean {
+  const digits = code.replace(/\D/g, "");
+  return digits.length >= 8 && digits.length <= 13 && /^\d+$/.test(digits);
+}
+
+/** Strip non-digits and auto-format for readability. */
+function formatBarcodeInput(raw: string): string {
+  return raw.replace(/[^\d]/g, "").slice(0, 13);
+}
 
 function relevanceScore(product: SearchProduct, query: string): number {
   const name = product.product_name.toLowerCase();
@@ -68,14 +94,25 @@ export default function LogFood() {
   }
 
   async function handleBarcodeSearch() {
-    if (!barcode.trim()) return;
-    await lookupBarcode(barcode.trim());
+    const digits = barcode.replace(/\D/g, "");
+    if (!digits) return;
+    if (!isBarcodeValid(digits)) {
+      setBarcodeError(`Barcode must be 8–13 digits. You entered ${digits.length}.`);
+      return;
+    }
+    await lookupBarcode(digits);
   }
+
+  // Barcode-specific error state (separate from general error)
+  const [barcodeError, setBarcodeError] = useState<string | null>(null);
+  const [barcodeNotFound, setBarcodeNotFound] = useState<string | null>(null);
 
   /** Shared barcode lookup — used by both manual entry and scanner. */
   async function lookupBarcode(code: string) {
     setLoading(true);
     setError(null);
+    setBarcodeError(null);
+    setBarcodeNotFound(null);
     setConfirmProduct(null);
     setConfirmLogged(false);
     setConfirmQty("1");
@@ -85,18 +122,28 @@ export default function LogFood() {
         barcode: code,
       });
       if (result.products.length > 0) {
-        // Show confirmation card for the first product
         setConfirmProduct(result.products[0]);
-        setResults([]); // clear search results when showing confirmation
+        setResults([]);
       } else {
-        setError(`No product found for barcode: ${code}`);
+        setBarcodeNotFound(code);
       }
     } catch (e: any) {
-      setError(e?.toString() ?? "Barcode lookup failed");
+      const msg = e?.toString() ?? "";
+      // Handle 404 / not-found gracefully
+      if (msg.includes("404") || msg.includes("not found") || msg.includes("No product")) {
+        setBarcodeNotFound(code);
+      } else {
+        setBarcodeError(`Lookup failed: ${msg.replace(/^Error:\s*/i, "")}`);
+      }
     } finally {
       setLoading(false);
     }
   }
+
+  // Computed barcode validation state
+  const barcodeDigits = useMemo(() => barcode.replace(/\D/g, ""), [barcode]);
+  const barcodeFormat = useMemo(() => detectBarcodeFormat(barcode), [barcode]);
+  const barcodeIsReady = isBarcodeValid(barcode);
 
   /** Called by the BarcodeScanner component when a barcode is detected. */
   function handleBarcodeDetected(barcodeValue: string, _format: string) {
@@ -362,28 +409,96 @@ export default function LogFood() {
           </button>
         </div>
 
-        <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr auto auto", gap: 10 }}>
-          <input
-            id="barcode-input"
-            value={barcode}
-            onChange={(e) => setBarcode(e.target.value)}
-            onKeyDown={(e) => handleKeyDown(e, handleBarcodeSearch)}
-            placeholder="Or enter a barcode…"
-            style={inputStyle}
-          />
+        {/* Barcode input row */}
+        <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr auto auto", gap: 10, alignItems: "start" }}>
+          <div>
+            <div style={{ position: "relative" }}>
+              <input
+                id="barcode-input"
+                value={barcode}
+                onChange={(e) => {
+                  setBarcode(formatBarcodeInput(e.target.value));
+                  setBarcodeError(null);
+                  setBarcodeNotFound(null);
+                }}
+                onKeyDown={(e) => handleKeyDown(e, handleBarcodeSearch)}
+                placeholder="Enter barcode (e.g. 0049000006346)"
+                inputMode="numeric"
+                maxLength={13}
+                style={{
+                  ...inputStyle,
+                  fontFamily: '"SF Mono", "Cascadia Mono", "Fira Code", monospace',
+                  letterSpacing: "1.5px",
+                  paddingRight: barcodeDigits.length > 0 ? 90 : 12,
+                }}
+              />
+              {/* Validation badge inside input */}
+              {barcodeDigits.length > 0 && (
+                <span style={{
+                  position: "absolute",
+                  right: 10,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  fontSize: 10,
+                  fontWeight: 600,
+                  padding: "2px 8px",
+                  borderRadius: 6,
+                  background: barcodeFormat
+                    ? "rgba(80,200,120,0.12)"
+                    : barcodeDigits.length > 13
+                      ? "rgba(255,80,80,0.12)"
+                      : "rgba(255,255,255,0.06)",
+                  color: barcodeFormat
+                    ? "rgba(80,200,120,0.9)"
+                    : barcodeDigits.length > 13
+                      ? "rgba(255,80,80,0.9)"
+                      : "var(--muted2)",
+                  border: `1px solid ${barcodeFormat ? "rgba(80,200,120,0.3)" : "transparent"}`,
+                }}>
+                  {barcodeFormat
+                    ? `✓ ${barcodeFormat}`
+                    : `${barcodeDigits.length}/13`}
+                </span>
+              )}
+            </div>
+            {/* Inline validation error */}
+            {barcodeError && (
+              <div style={{ marginTop: 4, fontSize: 11, color: "rgba(255,100,100,0.9)" }}>
+                ⚠️ {barcodeError}
+              </div>
+            )}
+          </div>
+
           <button
             id="barcode-search-btn"
             onClick={handleBarcodeSearch}
-            disabled={loading || !barcode.trim()}
-            style={{ ...buttonStyle, opacity: loading || !barcode.trim() ? 0.6 : 1 }}
+            disabled={loading || !barcodeIsReady}
+            style={{
+              ...buttonStyle,
+              opacity: loading || !barcodeIsReady ? 0.5 : 1,
+              background: barcodeIsReady
+                ? "linear-gradient(135deg, rgba(80,200,120,0.25), rgba(0,209,255,0.10))"
+                : "rgba(255,255,255,0.04)",
+              borderColor: barcodeIsReady
+                ? "rgba(80,200,120,0.4)"
+                : "var(--border)",
+            }}
           >
             {loading ? "Looking up…" : "🔢 Lookup"}
           </button>
+
           <button
             id="barcode-scan-btn"
-            className="scan-trigger-btn"
             onClick={() => setShowScanner(true)}
             disabled={loading}
+            style={{
+              ...buttonStyle,
+              background: "linear-gradient(135deg, rgba(0,180,255,0.2), rgba(124,92,255,0.12))",
+              borderColor: "rgba(0,180,255,0.35)",
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+            }}
           >
             📷 Scan
           </button>
@@ -476,6 +591,59 @@ export default function LogFood() {
       )}
 
       {/* Error */}
+      {/* Barcode not found — friendly card */}
+      {barcodeNotFound && (
+        <div className="card" style={{
+          maxWidth: 900,
+          border: "1px solid rgba(255,170,50,0.3)",
+          background: "rgba(255,170,50,0.06)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 28 }}>🔍</span>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>Product not found</div>
+              <div style={{ marginTop: 4, color: "var(--muted)", fontSize: 12 }}>
+                No product matched barcode
+                <code style={{
+                  padding: "2px 8px",
+                  borderRadius: 6,
+                  background: "rgba(255,255,255,0.06)",
+                  fontFamily: 'monospace',
+                  marginLeft: 4,
+                  fontSize: 12,
+                }}>{barcodeNotFound}</code>
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              onClick={() => {
+                setBarcodeNotFound(null);
+                setBarcode("");
+                // Focus the search input
+                document.getElementById("food-search-input")?.focus();
+              }}
+              style={{
+                ...logBtnStyle,
+                background: "linear-gradient(135deg, rgba(124,92,255,0.15), rgba(0,209,255,0.08))",
+              }}
+            >
+              🔍 Search by name instead
+            </button>
+            <button
+              onClick={() => setBarcodeNotFound(null)}
+              style={{ ...logBtnStyle, background: "rgba(255,255,255,0.04)", borderColor: "var(--border)" }}
+            >
+              Dismiss
+            </button>
+          </div>
+          <div style={{ marginTop: 8, fontSize: 11, color: "var(--muted2)" }}>
+            Tip: Check the barcode digits are correct, or try searching by product name.
+          </div>
+        </div>
+      )}
+
+      {/* General error (non-barcode) */}
       {error && (
         <div className="card" style={{ maxWidth: 900, border: "1px solid rgba(255,80,80,0.35)", background: "rgba(255,80,80,0.08)" }}>
           <div style={{ fontWeight: 600 }}>Error</div>
