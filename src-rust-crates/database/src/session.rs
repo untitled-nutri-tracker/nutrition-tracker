@@ -111,6 +111,9 @@ pub fn reconnect_last_database(app: &AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+/// Returns the default filesystem path suggested for newly created databases.
+///
+/// The path points to the app-managed database directory inside the user's application data area.
 #[tauri::command]
 pub fn get_db_path(app: AppHandle) -> Result<String, String> {
     Ok(default_database_directory(&app)?
@@ -119,6 +122,10 @@ pub fn get_db_path(app: AppHandle) -> Result<String, String> {
         .into_owned())
 }
 
+/// Returns the current database session state for the frontend landing flow.
+///
+/// The response includes the active database path, the last remembered path, and the default
+/// directory used for new database creation.
 #[tauri::command]
 pub fn get_database_session(app: AppHandle) -> Result<DatabaseSessionInfo, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
@@ -136,6 +143,9 @@ pub fn get_database_session(app: AppHandle) -> Result<DatabaseSessionInfo, Strin
     })
 }
 
+/// Creates a new database file at the requested path and makes it the active session.
+///
+/// If the provided path has no extension, `.db` is appended automatically.
 #[tauri::command]
 pub fn create_database(app: AppHandle, path: String) -> Result<String, String> {
     let trimmed = path.trim();
@@ -155,6 +165,9 @@ pub fn create_database(app: AppHandle, path: String) -> Result<String, String> {
     connect_database_path(&app, &db_path)
 }
 
+/// Opens an existing NutriLog database file and makes it the active session.
+///
+/// Returns the connected database path when the file exists and passes schema validation.
 #[tauri::command]
 pub fn open_database(app: AppHandle, path: String) -> Result<String, String> {
     let trimmed = path.trim();
@@ -170,6 +183,7 @@ pub fn open_database(app: AppHandle, path: String) -> Result<String, String> {
     connect_database_path(&app, &db_path)
 }
 
+/// Closes the currently connected database and clears the remembered last path.
 #[tauri::command]
 pub fn close_database(app: AppHandle) -> Result<(), String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
@@ -183,6 +197,9 @@ pub fn close_database(app: AppHandle) -> Result<(), String> {
     )
 }
 
+/// Loads the app-scoped profile payload stored in the currently connected database.
+///
+/// Returns `Ok(None)` when no profile has been initialized yet for that database.
 #[tauri::command]
 pub async fn load_profile() -> Result<Option<AppUserProfile>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
@@ -203,6 +220,7 @@ pub async fn load_profile() -> Result<Option<AppUserProfile>, String> {
         .map_err(|e| format!("Failed to parse stored profile: {e}"))
 }
 
+/// Persists the app-scoped profile payload into the currently connected database.
 #[tauri::command]
 pub async fn save_profile(profile: AppUserProfile) -> Result<(), String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
@@ -222,6 +240,7 @@ pub async fn save_profile(profile: AppUserProfile) -> Result<(), String> {
     Ok(())
 }
 
+/// Deletes the app-scoped profile payload from the currently connected database.
 #[tauri::command]
 pub async fn clear_profile() -> Result<(), String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;

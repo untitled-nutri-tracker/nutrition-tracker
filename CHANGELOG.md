@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.6.0] - 2026-04-02
+
+### Added
+- Landing page flow for database selection with distinct create/open entry points.
+- Runtime database session commands for creating, opening, closing, and restoring SQLite files across launches.
+- App-scoped profile persistence stored inside the selected database instead of browser-local storage.
+- Native Tauri dialog integration for opening existing databases and choosing save locations for new ones.
+
+### Changed
+- Database-session IPC moved out of `src-tauri` and into `src-rust-crates/database/src/session.rs` so the app crate remains an orchestration layer.
+- Desktop window default size updated to `1600x900`.
+- Main app routing now waits for an active database session before rendering tracker pages.
+
 ## [0.5.0] - 2026-03-22
 
 ### Added

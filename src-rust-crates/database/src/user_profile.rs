@@ -130,46 +130,46 @@ fn delete_profile_with_conn(conn: &Connection, id: i16) -> Result<bool, String> 
     Ok(changed > 0)
 }
 
-#[tauri::command]
 /// Creates a user profile record and returns the stored profile.
+#[tauri::command]
 pub async fn create_profile(user_profile: UserProfile) -> Result<UserProfile, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     create_profile_with_conn(&conn, user_profile)
 }
 
-#[tauri::command]
 /// Fetches a user profile by its id.
 ///
 /// Returns `Ok(None)` when no profile exists for the provided id.
+#[tauri::command]
 pub async fn get_profile(id: i16) -> Result<Option<UserProfile>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     get_profile_with_conn(&conn, id)
 }
 
-#[tauri::command]
 /// Lists all user profiles ordered by id.
+#[tauri::command]
 pub async fn list_profiles() -> Result<Vec<UserProfile>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     list_profiles_with_conn(&conn)
 }
 
-#[tauri::command]
 /// Updates an existing user profile and returns the refreshed row.
 ///
 /// Returns an error when the target profile does not exist.
+#[tauri::command]
 pub async fn update_profile(user_profile: UserProfile) -> Result<UserProfile, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     update_profile_with_conn(&conn, user_profile)
 }
 
-#[tauri::command]
 /// Deletes a user profile by id.
 ///
 /// Returns `true` when a row was deleted and `false` when the id was not found.
+#[tauri::command]
 pub async fn delete_profile(id: i16) -> Result<bool, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
