@@ -142,10 +142,16 @@ async fn ask_ollama(nlog_data: &str, prompt: &str) -> Result<AiResponse, String>
             )
         })?;
 
+    let status = res.status();
     let json: serde_json::Value = res
         .json()
         .await
         .map_err(|e| format!("Invalid response: {}", e))?;
+
+    if !status.is_success() {
+        let err_msg = json["error"]["message"].as_str().unwrap_or("Unknown error");
+        return Err(format!("Ollama error ({}): {}", status, err_msg));
+    }
 
     Ok(parse_openai_style_response(nlog_data, &json, "ollama"))
 }
@@ -276,7 +282,7 @@ async fn ask_google(nlog_data: &str, prompt: &str) -> Result<AiResponse, String>
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("Google Gemini request failed: {}", e))?;
+        .map_err(|e| format!("Google Gemini request failed: {}", e.to_string().replace(&api_key, "***")))?;
 
     let status = res.status();
     let json: serde_json::Value = res
@@ -313,6 +319,7 @@ async fn ask_google(nlog_data: &str, prompt: &str) -> Result<AiResponse, String>
 fn build_client() -> Result<Client, String> {
     Client::builder()
         .user_agent("NutriLog/1.0")
+        .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| format!("HTTP client error: {}", e))
 }

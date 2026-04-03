@@ -13,11 +13,21 @@ pub struct CredentialInfo {
     pub preview: String,
 }
 
+const ALLOWED_SERVICES: &[&str] = &[
+    crate::credentials::providers::OPENAI,
+    crate::credentials::providers::ANTHROPIC,
+    crate::credentials::providers::GOOGLE,
+    crate::credentials::providers::OLLAMA_ENDPOINT,
+];
+
 /// Store a credential (API key) for a given service/provider.
 #[tauri::command]
 pub fn store_credential(service: String, key: String) -> Result<(), String> {
     if service.trim().is_empty() {
         return Err("Service name cannot be empty".into());
+    }
+    if !ALLOWED_SERVICES.contains(&service.as_str()) {
+        return Err(format!("Unknown service: {}", service));
     }
     if key.trim().is_empty() {
         return Err("API key cannot be empty".into());

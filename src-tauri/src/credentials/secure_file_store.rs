@@ -110,6 +110,13 @@ impl SecureFileStore {
         fs::write(&self.vault_path, output)
             .map_err(|e| format!("Failed to write vault file: {}", e))?;
 
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&self.vault_path, fs::Permissions::from_mode(0o600))
+                .map_err(|e| format!("Failed to set vault permissions: {}", e))?;
+        }
+
         Ok(())
     }
 }
