@@ -1,4 +1,5 @@
 pub mod api;
+pub mod credentials;
 pub mod network_config;
 pub mod utils;
 
@@ -62,13 +63,22 @@ async fn fetch_food_by_barcode(barcode: String) -> Result<SearchResult, String> 
 }
 
 /// Get AI nutrition advice based on recent meals.
+/// Provider defaults to "ollama" if not specified.
 #[tauri::command]
-async fn get_ai_advice(question: String, days: i64) -> Result<AiResponse, String> {
+async fn get_ai_advice(
+    question: String,
+    days: i64,
+    provider: Option<String>,
+) -> Result<AiResponse, String> {
     // Build .nlog from database (via database crate)
     let nlog_data = nutrack_database::meal::build_nlog(days).await?;
 
-    // Send to Ollama
-    ai::ask_ollama(&nlog_data, &question).await
+    // Parse provider (default to Ollama for backwards compatibility)
+    let llm_provider =
+        ai::LlmProvider::from_str(&provider.unwrap_or_else(|| "ollama".into()))?;
+
+    // Send to the selected LLM provider
+    ai::ask_llm(&nlog_data, &question, &llm_provider).await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -92,6 +102,9 @@ pub fn run() {
             nutrack_database::DatabaseConnectionManager::initialize(&db_path).map_err(|e| {
                 Box::<dyn std::error::Error>::from(format!("Failed to initialize: {}", e))
             })?;
+
+            // Initialize credential manager (OS keychain or encrypted file fallback)
+            credentials::CredentialManager::initialize(&app_data_dir);
 
             println!("Successfully initialized DB at: {:?}", db_path);
 
@@ -138,6 +151,12 @@ pub fn run() {
             nutrack_database::user_profile::get_profile,
             nutrack_database::user_profile::list_profiles,
             nutrack_database::user_profile::update_profile,
+            // Credential management
+            credentials::commands::store_credential,
+            credentials::commands::delete_credential,
+            credentials::commands::has_credential,
+            credentials::commands::list_credentials,
+            credentials::commands::get_credential_preview,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
