@@ -1,120 +1,120 @@
 //! KeyringStore — OS-native credential storage via the `keyring` crate.
 //!
 //! Uses macOS Keychain, Windows Credential Manager, or Linux Secret Service.
+//! 
+//! **UX Improvement:** All keys are stored in a single JSON blob under ONE
+//! keychain entry (`__nutrilog_vault__`). This prevents the OS from prompting
+//! the user multiple times (once per API key). Furthermore, the vault is 
+//! cached in memory after the first read, so the user is only prompted at most 
+//! once per session (if they don't click "Always Allow").
 
 use super::CredentialStore;
 use keyring::Entry;
+use std::collections::HashMap;
+use std::sync::Mutex;
 
 const APP_SERVICE: &str = "com.pierretran.nutrition-tracker";
+const VAULT_KEY: &str = "__nutrilog_vault__";
 
-/// Metadata key that stores a JSON list of known service names.
-const SERVICE_REGISTRY_KEY: &str = "__nutrilog_service_registry__";
-
-pub struct KeyringStore;
+pub struct KeyringStore {
+    /// In-memory cache of the decrypted vault to avoid repeated OS prompts.
+    cache: Mutex<Option<HashMap<String, String>>>,
+}
 
 impl KeyringStore {
     /// Try to create a new `KeyringStore`.
     /// Returns an error if the OS keyring is not available.
     pub fn new() -> Result<Self, String> {
-        // Probe the keyring by attempting a no-op read
-        let entry = Entry::new(APP_SERVICE, SERVICE_REGISTRY_KEY)
+        let entry = Entry::new(APP_SERVICE, VAULT_KEY)
             .map_err(|e| format!("Keyring init failed: {}", e))?;
 
-        // If the registry doesn't exist yet, that's fine — we'll create it on first store.
-        match entry.get_password() {
-            Ok(_) => {}
-            Err(keyring::Error::NoEntry) => {}
+        // Probe the keyring and warm up the cache immediately.
+        // This is the SINGLE point where the OS might prompt the user for password access.
+        let vault = match entry.get_password() {
+            Ok(json) => serde_json::from_str(&json).unwrap_or_default(),
+            Err(keyring::Error::NoEntry) => HashMap::new(),
             Err(e) => {
                 // Some other error => keyring may not be functional
                 return Err(format!("Keyring probe failed: {}", e));
             }
-        }
-        Ok(KeyringStore)
-    }
-
-    /// Read the service registry (JSON array of service names).
-    fn read_registry(&self) -> Vec<String> {
-        let entry = match Entry::new(APP_SERVICE, SERVICE_REGISTRY_KEY) {
-            Ok(e) => e,
-            Err(_) => return vec![],
         };
-        match entry.get_password() {
-            Ok(json) => serde_json::from_str(&json).unwrap_or_default(),
-            Err(_) => vec![],
-        }
+
+        Ok(KeyringStore {
+            cache: Mutex::new(Some(vault)),
+        })
     }
 
-    /// Write the service registry.
-    fn write_registry(&self, services: &[String]) -> Result<(), String> {
-        let entry = Entry::new(APP_SERVICE, SERVICE_REGISTRY_KEY)
-            .map_err(|e| format!("Registry entry error: {}", e))?;
-        let json =
-            serde_json::to_string(services).map_err(|e| format!("JSON serialize error: {}", e))?;
+    /// Read the vault securely, favoring the in-memory cache if available.
+    fn read_vault(&self) -> Result<HashMap<String, String>, String> {
+        let mut guard = self.cache.lock().unwrap();
+        if let Some(vault) = &*guard {
+            return Ok(vault.clone());
+        }
+
+        let entry = Entry::new(APP_SERVICE, VAULT_KEY)
+            .map_err(|e| format!("Keyring entry error: {}", e))?;
+
+        let vault: HashMap<String, String> = match entry.get_password() {
+            Ok(json) => serde_json::from_str(&json).unwrap_or_default(),
+            Err(keyring::Error::NoEntry) => HashMap::new(),
+            Err(e) => return Err(format!("Failed to read vault: {}", e)),
+        };
+
+        *guard = Some(vault.clone());
+        Ok(vault)
+    }
+
+    /// Write the vault back to the OS Keychain and update the cache.
+    fn write_vault(&self, vault: &HashMap<String, String>) -> Result<(), String> {
+        let entry = Entry::new(APP_SERVICE, VAULT_KEY)
+            .map_err(|e| format!("Keyring entry error: {}", e))?;
+
+        let json = serde_json::to_string(vault)
+            .map_err(|e| format!("JSON serialize error: {}", e))?;
+
         entry
             .set_password(&json)
-            .map_err(|e| format!("Failed to write service registry: {}", e))
-    }
+            .map_err(|e| format!("Failed to write vault: {}", e))?;
 
-    /// Add a service to the registry if not already present.
-    fn register_service(&self, service: &str) -> Result<(), String> {
-        let mut services = self.read_registry();
-        if !services.iter().any(|s| s == service) {
-            services.push(service.to_string());
-            self.write_registry(&services)?;
+        // Update the in-memory cache
+        if let Ok(mut guard) = self.cache.lock() {
+            *guard = Some(vault.clone());
         }
-        Ok(())
-    }
 
-    /// Remove a service from the registry.
-    fn unregister_service(&self, service: &str) -> Result<(), String> {
-        let mut services = self.read_registry();
-        services.retain(|s| s != service);
-        self.write_registry(&services)
+        Ok(())
     }
 }
 
 impl CredentialStore for KeyringStore {
     fn store(&self, service: &str, key: &str) -> Result<(), String> {
-        let entry = Entry::new(APP_SERVICE, service)
-            .map_err(|e| format!("Keyring entry error: {}", e))?;
-        entry
-            .set_password(key)
-            .map_err(|e| format!("Failed to store credential: {}", e))?;
-        self.register_service(service)?;
-        Ok(())
+        let mut vault = self.read_vault()?;
+        vault.insert(service.to_string(), key.to_string());
+        self.write_vault(&vault)
     }
 
     fn retrieve(&self, service: &str) -> Result<String, String> {
-        let entry = Entry::new(APP_SERVICE, service)
-            .map_err(|e| format!("Keyring entry error: {}", e))?;
-        entry
-            .get_password()
-            .map_err(|e| format!("Failed to retrieve credential: {}", e))
+        let vault = self.read_vault()?;
+        vault
+            .get(service)
+            .cloned()
+            .ok_or_else(|| format!("No credential found for service: {}", service))
     }
 
     fn delete(&self, service: &str) -> Result<(), String> {
-        let entry = Entry::new(APP_SERVICE, service)
-            .map_err(|e| format!("Keyring entry error: {}", e))?;
-        match entry.delete_credential() {
-            Ok(()) => {}
-            Err(keyring::Error::NoEntry) => {} // already gone, that's fine
-            Err(e) => return Err(format!("Failed to delete credential: {}", e)),
+        let mut vault = self.read_vault()?;
+        if vault.remove(service).is_some() {
+            self.write_vault(&vault)?;
         }
-        self.unregister_service(service)?;
         Ok(())
     }
 
     fn exists(&self, service: &str) -> Result<bool, String> {
-        let entry = Entry::new(APP_SERVICE, service)
-            .map_err(|e| format!("Keyring entry error: {}", e))?;
-        match entry.get_password() {
-            Ok(_) => Ok(true),
-            Err(keyring::Error::NoEntry) => Ok(false),
-            Err(e) => Err(format!("Failed to check credential: {}", e)),
-        }
+        let vault = self.read_vault()?;
+        Ok(vault.contains_key(service))
     }
 
     fn list_services(&self) -> Result<Vec<String>, String> {
-        Ok(self.read_registry())
+        let vault = self.read_vault()?;
+        Ok(vault.keys().cloned().collect())
     }
 }
