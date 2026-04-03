@@ -6,7 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
-## [0.5.0] - 2026-03-22
+
+## [0.7.0] - 2026-04-03
+
+### Added
+- **OS Keychain Integration:** API keys for AI providers are now stored securely in the native OS Keychain (e.g., macOS Keychain) instead of plaintext. Keys are batched into a single encrypted JSON vault and securely cached in memory to minimize intrusive OS password prompts. Includes an AES-256-GCM encrypted file fallback for systems without native keyring support.
+- **Barcode Scanner Hardware Lifecycle:** Implemented robust webcam hardware lifecycle management ensuring the system camera is properly released (macOS green light extinguished) upon closing the scanner UI or unmounting the component.
+- **API Key Management UI:** Added a comprehensive section in the `Settings` page to manage credentials with masked previews, status badges, and strict one-way syncing (frontend never retrieves plaintext keys).
+- **Barcode Validation & UX Improvements:** Added a dedicated UX flow for successful barcode input formatting and a graceful "Product not found" fallback to allow users to pivot cleanly to name-based searches.
+
+## [0.6.0] - 2026-03-22
 
 ### Added
 - `FoodEntry` type definitions and `foodLogStore` persistence layer (`src/types/foodLog.ts`, `src/lib/foodLogStore.ts`) — localStorage-backed with `USE_TAURI` toggle, ready to connect to Rust CRUD commands.
