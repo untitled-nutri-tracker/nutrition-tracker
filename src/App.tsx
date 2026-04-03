@@ -10,7 +10,7 @@ import {
   DatabaseSessionProvider,
   useDatabaseSession,
 } from "./lib/DatabaseSessionContext";
-import LandingPage from "./pages/LandingPage";
+import WorkspaceSetupPage from "./pages/WorkspaceSetupPage";
 
 function RoutedApp() {
   const { session, loading } = useDatabaseSession();
@@ -20,7 +20,7 @@ function RoutedApp() {
   }
 
   if (!session.connectedPath) {
-    return <LandingPage />;
+    return <WorkspaceSetupPage />;
   }
 
   return (

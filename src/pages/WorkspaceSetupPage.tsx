@@ -7,7 +7,7 @@ import type { UserProfile } from "../types/profile";
 
 type LandingMode = "menu" | "create";
 
-export default function LandingPage() {
+export default function WorkspaceSetupPage() {
   const { session, createDatabase, openDatabase } = useDatabaseSession();
   const [mode, setMode] = useState<LandingMode>("menu");
   const [existingPath, setExistingPath] = useState(session.lastPath ?? "");
@@ -78,9 +78,9 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="landingShell">
-      <section className="landingHero">
-        <div className="landingEyebrow">NutriLog</div>
+    <div className="setupShell">
+      <section className="setupHero">
+        <div className="setupEyebrow">NutriLog</div>
         <h1>Choose a database.</h1>
         <p>
           Create a new local SQLite database with your profile, or reconnect an
@@ -89,23 +89,23 @@ export default function LandingPage() {
       </section>
 
       {error && (
-        <div className="landingError">
+        <div className="setupError">
           <strong>Error</strong>
           <span>{error}</span>
         </div>
       )}
 
       {mode === "menu" ? (
-        <div className="landingMenu">
+        <div className="setupMenu">
           <button
-            className="landingChoiceCard"
+            className="setupChoiceCard"
             type="button"
             onClick={() => {
               setError(null);
               setMode("create");
             }}
           >
-            <span className="landingChoiceEyebrow">New Workspace</span>
+            <span className="setupChoiceEyebrow">New Workspace</span>
             <strong>Create database</strong>
             <span>
               Start a new tracker database and initialize your profile.
@@ -113,24 +113,24 @@ export default function LandingPage() {
           </button>
 
           <button
-            className="landingChoiceCard"
+            className="setupChoiceCard"
             type="button"
             onClick={handleBrowse}
             disabled={opening}
           >
-            <span className="landingChoiceEyebrow">Existing Workspace</span>
+            <span className="setupChoiceEyebrow">Existing Workspace</span>
             <strong>{opening ? "Opening..." : "Open database"}</strong>
             <span>
-              Pick an existing NutriLog SQLite file and connect immediately.
+              Pick an existing NutriLog database and connect immediately.
             </span>
           </button>
         </div>
       ) : (
-        <div className="card landingCard">
-          <div className="landingCardHeader">
+        <div className="card setupCard">
+          <div className="setupCardHeader">
             <div>
-              <div className="landingCardTitle">Initialize your profile</div>
-              <div className="landingCardText">
+              <div className="setupCardTitle">Initialize your profile</div>
+              <div className="setupCardText">
                 After you click save, you will choose where to save the new
                 database file.
               </div>
@@ -151,7 +151,7 @@ export default function LandingPage() {
               setError(null);
               setMode("menu");
             }}
-            className="landingSecondaryButton"
+            className="setupSecondaryButton"
             type="button"
           >
             Back
@@ -160,29 +160,29 @@ export default function LandingPage() {
       )}
 
       {mode === "menu" && session.lastPath && (
-        <div className="card landingCard">
-          <div className="landingCardHeader">
-            <div className="landingCardTitle">Manual path fallback</div>
-            <div className="landingCardText">
+        <div className="card setupCard">
+          <div className="setupCardHeader">
+            <div className="setupCardTitle">Manual path fallback</div>
+            <div className="setupCardText">
               If you prefer, paste a path and open it directly.
             </div>
           </div>
 
-          <label className="landingLabel">
+          <label className="setupLabel">
             <span>Database path</span>
             <input
               value={existingPath}
               onChange={(e) => setExistingPath(e.target.value)}
               placeholder="/Users/you/Documents/nutrition.db"
-              className="landingInput"
+              className="setupInput"
             />
           </label>
 
-          <div className="landingButtonRow">
+          <div className="setupButtonRow">
             <button
               onClick={handleOpen}
               disabled={opening || !existingPath.trim()}
-              className="landingSecondaryButton"
+              className="setupSecondaryButton"
               type="button"
             >
               Open typed path
@@ -190,7 +190,7 @@ export default function LandingPage() {
 
             <button
               onClick={() => setExistingPath(session.lastPath ?? "")}
-              className="landingSecondaryButton"
+              className="setupSecondaryButton"
               type="button"
             >
               Use last path

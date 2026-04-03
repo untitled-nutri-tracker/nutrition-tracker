@@ -209,7 +209,7 @@ a{ color: inherit; }
   padding: 16px;
 }
 
-.landingShell{
+.setupShell{
   min-height: 100vh;
   padding: 32px;
   display: grid;
@@ -217,17 +217,17 @@ a{ color: inherit; }
   align-content: start;
 }
 
-.landingHero{
+.setupHero{
   max-width: 760px;
 }
 
-.landingHero h1{
+.setupHero h1{
   margin: 8px 0 0;
   font-size: clamp(32px, 5vw, 54px);
   line-height: 1.02;
 }
 
-.landingHero p{
+.setupHero p{
   margin: 14px 0 0;
   max-width: 640px;
   color: var(--muted);
@@ -235,21 +235,21 @@ a{ color: inherit; }
   line-height: 1.6;
 }
 
-.landingEyebrow{
+.setupEyebrow{
   color: #8bdcff;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
 
-.landingGrid{
+.setupGrid{
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
   gap: 18px;
   align-items: start;
 }
 
-.landingMenu{
+.setupMenu{
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 300px));
   gap: 18px;
@@ -257,7 +257,7 @@ a{ color: inherit; }
   max-width: 618px;
 }
 
-.landingChoiceCard{
+.setupChoiceCard{
   border: 1px solid var(--border);
   background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
   border-radius: 22px;
@@ -274,75 +274,75 @@ a{ color: inherit; }
   transition: transform .12s ease, border-color .12s ease, background .12s ease;
 }
 
-.landingChoiceCard:hover{
+.setupChoiceCard:hover{
   transform: translateY(-2px);
   border-color: rgba(139,220,255,0.35);
   background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.05));
 }
 
-.landingChoiceCard:disabled{
+.setupChoiceCard:disabled{
   opacity: 0.65;
   cursor: default;
   transform: none;
 }
 
-.landingChoiceCard strong{
+.setupChoiceCard strong{
   font-size: clamp(20px, 3vw, 28px);
   line-height: 1.05;
 }
 
-.landingChoiceCard span:last-child{
+.setupChoiceCard span:last-child{
   color: var(--muted);
   font-size: 14px;
   line-height: 1.6;
   max-width: 30ch;
 }
 
-.landingChoiceEyebrow{
+.setupChoiceEyebrow{
   color: #8bdcff;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
 
-.landingCreateWrap{
+.setupCreateWrap{
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 18px;
   align-items: start;
 }
 
-.landingCard{
+.setupCard{
   background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
 }
 
-.landingOpenHint{
+.setupOpenHint{
   min-height: 100%;
 }
 
-.landingCardHeader{
+.setupCardHeader{
   margin-bottom: 16px;
 }
 
-.landingCardTitle{
+.setupCardTitle{
   font-size: 18px;
   font-weight: 700;
 }
 
-.landingCardText{
+.setupCardText{
   margin-top: 6px;
   color: var(--muted);
   font-size: 13px;
 }
 
-.landingPath{
+.setupPath{
   margin-top: 8px;
   font-size: 12px;
   color: #8bdcff;
   word-break: break-all;
 }
 
-.landingLabel{
+.setupLabel{
   display: grid;
   gap: 6px;
   margin-bottom: 16px;
@@ -350,7 +350,7 @@ a{ color: inherit; }
   color: var(--muted2);
 }
 
-.landingInput{
+.setupInput{
   width: 100%;
   padding: 10px 12px;
   border-radius: 12px;
@@ -360,8 +360,8 @@ a{ color: inherit; }
   outline: none;
 }
 
-.landingPrimaryButton,
-.landingSecondaryButton{
+.setupPrimaryButton,
+.setupSecondaryButton{
   width: 100%;
   padding: 11px 12px;
   border-radius: 12px;
@@ -369,28 +369,28 @@ a{ color: inherit; }
   color: var(--text);
 }
 
-.landingPrimaryButton{
+.setupPrimaryButton{
   border: 1px solid rgba(124,92,255,0.35);
   background: linear-gradient(135deg, rgba(124,92,255,0.28), rgba(0,209,255,0.14));
 }
 
-.landingPrimaryButton:disabled{
+.setupPrimaryButton:disabled{
   opacity: 0.6;
   cursor: default;
 }
 
-.landingSecondaryButton{
+.setupSecondaryButton{
   margin-top: 10px;
   border: 1px solid var(--border);
   background: rgba(255,255,255,0.05);
 }
 
-.landingButtonRow{
+.setupButtonRow{
   display: grid;
   gap: 10px;
 }
 
-.landingError{
+.setupError{
   display: flex;
   gap: 10px;
   align-items: center;
@@ -401,13 +401,13 @@ a{ color: inherit; }
 }
 
 @media (max-width: 500px){
-  .landingMenu{
+  .setupMenu{
     grid-template-columns: 1fr;
     max-width: 300px;
   }
 
-  .landingCreateWrap,
-  .landingGrid{
+  .setupCreateWrap,
+  .setupGrid{
     grid-template-columns: 1fr;
   }
 }
