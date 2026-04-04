@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 function usePageMeta() {
   const { pathname } = useLocation();
@@ -71,6 +71,8 @@ function NavItem({
 
 export default function AppShell() {
   const { title, subtitle } = usePageMeta();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   return (
     <div className="app">
@@ -116,6 +118,17 @@ export default function AppShell() {
           <Outlet />
         </div>
       </section>
+      
+      {/* Global Contextual AI FAB */}
+      {pathname !== '/ai' && (
+        <button 
+          className="global-ai-fab pop-in"
+          onClick={() => navigate('/ai')}
+          title="Ask AI"
+        >
+          🤖
+        </button>
+      )}
     </div>
   );
 }

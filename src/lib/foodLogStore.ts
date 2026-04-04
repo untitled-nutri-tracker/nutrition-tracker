@@ -223,8 +223,9 @@ export async function loadEntriesRange(
   endDate: string
 ): Promise<Record<string, FoodEntry[]>> {
   const result: Record<string, FoodEntry[]> = {};
-  const cur = new Date(startDate);
-  const end = new Date(endDate);
+  // Use T00:00:00 to parse as LOCAL midnight, not UTC
+  const cur = new Date(startDate + "T00:00:00");
+  const end = new Date(endDate + "T23:59:59");
   while (cur <= end) {
     const d = localDateString(cur);
     result[d] = await loadEntriesByDate(d);

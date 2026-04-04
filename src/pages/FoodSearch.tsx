@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
 import {
   SearchProduct, SearchResult, MEAL_TYPES,
@@ -51,6 +52,7 @@ function rankResults(products: SearchProduct[], query: string): SearchProduct[] 
 }
 
 export default function LogFood() {
+  const location = useLocation();
   const [query, setQuery] = useState("");
   const [barcode, setBarcode] = useState("");
   const [results, setResults] = useState<SearchProduct[]>([]);
@@ -60,7 +62,7 @@ export default function LogFood() {
   const [loggedIds, setLoggedIds] = useState<Set<string>>(new Set());
   const [loggingId, setLoggingId] = useState<string | null>(null);
   const [mealType, setMealType] = useState(defaultMealType());
-  const [date, setDate] = useState(todayStr());
+  const [date, setDate] = useState<string>(location.state?.date || todayStr());
   const [quantity, setQuantity] = useState<Record<string, string>>({});
 
   // ---- Scanner state ----

@@ -3,7 +3,7 @@ pub mod credentials;
 pub mod network_config;
 pub mod utils;
 
-use api::ai::{self, AiResponse};
+use api::ai::{self, AiResponse, ChatMessage};
 use api::openfoodfacts::{self, SearchResult};
 use tauri::Manager;
 
@@ -69,16 +69,18 @@ async fn get_ai_advice(
     question: String,
     days: i64,
     provider: Option<String>,
+    history: Option<Vec<ChatMessage>>, // Use the bare name
+    offset_minutes: Option<i64>,
 ) -> Result<AiResponse, String> {
     // Build .nlog from database (via database crate)
-    let nlog_data = nutrack_database::meal::build_nlog(days).await?;
+    let nlog_data = nutrack_database::meal::build_nlog(days, offset_minutes.unwrap_or(0)).await?;
 
     // Parse provider (default to Ollama for backwards compatibility)
     let llm_provider =
         ai::LlmProvider::from_str(&provider.unwrap_or_else(|| "ollama".into()))?;
 
     // Send to the selected LLM provider
-    ai::ask_llm(&nlog_data, &question, &llm_provider).await
+    ai::ask_llm(&nlog_data, &question, history.unwrap_or_default(), &llm_provider).await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

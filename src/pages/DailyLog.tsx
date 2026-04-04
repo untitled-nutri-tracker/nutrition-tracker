@@ -1,10 +1,10 @@
 // src/pages/DailyLog.tsx
 // Sprint 2.7 — Refactored to use ui component library
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDailyLog } from "../hooks/useDailyLog";
-import { localDateString } from "../lib/foodLogStore";
+import { localDateString, loadEntriesByDate } from "../lib/foodLogStore";
 import { MEAL_TYPE_ORDER, MEAL_TYPE_LABELS, MEAL_TYPE_ICONS } from "../types/foodLog";
 import type { MealType } from "../types/foodLog";
 import AddEntryModal from "../components/AddEntryModal";
@@ -13,6 +13,102 @@ import ProfileSummaryCard from "../components/ProfileSummaryCard";
 import Button from "../components/ui/Button";
 import StatCard from "../components/ui/StatCard";
 import EmptyState from "../components/ui/EmptyState";
+import Confetti from "react-confetti";
+
+// ── Streak Card ───────────────────────────────────────────────────────────────
+
+function StreakCard() {
+  const [streak, setStreak] = useState(0);
+  const [weekMap, setWeekMap] = useState<boolean[]>([]);
+  const [bestStreak, setBestStreak] = useState(() => {
+    return parseInt(localStorage.getItem('nutrilog_best_streak') || '0', 10);
+  });
+
+  useEffect(() => {
+    async function compute() {
+      const today = new Date();
+      const days: boolean[] = [];
+      let currentStreak = 0;
+      let counting = true;
+
+      // Check last 7 days for the heatmap + streak
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateStr = localDateString(d);
+        const entries = await loadEntriesByDate(dateStr);
+        const hasEntries = entries.length > 0;
+        days.push(hasEntries);
+        if (counting && hasEntries) {
+          currentStreak++;
+        } else {
+          counting = false;
+        }
+      }
+
+      setWeekMap(days.reverse()); // oldest first
+      setStreak(currentStreak);
+
+      if (currentStreak > bestStreak) {
+        setBestStreak(currentStreak);
+        localStorage.setItem('nutrilog_best_streak', String(currentStreak));
+      }
+    }
+    compute();
+  }, []);
+
+  const today = new Date();
+  const startDay = new Date(today);
+  startDay.setDate(startDay.getDate() - 6);
+
+  return (
+    <div style={{
+      border: '1px solid rgba(124,92,255,0.2)',
+      background: 'rgba(124,92,255,0.04)',
+      borderRadius: 14,
+      padding: '12px 16px',
+      display: 'grid',
+      gridTemplateColumns: 'auto 1fr',
+      gap: 16,
+      alignItems: 'center',
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 28, fontWeight: 800, color: streak >= 3 ? '#10b981' : streak >= 1 ? '#fbbf24' : 'var(--muted2)', lineHeight: 1 }}>
+          {streak}
+        </div>
+        <div style={{ fontSize: 10, color: 'var(--muted2)', marginTop: 2 }}>day streak</div>
+        <div style={{ fontSize: 18, marginTop: 2 }}>{streak >= 7 ? '🔥' : streak >= 3 ? '⭐' : '🌱'}</div>
+      </div>
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(124,92,255,0.9)' }}>Logging Streak</span>
+          <span style={{ fontSize: 10, color: 'var(--muted2)' }}>Best: {bestStreak} days</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+          {weekMap.map((logged, i) => {
+            const d = new Date(startDay);
+            d.setDate(d.getDate() + i);
+            const label = d.toLocaleDateString('en-US', { weekday: 'narrow' });
+            return (
+              <div key={i} style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 9, color: 'var(--muted2)', marginBottom: 2 }}>{label}</div>
+                <div style={{
+                  width: 24, height: 24, borderRadius: 6, margin: '0 auto',
+                  background: logged ? 'rgba(16, 185, 129, 0.7)' : 'rgba(255,255,255,0.06)',
+                  border: logged ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, color: logged ? '#fff' : 'var(--muted2)',
+                }}>
+                  {logged ? '✓' : '·'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -40,6 +136,89 @@ function nextDay(dateStr: string): string {
   return localDateString(d);
 }
 
+// ── Scoring ───────────────────────────────────────────────────────────────────
+
+interface MacroTargets { calories: number; proteinG: number; carbsG: number; fatG: number; }
+
+function getTargets(): MacroTargets {
+  const goal = localStorage.getItem('nutrilog_goal') || 'maintenance';
+  let cal = 2000, pro = 75, carb = 250, fat = 65;
+  try {
+    const raw = localStorage.getItem('nutrilog.userProfile.v1');
+    if (raw) {
+      const p = JSON.parse(raw);
+      const w = p.weightKg || 70;
+      const actMult: Record<string, number> = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9 };
+      const mult = actMult[p.activityLevel] || 1.55;
+      const bmr = p.sex === 'male'
+        ? 10 * w + 6.25 * (p.heightCm || 170) - 5 * (p.age || 30) + 5
+        : 10 * w + 6.25 * (p.heightCm || 160) - 5 * (p.age || 30) - 161;
+      const tdee = bmr * mult;
+      if (goal === 'weight_loss') { cal = tdee - 400; pro = w * 1.4; }
+      else if (goal === 'muscle_gain') { cal = tdee + 300; pro = w * 1.8; }
+      else { cal = tdee; pro = w * 1.2; }
+      carb = (cal * 0.45) / 4; fat = (cal * 0.25) / 9;
+    }
+  } catch { /* defaults */ }
+  return { calories: Math.round(cal), proteinG: Math.round(pro), carbsG: Math.round(carb), fatG: Math.round(fat) };
+}
+
+function computeScore(totals: { calories: number; proteinG: number; carbsG: number; fatG: number }, targets: MacroTargets): number {
+  if (totals.calories === 0) return 0;
+  const sc = (a: number, t: number) => {
+    if (t === 0) return 25;
+    const d = Math.abs(1 - a / t);
+    return d <= 0.1 ? 25 : d <= 0.2 ? 20 : d <= 0.35 ? 15 : d <= 0.5 ? 10 : 5;
+  };
+  return sc(totals.calories, targets.calories) + sc(totals.proteinG, targets.proteinG) + sc(totals.carbsG, targets.carbsG) + sc(totals.fatG, targets.fatG);
+}
+
+function scoreToGrade(score: number) {
+  if (score >= 90) return { letter: 'A', color: '#10b981', emoji: '🏆' };
+  if (score >= 75) return { letter: 'B', color: '#34d399', emoji: '💪' };
+  if (score >= 60) return { letter: 'C', color: '#fbbf24', emoji: '👍' };
+  if (score >= 40) return { letter: 'D', color: '#f97316', emoji: '⚠️' };
+  return { letter: 'F', color: '#ef4444', emoji: '🔻' };
+}
+
+function MacroBar({ label, actual, target, unit }: { label: string; actual: number; target: number; unit: string }) {
+  const pct = target > 0 ? Math.min((actual / target) * 100, 150) : 0;
+  const barColor = pct > 110 ? '#f97316' : pct >= 80 ? '#10b981' : '#fbbf24';
+  return (
+    <div style={{ fontSize: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+        <span>{label}</span>
+        <span style={{ color: 'var(--muted2)' }}>{Math.round(actual)}/{target}{unit}</span>
+      </div>
+      <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+        <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: barColor, borderRadius: 4, transition: 'width 0.4s ease' }} />
+      </div>
+    </div>
+  );
+}
+
+function NutriScoreCard({ totals }: { totals: { calories: number; proteinG: number; carbsG: number; fatG: number } }) {
+  const targets = getTargets();
+  const score = computeScore(totals, targets);
+  const grade = scoreToGrade(score);
+  return (
+    <div style={{ border: `1px solid ${grade.color}33`, background: `${grade.color}08`, borderRadius: 14, padding: '14px 16px', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 16, alignItems: 'center' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 36, fontWeight: 800, color: grade.color, lineHeight: 1 }}>{grade.letter}</div>
+        <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 2 }}>{score}/100</div>
+        <div style={{ fontSize: 16, marginTop: 2 }}>{grade.emoji}</div>
+      </div>
+      <div style={{ display: 'grid', gap: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: grade.color }}>Daily Nutrition Score</div>
+        <MacroBar label="Calories" actual={totals.calories} target={targets.calories} unit="kcal" />
+        <MacroBar label="Protein" actual={totals.proteinG} target={targets.proteinG} unit="g" />
+        <MacroBar label="Carbs" actual={totals.carbsG} target={targets.carbsG} unit="g" />
+        <MacroBar label="Fat" actual={totals.fatG} target={targets.fatG} unit="g" />
+      </div>
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function DailyLog() {
@@ -57,16 +236,24 @@ export default function DailyLog() {
     { breakfast: [], lunch: [], dinner: [], snack: [] }
   );
 
+  const targets = getTargets();
+  const showConfetti = !loading && entries.length > 0 && 
+    (Math.abs(totals.calories - targets.calories) < targets.calories * 0.05);
+
   const isToday  = date === TODAY;
   const isFuture = date > TODAY;
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
+    <div className="page-enter" style={{ display: "grid", gap: 14 }}>
+      {showConfetti && <Confetti recycle={false} numberOfPieces={300} style={{ position: 'fixed', left: 0, top: 0, zIndex: 9999, pointerEvents: 'none' }} />}
 
       {/* Profile summary */}
       <ProfileSummaryCard />
+
+      {/* Streak tracker */}
+      <StreakCard />
 
       {/* Error banner */}
       {error && (
@@ -118,7 +305,7 @@ export default function DailyLog() {
 
         <Button
           variant="primary"
-          onClick={() => navigate("/log")}
+          onClick={() => navigate("/log", { state: { date } })}
           disabled={isFuture || saving}
           iconLeft="🔍"
         >
@@ -137,10 +324,17 @@ export default function DailyLog() {
         </div>
       )}
 
+      {/* Daily Nutrition Score */}
+      {entries.length > 0 && (
+        <NutriScoreCard totals={totals} />
+      )}
+
       {/* Loading state */}
       {loading && (
-        <div style={cardStyle}>
-          <div style={{ color: "var(--muted)", fontSize: 13 }}>Loading…</div>
+        <div className="pop-in" style={{ display: "grid", gap: 14 }}>
+          <div className="skeleton" style={{ height: 110 }} />
+          <div className="skeleton" style={{ height: 80 }} />
+          <div className="skeleton" style={{ height: 160 }} />
         </div>
       )}
 
@@ -148,18 +342,24 @@ export default function DailyLog() {
       {!loading && entries.length === 0 && (
         <EmptyState
           icon={isFuture ? "📅" : "🍽️"}
-          title={isFuture ? "No entries for a future date" : "No entries yet"}
+          title={isFuture ? "No entries for a future date" : "Let's Get Started!"}
           description={
             isFuture
               ? "Navigate back to today to start logging."
-              : "Tap \"Add food\" to log your first meal."
+              : "What are you having today?"
           }
-          action={
-            !isFuture
-              ? { label: "+ Add food", onClick: () => setModalOpen(true) }
-              : undefined
-          }
-        />
+        >
+          {!isFuture && (
+            <>
+              <Button onClick={() => navigate("/log", { state: { date } })} iconLeft="🔍" size="sm">
+                Search & Log Food
+              </Button>
+              <Button onClick={() => navigate("/ai")} variant="secondary" iconLeft="🤖" size="sm" style={{ background: 'rgba(124,92,255,0.1)' }}>
+                Ask AI for Suggestions
+              </Button>
+            </>
+          )}
+        </EmptyState>
       )}
 
       {/* Meal type groups */}
