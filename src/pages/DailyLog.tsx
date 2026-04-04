@@ -250,10 +250,14 @@ export default function DailyLog() {
       {showConfetti && <Confetti recycle={false} numberOfPieces={300} style={{ position: 'fixed', left: 0, top: 0, zIndex: 9999, pointerEvents: 'none' }} />}
 
       {/* Profile summary */}
-      <ProfileSummaryCard />
+      <div className="pop-in">
+        <ProfileSummaryCard />
+      </div>
 
       {/* Streak tracker */}
-      <StreakCard />
+      <div className="pop-in-delay-1">
+        <StreakCard />
+      </div>
 
       {/* Error banner */}
       {error && (
@@ -263,7 +267,7 @@ export default function DailyLog() {
       )}
 
       {/* Date nav + Add button */}
-      <div style={dateNavRowStyle}>
+      <div className="pop-in-delay-2" style={dateNavRowStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <Button
             variant="secondary"
@@ -326,7 +330,9 @@ export default function DailyLog() {
 
       {/* Daily Nutrition Score */}
       {entries.length > 0 && (
-        <NutriScoreCard totals={totals} />
+        <div className="pop-in-delay-3">
+          <NutriScoreCard totals={totals} />
+        </div>
       )}
 
       {/* Loading state */}

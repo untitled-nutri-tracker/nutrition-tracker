@@ -347,9 +347,9 @@ export default function LogFood() {
   }
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
+    <div className="page-enter" style={{ display: "grid", gap: 14 }}>
       {/* Meal type + date selector */}
-      <div className="card" style={{ maxWidth: 900 }}>
+      <div className="card pop-in" style={{ maxWidth: 900 }}>
         <div style={{ fontSize: 16, fontWeight: 600 }}>Log Food</div>
         <div style={{ fontSize: 12, color: "var(--muted2)", marginTop: 4 }}>
           Search for food, scan a barcode, or enter one manually.
