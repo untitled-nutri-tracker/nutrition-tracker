@@ -93,7 +93,15 @@ export default function AppShell() {
           <NavItem to="/settings" label="Settings" icon="⚙️" />
         </nav>
 
-        <div className="footerHint"> </div>
+        <div className="footerHint">
+          <div className="dbStatusLabel">Connected database</div>
+          <div className="dbStatusPath" title={session.connectedPath ?? ""}>
+            {session.connectedPath}
+          </div>
+          <button className="disconnectButton" onClick={closeDatabase} type="button">
+            Close database
+          </button>
+        </div>
       </aside>
 
       <section className="main">
@@ -110,7 +118,7 @@ export default function AppShell() {
           </div>
 
           <div style={{ fontSize: 12, color: "var(--muted2)" }}>
-            nutrition-tracker
+            {session.connectedPath?.split("/").pop()}
           </div>
         </header>
 

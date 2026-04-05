@@ -1,10 +1,12 @@
-use rusqlite::Connection;
-use std::path::Path;
+use rusqlite::{Connection, OptionalExtension};
+use std::ops::Deref;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, OnceLock};
 use thiserror::Error;
 
 pub mod food;
 pub mod meal;
+pub mod session;
 pub mod user_profile;
 
 use tauri::ipc::Invoke;
@@ -42,6 +44,14 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         meal::update_meal_item,
         meal::delete_meal_item,
         meal::build_nlog,
+        session::get_db_path,
+        session::get_database_session,
+        session::create_database,
+        session::open_database,
+        session::close_database,
+        session::load_profile,
+        session::save_profile,
+        session::clear_profile,
         user_profile::create_profile,
         user_profile::get_profile,
         user_profile::list_profiles,
@@ -58,23 +68,42 @@ pub enum DatabaseError {
     IoError(#[from] std::io::Error),
     #[error("Database manager has not been initialized")]
     NotInitialized,
+    #[error("No database is currently connected")]
+    NotConnected,
     #[error("Database connection lock is poisoned")]
     LockPoisoned,
+    #[error("{0}")]
+    InvalidDatabase(String),
 }
 
 pub struct DatabaseConnectionManager {
-    connection: Mutex<Connection>,
+    connection: Mutex<Option<Connection>>,
+    current_path: Mutex<Option<PathBuf>>,
+}
+
+pub struct DatabaseConnectionGuard<'a> {
+    guard: MutexGuard<'a, Option<Connection>>,
+}
+
+impl Deref for DatabaseConnectionGuard<'_> {
+    type Target = Connection;
+
+    fn deref(&self) -> &Self::Target {
+        self.guard
+            .as_ref()
+            .expect("database connection guard must contain a connection")
+    }
 }
 
 impl DatabaseConnectionManager {
-    pub fn initialize(db_path: &Path) -> Result<&'static Self, DatabaseError> {
+    pub fn initialize() -> Result<&'static Self, DatabaseError> {
         if let Some(manager) = DB_MANAGER.get() {
             return Ok(manager);
         }
 
-        let conn = init_db(db_path)?;
         let manager = Self {
-            connection: Mutex::new(conn),
+            connection: Mutex::new(None),
+            current_path: Mutex::new(None),
         };
         let _ = DB_MANAGER.set(manager);
         DB_MANAGER.get().ok_or(DatabaseError::NotInitialized)
@@ -84,10 +113,61 @@ impl DatabaseConnectionManager {
         DB_MANAGER.get().ok_or(DatabaseError::NotInitialized)
     }
 
-    pub fn connection(&self) -> Result<MutexGuard<'_, Connection>, DatabaseError> {
-        self.connection
+    pub fn connect(&self, db_path: &Path) -> Result<(), DatabaseError> {
+        let conn = init_db(db_path)?;
+        let mut connection = self
+            .connection
             .lock()
-            .map_err(|_| DatabaseError::LockPoisoned)
+            .map_err(|_| DatabaseError::LockPoisoned)?;
+        let mut current_path = self
+            .current_path
+            .lock()
+            .map_err(|_| DatabaseError::LockPoisoned)?;
+
+        *connection = Some(conn);
+        *current_path = Some(db_path.to_path_buf());
+
+        Ok(())
+    }
+
+    pub fn disconnect(&self) -> Result<(), DatabaseError> {
+        let mut connection = self
+            .connection
+            .lock()
+            .map_err(|_| DatabaseError::LockPoisoned)?;
+        let mut current_path = self
+            .current_path
+            .lock()
+            .map_err(|_| DatabaseError::LockPoisoned)?;
+
+        *connection = None;
+        *current_path = None;
+        Ok(())
+    }
+
+    pub fn current_path(&self) -> Result<Option<PathBuf>, DatabaseError> {
+        let current_path = self
+            .current_path
+            .lock()
+            .map_err(|_| DatabaseError::LockPoisoned)?;
+        Ok(current_path.clone())
+    }
+
+    pub fn is_connected(&self) -> Result<bool, DatabaseError> {
+        Ok(self.current_path()?.is_some())
+    }
+
+    pub fn connection(&self) -> Result<DatabaseConnectionGuard<'_>, DatabaseError> {
+        let guard = self
+            .connection
+            .lock()
+            .map_err(|_| DatabaseError::LockPoisoned)?;
+
+        if guard.is_none() {
+            return Err(DatabaseError::NotConnected);
+        }
+
+        Ok(DatabaseConnectionGuard { guard })
     }
 }
 
@@ -104,8 +184,40 @@ pub fn init_db(db_path: &Path) -> Result<Connection, DatabaseError> {
     let conn = Connection::open(db_path)?;
     if !db_exists {
         conn.execute_batch(SCHEMA_SQL)?;
+    } else {
+        validate_db_schema(&conn)?;
     }
     Ok(conn)
+}
+
+fn validate_db_schema(conn: &Connection) -> Result<(), DatabaseError> {
+    let required_tables = [
+        "user_profiles",
+        "foods",
+        "servings",
+        "nutrition_facts",
+        "meals",
+        "meal_items",
+    ];
+
+    let mut stmt = conn
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?1")
+        .map_err(DatabaseError::ConnectionError)?;
+
+    for table in required_tables {
+        let found = stmt
+            .query_row([table], |row| row.get::<_, String>(0))
+            .optional()
+            .map_err(DatabaseError::ConnectionError)?;
+
+        if found.is_none() {
+            return Err(DatabaseError::InvalidDatabase(format!(
+                "The selected file is not a NutriLog database. Missing table: {table}"
+            )));
+        }
+    }
+
+    Ok(())
 }
 
 /// Sanitises raw database errors before they cross the IPC boundary.
@@ -168,30 +280,12 @@ mod tests {
     }
 
     #[test]
-    fn test_skip_schema_creation_for_existing_db_file() {
+    fn test_reject_existing_db_file_without_schema() {
         let temp_dir = tempdir().unwrap();
         let db_path = temp_dir.path().join("existing.db");
         File::create(&db_path).unwrap();
 
-        let conn = init_db(&db_path).unwrap();
-        let table_count: i64 = conn
-            .query_row(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN (
-                    'user_profiles',
-                    'foods',
-                    'servings',
-                    'nutrition_facts',
-                    'meals',
-                    'meal_items'
-                )",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap();
-
-        assert_eq!(
-            table_count, 0,
-            "Schema should not be created for existing db"
-        );
+        let err = init_db(&db_path).unwrap_err();
+        assert!(matches!(err, DatabaseError::InvalidDatabase(_)));
     }
 }

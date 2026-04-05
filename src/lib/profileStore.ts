@@ -16,7 +16,7 @@ const LS_KEY = "nutrilog.userProfile.v1";
  *   - save_profile
  *   - clear_profile
  */
-const USE_TAURI = false;
+const USE_TAURI = true;
 
 /**
  * Safe wrapper around Tauri invoke.
@@ -55,8 +55,8 @@ function isUserProfileV1(x: unknown): x is UserProfile {
  */
 export async function loadProfile(): Promise<UserProfile | null> {
   if (USE_TAURI) {
-    // Requires Rust command: load_profile -> Option<UserProfile>
-    return await tauriInvoke<UserProfile | null>("load_profile");
+    const profile = await tauriInvoke<UserProfile | null>("load_profile");
+    return profile && isUserProfileV1(profile) ? profile : null;
   }
 
   const raw = localStorage.getItem(LS_KEY);
