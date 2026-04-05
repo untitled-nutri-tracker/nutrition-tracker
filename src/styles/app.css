@@ -347,3 +347,108 @@ a{ color: inherit; }
 @keyframes slideOutRight { to { transform: translateX(100%); } }
 @keyframes fadeIn { to { opacity: 1; } }
 @keyframes fadeOut { to { opacity: 0; } }
+/* ── Responsive Layout Improvements (Sprint 3) ───────────────────────────── */
+
+/* Tablet: slightly narrower sidebar */
+@media (max-width: 900px) {
+  .app { grid-template-columns: 200px 1fr; gap: 12px; padding: 12px; }
+}
+
+/* Mobile: icon-only sidebar */
+@media (max-width: 720px) {
+  .app { grid-template-columns: 64px 1fr; gap: 8px; padding: 8px; }
+
+  .navLabel { display: none; }
+  .brandText { display: none; }
+
+  /* Center the icon in the nav item */
+  .navItem {
+    justify-content: center;
+    padding: 10px 0;
+    border-radius: 12px;
+  }
+
+  /* Hide footer DB status info */
+  .dbStatusLabel,
+  .dbStatusPath,
+  .disconnectButton { display: none; }
+
+  .footerHint { padding: 6px 4px; }
+
+  /* Center brand icon */
+  .brand {
+    justify-content: center;
+    padding: 10px 4px 14px 4px;
+  }
+
+  /* Smaller nav icon */
+  .navIcon {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+/* Very small screens: hide sidebar entirely, show bottom nav */
+@media (max-width: 480px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+    padding: 0;
+    gap: 0;
+  }
+
+  .sidebar {
+    grid-row: 2;
+    border-radius: 0;
+    flex-direction: row;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  .brand { display: none; }
+  .footerHint { display: none; }
+
+  .nav {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%;
+    padding: 0;
+    gap: 4px;
+  }
+
+  .navItem {
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 6px 4px;
+    gap: 2px;
+    border-radius: 10px;
+  }
+
+  .navLabel {
+    display: block;
+    font-size: 9px;
+    color: var(--muted2);
+  }
+
+  .navIcon {
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: transparent;
+    font-size: 16px;
+  }
+
+  .main {
+    grid-row: 1;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+  }
+}
