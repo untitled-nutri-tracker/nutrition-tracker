@@ -356,14 +356,9 @@ export default function DailyLog() {
           }
         >
           {!isFuture && (
-            <>
-              <Button onClick={() => navigate("/log", { state: { date } })} iconLeft="🔍" size="sm">
-                Search & Log Food
-              </Button>
-              <Button onClick={() => navigate("/ai")} variant="secondary" iconLeft="🤖" size="sm" style={{ background: 'rgba(124,92,255,0.1)' }}>
-                Ask AI for Suggestions
-              </Button>
-            </>
+            <Button onClick={() => navigate("/log", { state: { date } })} iconLeft="🔍" size="sm">
+              Search & Log Food
+            </Button>
           )}
         </EmptyState>
       )}

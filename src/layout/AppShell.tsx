@@ -75,6 +75,7 @@ export default function AppShell() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
+
   return (
     <div className="app">
       <aside className="sidebar">
