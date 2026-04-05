@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-
+import { useDatabaseSession } from "../lib/DatabaseSessionContext";
 function usePageMeta() {
   const { pathname } = useLocation();
 
@@ -71,6 +71,7 @@ function NavItem({
 
 export default function AppShell() {
   const { title, subtitle } = usePageMeta();
+  const { session, closeDatabase } = useDatabaseSession();
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
