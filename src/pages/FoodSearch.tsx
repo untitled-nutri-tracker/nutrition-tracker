@@ -1,6 +1,10 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
+import { createEntry } from "../lib/foodLogStore";
+
+// Toggle: false = localStorage (works now), true = Tauri IPC
+const USE_TAURI = false;
 import {
   SearchProduct, SearchResult, MEAL_TYPES,
   r, defaultMealType, todayStr,
@@ -156,191 +160,161 @@ export default function LogFood() {
 
   /** Log a product from the confirmation card. */
   async function handleConfirmLog() {
-    if (!confirmProduct) return;
-    const product = confirmProduct;
-    setConfirmLoading(true);
-    try {
-      const now = Math.floor(Date.now() / 1000);
-      const occurredAt = Math.floor(new Date(date + "T12:00:00").getTime() / 1000);
-      const qty = parseFloat(confirmQty) || 1;
+  if (!confirmProduct) return;
+  const product = confirmProduct;
+  setConfirmLoading(true);
+  try {
+    const qty = parseFloat(confirmQty) || 1;
 
-      // 1. Save food to library
-      const food = await invoke<any>("create_food", {
-        food: {
-          id: 0,
-          name: product.product_name,
-          brand: product.brands,
-          category: product.categories,
-          source: "openfoodfacts",
-          refUrl: "",
-          barcode: product.barcode,
-          createdAt: now,
-          updatedAt: now,
-        },
+    if (!USE_TAURI) {
+      await createEntry({
+        date,
+        mealType: mealType as any,
+        foodName: product.product_name,
+        brand: product.brands || undefined,
+        calories: Math.round((product.calories_kcal || 0) * qty),
+        proteinG: Math.round((product.protein_g || 0) * qty * 10) / 10,
+        carbsG: Math.round((product.total_carbohydrate_g || 0) * qty * 10) / 10,
+        fatG: Math.round((product.fat_g || 0) * qty * 10) / 10,
+        servingDesc: `${qty} serving`,
       });
-
-      // 2. Create default 100g serving
-      const serving = await invoke<any>("create_serving", {
-        serving: {
-          id: 0,
-          food,
-          amount: 100,
-          unit: "GRAM",
-          gramsEquiv: 100,
-          isDefault: true,
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
-
-      // 3. Save nutrition facts
-      await invoke("create_nutrition_facts", {
-        nutritionFacts: {
-          SERVING: serving,
-          CALORIES_KCAL: product.calories_kcal || 0,
-          FAT_G: product.fat_g || 0,
-          SATURATED_FAT_G: product.saturated_fat_g || 0,
-          TRANS_FAT_G: product.trans_fat_g || 0,
-          CHOLESTEROL_MG: product.cholesterol_mg || 0,
-          SODIUM_MG: product.sodium_mg || 0,
-          TOTAL_CARBOHYDRATE_G: product.total_carbohydrate_g || 0,
-          DIETARY_FIBER_G: product.dietary_fiber_g || 0,
-          TOTAL_SUGARS_G: product.total_sugars_g || 0,
-          ADDED_SUGARS_G: product.added_sugars_g || 0,
-          PROTEIN_G: product.protein_g || 0,
-          VITAMIN_D_MCG: product.vitamin_d_mcg || 0,
-          CALCIUM_MG: product.calcium_mg || 0,
-          IRON_MG: product.iron_mg || 0,
-        },
-      });
-
-      // 4. Create or find meal for this date + type
-      const meal = await invoke<any>("create_meal", {
-        meal: {
-          id: 0,
-          occurredAt,
-          mealType: mealType.toUpperCase(),
-          title: mealType.charAt(0).toUpperCase() + mealType.slice(1),
-          note: "",
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
-
-      // 5. Add food as meal item
-      await invoke("create_meal_item", {
-        mealItem: {
-          id: 0,
-          meal,
-          food,
-          serving,
-          quantity: qty,
-          note: "",
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
-
       setConfirmLogged(true);
-    } catch (e: any) {
-      setError(e?.toString() ?? "Failed to log food");
-    } finally {
-      setConfirmLoading(false);
+      return;
     }
+
+    // Tauri IPC path
+    const now = Math.floor(Date.now() / 1000);
+    const occurredAt = Math.floor(new Date(date + "T12:00:00").getTime() / 1000);
+    const food = await invoke<any>("create_food", {
+      food: {
+        id: 0, name: product.product_name, brand: product.brands,
+        category: product.categories, source: "openfoodfacts",
+        refUrl: "", barcode: product.barcode, createdAt: now, updatedAt: now,
+      },
+    });
+    const serving = await invoke<any>("create_serving", {
+      serving: {
+        id: 0, food, amount: 100, unit: "GRAM", gramsEquiv: 100,
+        isDefault: true, createdAt: now, updatedAt: now,
+      },
+    });
+    await invoke("create_nutrition_facts", {
+      nutritionFacts: {
+        SERVING: serving,
+        CALORIES_KCAL: product.calories_kcal || 0,
+        FAT_G: product.fat_g || 0,
+        SATURATED_FAT_G: product.saturated_fat_g || 0,
+        TRANS_FAT_G: product.trans_fat_g || 0,
+        CHOLESTEROL_MG: product.cholesterol_mg || 0,
+        SODIUM_MG: product.sodium_mg || 0,
+        TOTAL_CARBOHYDRATE_G: product.total_carbohydrate_g || 0,
+        DIETARY_FIBER_G: product.dietary_fiber_g || 0,
+        TOTAL_SUGARS_G: product.total_sugars_g || 0,
+        ADDED_SUGARS_G: product.added_sugars_g || 0,
+        PROTEIN_G: product.protein_g || 0,
+        VITAMIN_D_MCG: product.vitamin_d_mcg || 0,
+        CALCIUM_MG: product.calcium_mg || 0,
+        IRON_MG: product.iron_mg || 0,
+      },
+    });
+    const meal = await invoke<any>("create_meal", {
+      meal: {
+        id: 0, occurredAt, mealType: mealType.toUpperCase(),
+        title: mealType.charAt(0).toUpperCase() + mealType.slice(1),
+        note: "", createdAt: now, updatedAt: now,
+      },
+    });
+    await invoke("create_meal_item", {
+      mealItem: {
+        id: 0, meal, food, serving, quantity: qty,
+        note: "", createdAt: now, updatedAt: now,
+      },
+    });
+    setConfirmLogged(true);
+  } catch (e: any) {
+    setError(e?.toString() ?? "Failed to log food");
+  } finally {
+    setConfirmLoading(false);
   }
+}
 
   async function handleLog(product: SearchProduct) {
-    const uid = product.barcode || product.product_name;
-    setLoggingId(uid);
-    try {
-      const now = Math.floor(Date.now() / 1000);
-      const occurredAt = Math.floor(new Date(date + "T12:00:00").getTime() / 1000);
-      const qty = parseFloat(quantity[uid] || "1") || 1;
+  const uid = product.barcode || product.product_name;
+  setLoggingId(uid);
+  try {
+    const qty = parseFloat(quantity[uid] || "1") || 1;
 
-      // 1. Save food to library
-      const food = await invoke<any>("create_food", {
-        food: {
-          id: 0,
-          name: product.product_name,
-          brand: product.brands,
-          category: product.categories,
-          source: "openfoodfacts",
-          refUrl: "",
-          barcode: product.barcode,
-          createdAt: now,
-          updatedAt: now,
-        },
+    if (!USE_TAURI) {
+      await createEntry({
+        date,
+        mealType: mealType as any,
+        foodName: product.product_name,
+        brand: product.brands || undefined,
+        calories: Math.round((product.calories_kcal || 0) * qty),
+        proteinG: Math.round((product.protein_g || 0) * qty * 10) / 10,
+        carbsG: Math.round((product.total_carbohydrate_g || 0) * qty * 10) / 10,
+        fatG: Math.round((product.fat_g || 0) * qty * 10) / 10,
+        servingDesc: `${qty} serving`,
       });
-
-      // 2. Create default 100g serving
-      const serving = await invoke<any>("create_serving", {
-        serving: {
-          id: 0,
-          food,
-          amount: 100,
-          unit: "GRAM",
-          gramsEquiv: 100,
-          isDefault: true,
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
-
-      // 3. Save nutrition facts
-      await invoke("create_nutrition_facts", {
-        nutritionFacts: {
-          SERVING: serving,
-          CALORIES_KCAL: product.calories_kcal || 0,
-          FAT_G: product.fat_g || 0,
-          SATURATED_FAT_G: product.saturated_fat_g || 0,
-          TRANS_FAT_G: product.trans_fat_g || 0,
-          CHOLESTEROL_MG: product.cholesterol_mg || 0,
-          SODIUM_MG: product.sodium_mg || 0,
-          TOTAL_CARBOHYDRATE_G: product.total_carbohydrate_g || 0,
-          DIETARY_FIBER_G: product.dietary_fiber_g || 0,
-          TOTAL_SUGARS_G: product.total_sugars_g || 0,
-          ADDED_SUGARS_G: product.added_sugars_g || 0,
-          PROTEIN_G: product.protein_g || 0,
-          VITAMIN_D_MCG: product.vitamin_d_mcg || 0,
-          CALCIUM_MG: product.calcium_mg || 0,
-          IRON_MG: product.iron_mg || 0,
-        },
-      });
-
-      // 4. Create or find meal for this date + type
-      const meal = await invoke<any>("create_meal", {
-        meal: {
-          id: 0,
-          occurredAt,
-          mealType: mealType.toUpperCase(),
-          title: mealType.charAt(0).toUpperCase() + mealType.slice(1),
-          note: "",
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
-
-      // 5. Add food as meal item
-      await invoke("create_meal_item", {
-        mealItem: {
-          id: 0,
-          meal,
-          food,
-          serving,
-          quantity: qty,
-          note: "",
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
-
       setLoggedIds((prev) => new Set(prev).add(uid));
-    } catch (e: any) {
-      setError(e?.toString() ?? "Failed to log food");
-    } finally {
-      setLoggingId(null);
+      return;
     }
+
+    // Tauri IPC path
+    const now = Math.floor(Date.now() / 1000);
+    const occurredAt = Math.floor(new Date(date + "T12:00:00").getTime() / 1000);
+    const food = await invoke<any>("create_food", {
+      food: {
+        id: 0, name: product.product_name, brand: product.brands,
+        category: product.categories, source: "openfoodfacts",
+        refUrl: "", barcode: product.barcode, createdAt: now, updatedAt: now,
+      },
+    });
+    const serving = await invoke<any>("create_serving", {
+      serving: {
+        id: 0, food, amount: 100, unit: "GRAM", gramsEquiv: 100,
+        isDefault: true, createdAt: now, updatedAt: now,
+      },
+    });
+    await invoke("create_nutrition_facts", {
+      nutritionFacts: {
+        SERVING: serving,
+        CALORIES_KCAL: product.calories_kcal || 0,
+        FAT_G: product.fat_g || 0,
+        SATURATED_FAT_G: product.saturated_fat_g || 0,
+        TRANS_FAT_G: product.trans_fat_g || 0,
+        CHOLESTEROL_MG: product.cholesterol_mg || 0,
+        SODIUM_MG: product.sodium_mg || 0,
+        TOTAL_CARBOHYDRATE_G: product.total_carbohydrate_g || 0,
+        DIETARY_FIBER_G: product.dietary_fiber_g || 0,
+        TOTAL_SUGARS_G: product.total_sugars_g || 0,
+        ADDED_SUGARS_G: product.added_sugars_g || 0,
+        PROTEIN_G: product.protein_g || 0,
+        VITAMIN_D_MCG: product.vitamin_d_mcg || 0,
+        CALCIUM_MG: product.calcium_mg || 0,
+        IRON_MG: product.iron_mg || 0,
+      },
+    });
+    const meal = await invoke<any>("create_meal", {
+      meal: {
+        id: 0, occurredAt, mealType: mealType.toUpperCase(),
+        title: mealType.charAt(0).toUpperCase() + mealType.slice(1),
+        note: "", createdAt: now, updatedAt: now,
+      },
+    });
+    await invoke("create_meal_item", {
+      mealItem: {
+        id: 0, meal, food, serving, quantity: qty,
+        note: "", createdAt: now, updatedAt: now,
+      },
+    });
+    setLoggedIds((prev) => new Set(prev).add(uid));
+  } catch (e: any) {
+    setError(e?.toString() ?? "Failed to log food");
+  } finally {
+    setLoggingId(null);
   }
+}
 
   function handleKeyDown(e: React.KeyboardEvent, action: () => void) {
     if (e.key === "Enter") action();
