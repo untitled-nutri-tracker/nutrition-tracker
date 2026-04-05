@@ -5,6 +5,7 @@ pub mod utils;
 
 use api::ai::{self, AiResponse};
 use api::openfoodfacts::{self, SearchResult};
+use tauri::Manager;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -85,11 +86,17 @@ pub fn run() {
             if let Err(err) = nutrack_database::session::reconnect_last_database(app.handle()) {
                 eprintln!("Failed to reconnect database at startup: {err}");
             }
+
+            // Resolve the platform-specific AppData directory dynamically
+            let app_data_dir = app.path().app_data_dir().map_err(|e| {
+                Box::<dyn std::error::Error>::from(format!(
+                    "Failed to locate app data directory on this OS: {}",
+                    e
+                ))
+            })?;
           
             // Initialize credential manager (OS keychain or encrypted file fallback)
             credentials::CredentialManager::initialize(&app_data_dir);
-
-            println!("Successfully initialized DB at: {:?}", db_path);
 
             Ok(())
         })
