@@ -97,6 +97,13 @@ Shared UI primitives live in `src/components/ui/` and must be used instead of wr
 - `Modal` — handles ESC close, backdrop click, and body scroll lock.
 - `StatCard` — for displaying numeric metrics with optional accent color.
 - `EmptyState` — for zero-data views with optional CTA button.
+### 9. Secure Credential Management
+API Keys and secrets are never stored in plaintext on disk, and the React frontend never receives plaintext keys from the backend.
+- **OS Native Vault (`keyring`):** Keys are stored as a single JSON blob under `__nutrilog_vault__` in the OS Keychain (macOS Keychain, Windows Credential Manager).
+- **AES-GCM Fallback:** Systems without a native keyring use an AES-256-GCM encrypted file (`credentials.vault`), keyed via PBKDF2 from a machine-specific identifier.
+- **Memory Caching:** To prevent aggressive macOS security prompts, the vault is decrypted exactly once via a lazy-loaded `Mutex` and cached in memory for the duration of the session.
+- **Frontend Previews:** The Tauri IPC layer strictly enforces that only masked string previews (e.g., `sk-abc...xyz`) are sent back to the React UI layer.
+
 ---
 
 **Note on Changelogs:**
