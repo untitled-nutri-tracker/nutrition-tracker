@@ -17,14 +17,30 @@
 html, body { height: 100%; }
 body{
   margin: 0;
+  color: var(--text);
+  font-family: var(--font), serif;
+}
+
+body::before{
+  content: "";
+  position: fixed;
+  inset: 0;
   background: radial-gradient(1200px 700px at 20% -10%, rgba(124,92,255,0.22), transparent 55%),
               radial-gradient(1000px 650px at 90% 0%, rgba(0,209,255,0.18), transparent 55%),
               var(--bg);
-  color: var(--text);
-  font-family: var(--font);
+  z-index: -1;
+  pointer-events: none;
 }
 
 a{ color: inherit; }
+
+.appLoading{
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  color: var(--muted);
+}
 
 .app{
   height: 100vh;
@@ -122,6 +138,35 @@ a{ color: inherit; }
   color: var(--muted2);
 }
 
+.dbStatusLabel{
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted2);
+}
+
+.dbStatusPath{
+  margin-top: 6px;
+  line-height: 1.4;
+  word-break: break-all;
+  color: var(--text);
+}
+
+.disconnectButton{
+  margin-top: 10px;
+  width: 100%;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 9px 10px;
+  cursor: pointer;
+}
+
+.disconnectButton:hover{
+  background: rgba(255,255,255,0.09);
+}
+
 .main{
   border: 1px solid var(--border);
   background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
@@ -162,4 +207,207 @@ a{ color: inherit; }
   background: rgba(255,255,255,0.04);
   border-radius: var(--radius-sm);
   padding: 16px;
+}
+
+.setupShell{
+  min-height: 100vh;
+  padding: 32px;
+  display: grid;
+  gap: 22px;
+  align-content: start;
+}
+
+.setupHero{
+  max-width: 760px;
+}
+
+.setupHero h1{
+  margin: 8px 0 0;
+  font-size: clamp(32px, 5vw, 54px);
+  line-height: 1.02;
+}
+
+.setupHero p{
+  margin: 14px 0 0;
+  max-width: 640px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.setupEyebrow{
+  color: #8bdcff;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.setupGrid{
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.setupMenu{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 300px));
+  gap: 18px;
+  width: 100%;
+  max-width: 618px;
+}
+
+.setupChoiceCard{
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+  border-radius: 22px;
+  width: 100%;
+  min-height: 200px;
+  padding: 20px;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  box-shadow: var(--shadow);
+  transition: transform .12s ease, border-color .12s ease, background .12s ease;
+}
+
+.setupChoiceCard:hover{
+  transform: translateY(-2px);
+  border-color: rgba(139,220,255,0.35);
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.05));
+}
+
+.setupChoiceCard:disabled{
+  opacity: 0.65;
+  cursor: default;
+  transform: none;
+}
+
+.setupChoiceCard strong{
+  font-size: clamp(20px, 3vw, 28px);
+  line-height: 1.05;
+}
+
+.setupChoiceCard span:last-child{
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 30ch;
+}
+
+.setupChoiceEyebrow{
+  color: #8bdcff;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.setupCreateWrap{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 18px;
+  align-items: start;
+}
+
+.setupCard{
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+}
+
+.setupOpenHint{
+  min-height: 100%;
+}
+
+.setupCardHeader{
+  margin-bottom: 16px;
+}
+
+.setupCardTitle{
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.setupCardText{
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.setupPath{
+  margin-top: 8px;
+  font-size: 12px;
+  color: #8bdcff;
+  word-break: break-all;
+}
+
+.setupLabel{
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: var(--muted2);
+}
+
+.setupInput{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+  outline: none;
+}
+
+.setupPrimaryButton,
+.setupSecondaryButton{
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.setupPrimaryButton{
+  border: 1px solid rgba(124,92,255,0.35);
+  background: linear-gradient(135deg, rgba(124,92,255,0.28), rgba(0,209,255,0.14));
+}
+
+.setupPrimaryButton:disabled{
+  opacity: 0.6;
+  cursor: default;
+}
+
+.setupSecondaryButton{
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.05);
+}
+
+.setupButtonRow{
+  display: grid;
+  gap: 10px;
+}
+
+.setupError{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(255,80,80,0.35);
+  background: rgba(255,80,80,0.08);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+@media (max-width: 500px){
+  .setupMenu{
+    grid-template-columns: 1fr;
+    max-width: 300px;
+  }
+
+  .setupCreateWrap,
+  .setupGrid{
+    grid-template-columns: 1fr;
+  }
 }

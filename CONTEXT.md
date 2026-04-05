@@ -50,6 +50,8 @@
 ### 1. Local-First Database Strategy
 The app is designed to be **offline-first and local-first**. The database is a local SQLite file managed directly by the Rust backend.
 - **Singleton Access:** The SQLite connection is process-wide, held in `DatabaseConnectionManager::global()`.
+- **Session Switching:** The singleton can be connected, disconnected, and reconnected to different SQLite files at runtime via the `session` commands in `nutrack-database`.
+- **Last Database Restore:** The active database path is remembered in app data and restored on startup when possible, so users normally return directly to their previous workspace.
 - **Command Structure:** Database operations are isolated in private `_with_conn(&Connection)` helper functions, which are then wrapped by thin `pub fn` Tauri commands. This separates DB logic from IPC concerns.
 
 ### 2. Tauri IPC and Type Safety
@@ -74,6 +76,7 @@ Validation errors return clean, user-friendly strings — never raw database or 
 The Rust backend is intentionally split into separate crates and modules to isolate domains of logic:
 - **`nutrack-model` (Library Crate):** Contains pure Rust structs and Enums (e.g., `Food`, `UserProfile`) with `serde` implementations. No business or database logic. Completely pure, safe to share anywhere.
 - **`nutrack-database` (Library Crate):** Contains the SQLite schema, connection manager, and all database CRUD operations. The CRUD operations are split cleanly into separate files/modules (`food.rs`, `meal.rs`, `user_profile.rs`) to prevent monoliths.
+- **Database Session Layer:** `src-rust-crates/database/src/session.rs` owns database-file session management, last-path persistence, and the app-scoped profile stored inside the selected SQLite file.
 - **`src-tauri` (App Crate):** The Tauri application shell. It imports the database and model crates, acting only as the orchestrator. It handles IPC (commands), external APIs (`openfoodfacts.rs`), and system-level configuration.
 This separation of concerns makes unit testing the database layer extremely fast and decoupled from Tauri infrastructure.
 
@@ -85,6 +88,7 @@ The frontend uses a dual-mode persistence pattern for all local state:
 - **`USE_TAURI = false`:** Data is stored in `localStorage` using versioned keys (e.g., `nutrilog.foodLog.v1.YYYY-MM-DD`). This allows the full UI to work without any Rust backend.
 - **`USE_TAURI = true`:** A single flag flip switches all reads/writes to Tauri IPC commands. No other code changes are required.
 - This pattern is established in `profileStore.ts` (Sprint 1.4) and `foodLogStore.ts` (Sprint 2.1), and should be followed by all future frontend data layers.
+- **Current App Behavior:** The production desktop flow now requires an active selected database. The landing page uses `DatabaseSessionContext` to gate the main app until a database is created or opened.
 
 ### 8. UI Component Library
 Shared UI primitives live in `src/components/ui/` and must be used instead of writing one-off inline styles:

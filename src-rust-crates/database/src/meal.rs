@@ -339,99 +339,99 @@ fn delete_meal_item_with_conn(conn: &Connection, id: i64) -> Result<bool, String
     Ok(changed > 0)
 }
 
-#[tauri::command]
 /// Creates a meal record and returns the stored meal.
 ///
 /// A meal is the parent record for zero or more [`MealItem`] rows.
+#[tauri::command]
 pub async fn create_meal(meal: Meal) -> Result<Meal, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     create_meal_with_conn(&conn, meal)
 }
 
-#[tauri::command]
 /// Fetches a meal by id.
 ///
 /// Returns `Ok(None)` when no meal exists for the provided id.
+#[tauri::command]
 pub async fn get_meal(id: i64) -> Result<Option<Meal>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     get_meal_with_conn(&conn, id)
 }
 
-#[tauri::command]
 /// Lists all meals ordered by occurrence time and id.
+#[tauri::command]
 pub async fn list_meals() -> Result<Vec<Meal>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     list_meals_with_conn(&conn)
 }
 
-#[tauri::command]
 /// Updates an existing meal and returns the refreshed row.
 ///
 /// Returns an error when the target meal does not exist.
+#[tauri::command]
 pub async fn update_meal(meal: Meal) -> Result<Meal, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     update_meal_with_conn(&conn, meal)
 }
 
-#[tauri::command]
 /// Deletes a meal by id.
 ///
 /// Returns `true` when a row was deleted and `false` when the id was not found.
+#[tauri::command]
 pub async fn delete_meal(id: i64) -> Result<bool, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     delete_meal_with_conn(&conn, id)
 }
 
-#[tauri::command]
 /// Creates a meal item and returns the stored row with its related meal, food, and serving.
 ///
 /// A single meal can contain multiple meal items. Each meal item belongs to exactly one meal
 /// and references one food together with one selected serving.
+#[tauri::command]
 pub async fn create_meal_item(meal_item: MealItem) -> Result<MealItem, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     create_meal_item_with_conn(&conn, meal_item)
 }
 
-#[tauri::command]
 /// Fetches a meal item by id.
 ///
 /// Returns `Ok(None)` when no meal item exists for the provided id.
+#[tauri::command]
 pub async fn get_meal_item(id: i64) -> Result<Option<MealItem>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     get_meal_item_with_conn(&conn, id)
 }
 
-#[tauri::command]
 /// Lists all meal items that belong to a meal.
 ///
 /// Returns an error when the parent meal does not exist.
+#[tauri::command]
 pub async fn list_meal_items_by_meal(meal_id: i64) -> Result<Vec<MealItem>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     list_meal_items_by_meal_with_conn(&conn, meal_id)
 }
 
-#[tauri::command]
 /// Updates an existing meal item and returns the refreshed row.
 ///
 /// Returns an error when the target meal item does not exist.
+#[tauri::command]
 pub async fn update_meal_item(meal_item: MealItem) -> Result<MealItem, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     update_meal_item_with_conn(&conn, meal_item)
 }
 
-#[tauri::command]
 /// Deletes a meal item by id.
 ///
 /// Returns `true` when a row was deleted and `false` when the id was not found.
+#[tauri::command]
 pub async fn delete_meal_item(id: i64) -> Result<bool, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
@@ -472,6 +472,9 @@ fn list_meals_by_date_range_with_conn(
     Ok(meals)
 }
 
+/// Lists meals whose `occurred_at` timestamps fall within the half-open interval `[start, end)`.
+///
+/// This is used by the frontend daily-log views to fetch all meals for a local date window.
 #[tauri::command]
 pub async fn list_meals_by_date_range(start: i64, end: i64) -> Result<Vec<Meal>, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
@@ -571,6 +574,9 @@ fn build_nlog_with_conn(conn: &Connection, days: i64) -> Result<String, String> 
     Ok(lines.join("\n"))
 }
 
+/// Serializes recent meals into `.nlog` text for downstream AI analysis.
+///
+/// Returns a placeholder string when no meals exist in the requested time window.
 #[tauri::command]
 pub async fn build_nlog(days: i64) -> Result<String, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
