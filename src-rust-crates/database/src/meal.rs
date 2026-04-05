@@ -519,7 +519,7 @@ fn meal_type_label(val: i64) -> &'static str {
     }
 }
 
-fn build_nlog_with_conn(conn: &Connection, days: i64) -> Result<String, String> {
+fn build_nlog_with_conn(conn: &Connection, days: i64, offset_minutes: i64) -> Result<String, String> {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(|e| crate::sanitize_db_error(e.to_string()))?
@@ -559,7 +559,7 @@ fn build_nlog_with_conn(conn: &Connection, days: i64) -> Result<String, String> 
 
         Ok(format!(
             "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
-            ts_to_yymmdd(occ), name,
+            ts_to_yymmdd(occ - (offset_minutes * 60)), name,
             r64(cal*qty), r64(pro*qty), r64(carb*qty), r64(fat*qty),
             r64(sf*qty), r64(sug*qty), r64(fib*qty), r64(sod*qty), r64(chol*qty),
             meal_type_label(mt),
@@ -578,10 +578,10 @@ fn build_nlog_with_conn(conn: &Connection, days: i64) -> Result<String, String> 
 ///
 /// Returns a placeholder string when no meals exist in the requested time window.
 #[tauri::command]
-pub async fn build_nlog(days: i64) -> Result<String, String> {
+pub async fn build_nlog(days: i64, offset_minutes: i64) -> Result<String, String> {
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
-    build_nlog_with_conn(&conn, days)
+    build_nlog_with_conn(&conn, days, offset_minutes)
 }
 
 #[cfg(test)]

@@ -15,6 +15,7 @@ interface EmptyStateProps {
     onClick: () => void;
   };
   style?: React.CSSProperties;
+  children?: React.ReactNode;
 }
 
 export default function EmptyState({
@@ -23,9 +24,10 @@ export default function EmptyState({
   description,
   action,
   style,
+  children,
 }: EmptyStateProps) {
   return (
-    <div style={{ ...containerStyle, ...style }}>
+    <div className="pop-in" style={{ ...containerStyle, ...style }}>
       <div style={iconStyle}>{icon}</div>
       <div style={titleStyle}>{title}</div>
       {description && (
@@ -36,6 +38,11 @@ export default function EmptyState({
           <Button onClick={action.onClick} size="sm">
             {action.label}
           </Button>
+        </div>
+      )}
+      {children && (
+        <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+          {children}
         </div>
       )}
     </div>

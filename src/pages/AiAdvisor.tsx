@@ -2,6 +2,9 @@ import { useNetwork } from "../lib/NetworkContext";
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { LLM_PROVIDERS } from "../hooks/useCredentials";
+import { createEntry } from "../lib/foodLogStore";
+import { loadProfile } from "../lib/profileStore";
+import ReactMarkdown from "react-markdown";
 
 interface AiResponse {
   nlog_data: string;
@@ -18,10 +21,11 @@ interface ChatMessage {
 }
 
 const QUICK_PROMPTS = [
-  { label: "📊 Analyze My Week", prompt: "Analyze my nutrition for the past week. What am I doing well and what should I improve?" },
-  { label: "🥗 Suggest Improvements", prompt: "Based on my recent meals, suggest specific foods I should add or reduce in my diet." },
-  { label: "⚖️ Macro Balance", prompt: "Am I getting the right balance of protein, carbs, and fats? Give me actionable advice." },
-  { label: "🔍 Today's Review", prompt: "Review what I ate today. How can I make tomorrow better?" },
+  { label: "📊 Weekly Digest", prompt: "Generate my Weekly Nutrition Report Card. Include: (1) daily average macros vs my targets, (2) best and worst days this week, (3) consistency patterns like meal skipping or late-night eating, (4) my top 3 action items for next week. Set context to Last 7 Days." },
+  { label: "❓ Simulate a Meal", prompt: "I'm thinking about eating a Big Mac for lunch. Simulate the macros for me and tell me how it affects my daily limits." },
+  { label: "📅 Plan Tomorrow", prompt: "Based on my macro deficits, generate a healthy 3-meal plan for tomorrow and automatically log it into my diary." },
+  { label: "🛒 Build Grocery List", prompt: "Look at my diet and suggest 3 ingredients I should buy to improve my nutrition, then add them to my grocery list." },
+  { label: "🔍 Audit This", prompt: "Audit the ingredients in a standard Protein Bar. Tell me if it's healthy." },
 ];
 
 export default function AiAdvisor() {
@@ -31,6 +35,29 @@ export default function AiAdvisor() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showNlog, setShowNlog] = useState<number | null>(null);
+  const [contextDays, setContextDays] = useState<number>(7);
+
+  const [groceryList, setGroceryList] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('nutrilog_grocery') || '[]'); } 
+    catch { return []; }
+  });
+
+  function addGroceryItem(item: string) {
+    setGroceryList(prev => {
+      if (prev.find((p) => p.toLowerCase() === item.toLowerCase())) return prev;
+      const next = [...prev, item];
+      localStorage.setItem('nutrilog_grocery', JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function removeGroceryItem(item: string) {
+    setGroceryList(prev => {
+      const next = prev.filter(i => i !== item);
+      localStorage.setItem('nutrilog_grocery', JSON.stringify(next));
+      return next;
+    });
+  }
 
   // Read selected provider from localStorage (set in Settings)
   const selectedProvider = localStorage.getItem("nutrilog_ai_provider") || "ollama";
@@ -47,17 +74,64 @@ export default function AiAdvisor() {
 
     try {
       const today = new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-      const contextualQuestion = `(System Context: Today is ${today}. Only reference items matching this context if the user asks about today or specific dates.)\n\nUser Question: ${question.trim()}`;
+
+      // Load the user's profile for personalized targets
+      const profile = await loadProfile();
+      let profileContext = '';
+      if (profile) {
+        const goal = localStorage.getItem('nutrilog_goal') || 'maintenance';
+        profileContext = `User Profile: ${profile.sex}, ${profile.age} years old, ${profile.heightCm}cm, ${profile.weightKg}kg, activity level: ${profile.activityLevel}, goal: ${goal}.`;
+      }
+
+      const contextualQuestion = `${profileContext ? profileContext + '\n' : ''}(System Context: Today is ${today}.)\n\nUser Question: ${question.trim()}`;
+
+      const historyPayload = messages.map(m => ({ role: m.role, content: m.content })).slice(-6);
 
       const result = await invoke<AiResponse>("get_ai_advice", {
         question: contextualQuestion,
-        days: 7,
+        days: contextDays,
         provider: selectedProvider,
+        history: historyPayload,
+        offsetMinutes: new Date().getTimezoneOffset(),
       });
+
+      let finalAdvice = result.advice;
+
+      // Intercept Frontend WRITE Actions from the AI safely
+      const writeRegex = /\[FRONTEND_ACTION:\s*log_food\((.*?)\)\]/;
+      const match = finalAdvice.match(writeRegex);
+      if (match) {
+        const parts = match[1].split('|');
+        if (parts.length >= 7) {
+          const [foodName, cal, p, c, f, mealType, dateStr] = parts;
+          try {
+            await createEntry({
+              date: dateStr.trim(),
+              mealType: mealType.trim().toLowerCase() as "breakfast" | "lunch" | "dinner" | "snack",
+              foodName: foodName.trim(),
+              calories: parseFloat(cal) || 0,
+              proteinG: parseFloat(p) || 0,
+              carbsG: parseFloat(c) || 0,
+              fatG: parseFloat(f) || 0
+            });
+            finalAdvice = finalAdvice.replace(match[0], `✅ **Done!** I logged ${foodName.trim()} for ${mealType.trim().toLowerCase()} on ${dateStr.trim()}.`);
+          } catch (err: any) {
+            finalAdvice = finalAdvice.replace(match[0], `❌ Failed to log food securely: ${err}`);
+          }
+        }
+      }
+
+      // Intercept Grocery List Actions
+      const groceryMatches = [...finalAdvice.matchAll(/\[FRONTEND_ACTION:\s*add_grocery\((.*?)\)\]/g)];
+      for (const m of groceryMatches) {
+        const item = m[1].trim();
+        addGroceryItem(item);
+        finalAdvice = finalAdvice.replace(m[0], `✨ **Added to Grocery List:** ${item}`);
+      }
 
       const aiMsg: ChatMessage = {
         role: "assistant",
-        content: result.advice,
+        content: finalAdvice,
         nlogData: result.nlog_data,
         tokens: result.token_count,
       };
@@ -91,7 +165,7 @@ export default function AiAdvisor() {
   }
 
   return (
-    <div style={{ display: "grid", gap: 14, maxWidth: 900 }}>
+    <div className="page-enter pop-in" style={{ display: "grid", gap: 14, maxWidth: 900 }}>
       {!isOnline && (
         <div
           className="card"
@@ -110,7 +184,44 @@ export default function AiAdvisor() {
 
       {/* Info card */}
       <div className="card">
-        <div style={{ fontWeight: 700, fontSize: 16 }}>🤖 AI Nutrition Advisor</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>🤖 AI Nutrition Advisor</div>
+          <select 
+            value={contextDays} 
+            onChange={(e) => setContextDays(Number(e.target.value))}
+            style={{ 
+              background: "rgba(255,255,255,0.05)", 
+              border: "1px solid var(--border)", 
+              color: "var(--text)", 
+              borderRadius: 6, 
+              padding: "4px 8px", 
+              fontSize: 12 
+            }}
+          >
+            <option value={1} style={{ color: "black" }}>Today</option>
+            <option value={7} style={{ color: "black" }}>Last 7 Days</option>
+            <option value={30} style={{ color: "black" }}>Last 30 Days</option>
+          </select>
+        </div>
+        <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
+          <span style={{ fontSize: 12, color: "var(--muted2)" }}>🎯 Goal:</span>
+          <select 
+            value={localStorage.getItem('nutrilog_goal') || 'maintenance'}
+            onChange={(e) => { localStorage.setItem('nutrilog_goal', e.target.value); /* force re-render */ setContextDays(c => c); }}
+            style={{ 
+              background: "rgba(255,255,255,0.05)", 
+              border: "1px solid var(--border)", 
+              color: "var(--text)", 
+              borderRadius: 6, 
+              padding: "4px 8px", 
+              fontSize: 12 
+            }}
+          >
+            <option value="weight_loss" style={{ color: "black" }}>🔥 Weight Loss</option>
+            <option value="maintenance" style={{ color: "black" }}>⚖️ Maintenance</option>
+            <option value="muscle_gain" style={{ color: "black" }}>💪 Muscle Gain</option>
+          </select>
+        </div>
         <div style={{ marginTop: 4, fontSize: 12, color: "var(--muted2)" }}>
           Powered by {providerConfig.name}.
           {selectedProvider === "ollama"
@@ -119,6 +230,29 @@ export default function AiAdvisor() {
           {" "}Ask questions about your nutrition and get personalized advice.
         </div>
       </div>
+
+      {/* Grocery List UI */}
+      {groceryList.length > 0 && (
+        <div className="card" style={{ borderLeft: "3px solid #10b981", background: "rgba(16, 185, 129, 0.05)" }}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
+            <span>🛒 Smart Grocery List</span>
+            <span style={{ fontSize: 11, color: "var(--muted2)", fontWeight: "normal" }}>AI Managed</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {groceryList.map((item, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(0,0,0,0.2)", padding: "6px 10px", borderRadius: 8 }}>
+                <span style={{ fontSize: 13 }}>{item}</span>
+                <button 
+                  onClick={() => removeGroceryItem(item)}
+                  style={{ background: "none", border: "none", color: "var(--muted2)", cursor: "pointer", fontSize: 16 }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick prompts */}
       {messages.length === 0 && (
@@ -150,9 +284,15 @@ export default function AiAdvisor() {
           <div style={{ fontSize: 11, color: "var(--muted2)", marginBottom: 6, fontWeight: 600 }}>
             {msg.role === "user" ? "You" : "NutriLog AI"}
           </div>
-          <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-            {msg.content}
-          </div>
+          {msg.role === "assistant" ? (
+            <div className="ai-markdown" style={{ fontSize: 14, lineHeight: 1.7 }}>
+              <ReactMarkdown>{msg.content}</ReactMarkdown>
+            </div>
+          ) : (
+            <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+              {msg.content}
+            </div>
+          )}
 
           {/* .nlog data toggle */}
           {msg.nlogData && (

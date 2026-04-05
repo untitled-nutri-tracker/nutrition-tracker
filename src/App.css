@@ -146,3 +146,98 @@ button {
     background-color: #0f0f0f69;
   }
 }
+
+/* ── AI Markdown Chat Rendering ────────────────────────────────────── */
+.ai-markdown h1,
+.ai-markdown h2,
+.ai-markdown h3 {
+  margin: 12px 0 6px 0;
+  line-height: 1.3;
+  color: var(--text, #f6f6f6);
+}
+.ai-markdown h1 { font-size: 18px; text-align: left; }
+.ai-markdown h2 { font-size: 16px; border-bottom: 1px solid rgba(124,92,255,0.2); padding-bottom: 4px; }
+.ai-markdown h3 { font-size: 14px; color: rgba(124,92,255,0.85); }
+
+.ai-markdown p {
+  margin: 6px 0;
+}
+
+.ai-markdown ul,
+.ai-markdown ol {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+.ai-markdown li {
+  margin: 4px 0;
+}
+.ai-markdown li::marker {
+  color: rgba(124,92,255,0.6);
+}
+
+.ai-markdown strong {
+  color: rgba(124,92,255,0.95);
+  font-weight: 700;
+}
+
+.ai-markdown em {
+  color: rgba(0,209,255,0.85);
+  font-style: italic;
+}
+
+.ai-markdown code {
+  background: rgba(124,92,255,0.12);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+}
+
+.ai-markdown pre {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border, rgba(255,255,255,0.08));
+  border-radius: 8px;
+  padding: 10px 14px;
+  overflow-x: auto;
+  font-size: 12px;
+}
+.ai-markdown pre code {
+  background: none;
+  padding: 0;
+}
+
+.ai-markdown hr {
+  border: none;
+  border-top: 1px solid rgba(124,92,255,0.15);
+  margin: 12px 0;
+}
+
+.ai-markdown blockquote {
+  border-left: 3px solid rgba(124,92,255,0.4);
+  margin: 8px 0;
+  padding: 4px 12px;
+  color: var(--muted, #aaa);
+  background: rgba(124,92,255,0.04);
+  border-radius: 0 6px 6px 0;
+}
+
+.ai-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 12px;
+}
+.ai-markdown th {
+  background: rgba(124,92,255,0.15);
+  padding: 6px 8px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid rgba(124,92,255,0.3);
+}
+.ai-markdown td {
+  padding: 5px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.ai-markdown tr:hover td {
+  background: rgba(124,92,255,0.05);
+}

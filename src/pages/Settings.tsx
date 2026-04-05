@@ -21,7 +21,7 @@ export default function Settings() {
   }
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
+    <div className="page-enter" style={{ display: "grid", gap: 14 }}>
       {error && (
         <div
           className="card"
@@ -35,9 +35,11 @@ export default function Settings() {
         </div>
       )}
 
-      <ProfileForm initial={profile} onSave={persist} saving={saving} />
+      <div className="pop-in">
+        <ProfileForm initial={profile} onSave={persist} saving={saving} />
+      </div>
 
-      <div className="card" style={{ maxWidth: 720 }}>
+      <div className="card pop-in-delay-1" style={{ maxWidth: 720 }}>
         <div style={{ fontSize: 16, fontWeight: 600 }}>Energy estimates</div>
         <div
           style={{ fontSize: 12, color: "var(--muted2)", marginTop: 4 }}
@@ -166,7 +168,7 @@ function ApiKeySection() {
   };
 
   return (
-    <div className="card" style={{ maxWidth: 720 }}>
+    <div className="card pop-in-delay-2" style={{ maxWidth: 720 }}>
       <div style={{ fontSize: 16, fontWeight: 600 }}>
         AI Provider Configuration
       </div>
