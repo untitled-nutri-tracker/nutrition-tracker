@@ -108,49 +108,6 @@ pub fn run() {
             fetch_food_by_barcode,
             get_ai_advice,
             network_config::get_network_config,
-            nutrack_database::session::get_db_path,
-            nutrack_database::session::get_database_session,
-            nutrack_database::session::create_database,
-            nutrack_database::session::open_database,
-            nutrack_database::session::close_database,
-            nutrack_database::session::load_profile,
-            nutrack_database::session::save_profile,
-            nutrack_database::session::clear_profile,
-            // Food CRUD
-            nutrack_database::food::create_food,
-            nutrack_database::food::get_food,
-            nutrack_database::food::list_foods,
-            nutrack_database::food::update_food,
-            nutrack_database::food::delete_food,
-            nutrack_database::food::create_serving,
-            nutrack_database::food::get_serving,
-            nutrack_database::food::list_servings_by_food,
-            nutrack_database::food::update_serving,
-            nutrack_database::food::delete_serving,
-            nutrack_database::food::create_nutrition_facts,
-            nutrack_database::food::get_nutrition_facts,
-            nutrack_database::food::list_nutrition_facts,
-            nutrack_database::food::update_nutrition_facts,
-            nutrack_database::food::delete_nutrition_facts,
-            // Meal CRUD
-            nutrack_database::meal::create_meal,
-            nutrack_database::meal::get_meal,
-            nutrack_database::meal::list_meals,
-            nutrack_database::meal::list_meals_by_date_range,
-            nutrack_database::meal::update_meal,
-            nutrack_database::meal::delete_meal,
-            nutrack_database::meal::create_meal_item,
-            nutrack_database::meal::get_meal_item,
-            nutrack_database::meal::list_meal_items_by_meal,
-            nutrack_database::meal::update_meal_item,
-            nutrack_database::meal::delete_meal_item,
-            nutrack_database::meal::build_nlog,
-            // User Profile
-            nutrack_database::user_profile::create_profile,
-            nutrack_database::user_profile::get_profile,
-            nutrack_database::user_profile::list_profiles,
-            nutrack_database::user_profile::update_profile,
-            nutrack_database::user_profile::delete_profile,
             // Credential management
             credentials::commands::store_credential,
             credentials::commands::delete_credential,
@@ -158,6 +115,7 @@ pub fn run() {
             credentials::commands::list_credentials,
             credentials::commands::get_credential_preview,
         ])
+        .invoke_handler(nutrack_database::handler())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
