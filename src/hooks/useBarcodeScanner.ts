@@ -172,6 +172,14 @@ export function useBarcodeScanner(
         setIsScanning(true);
         setCameraPermission("granted");
 
+        // Refetch devices now that permission is granted to update the dropdown list
+        if (!IS_MOBILE) {
+          navigator.mediaDevices.enumerateDevices().then((allDevs) => {
+            const videoDevs = allDevs.filter((d) => d.kind === "videoinput");
+            setDevices(videoDevs);
+          }).catch(() => {});
+        }
+
         let scanAttempts = 0;
 
         reader.decodeFromStream(
@@ -212,8 +220,15 @@ export function useBarcodeScanner(
 
         console.log("[BarcodeScanner] Decode loop started");
       } catch (e: any) {
+        const errName = e?.name || "";
         const msg = e?.message ?? String(e);
-        console.error("[BarcodeScanner] Failed to start:", msg);
+        console.error("[BarcodeScanner] Failed to start:", errName, msg);
+
+        // Ignore AbortError caused by rapid component unmount/remount
+        if (errName === "AbortError" || msg.includes("operation was aborted")) {
+          return;
+        }
+
         if (
           msg.includes("NotAllowedError") ||
           msg.includes("Permission denied")
