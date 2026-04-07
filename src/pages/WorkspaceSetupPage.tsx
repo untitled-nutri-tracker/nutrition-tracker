@@ -8,7 +8,7 @@ import type { UserProfile } from "../types/profile";
 type LandingMode = "menu" | "create";
 
 export default function WorkspaceSetupPage() {
-  const { session, createDb, openDb } = useDatabaseSession();
+  const { session, createDatabase, openDatabase } = useDatabaseSession();
   const [mode, setMode] = useState<LandingMode>("menu");
   const [existingPath, setExistingPath] = useState(session.lastPath ?? "");
   const [creating, setCreating] = useState(false);
@@ -28,7 +28,7 @@ export default function WorkspaceSetupPage() {
         return;
       }
 
-      await createDb(selected);
+      await createDatabase(selected);
       await saveProfile(profile);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create database");
@@ -42,7 +42,7 @@ export default function WorkspaceSetupPage() {
     setOpening(true);
     setError(null);
     try {
-      await openDb(existingPath);
+      await openDatabase(existingPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to open database");
     } finally {
@@ -69,7 +69,7 @@ export default function WorkspaceSetupPage() {
       }
 
       setExistingPath(selected);
-      await openDb(selected);
+      await openDatabase(selected);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to open database");
     } finally {

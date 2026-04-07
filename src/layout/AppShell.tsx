@@ -74,7 +74,7 @@ export default function AppShell() {
   const { title, subtitle } = usePageMeta();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { session, closeDb } = useDatabaseSession();
+  const { session, closeDatabase } = useDatabaseSession();
 
   return (
     <div className="app">
@@ -100,7 +100,7 @@ export default function AppShell() {
           <div className="dbStatusPath" title={session.connectedPath ?? ""}>
             {session.connectedPath}
           </div>
-          <button className="disconnectButton" onClick={closeDb} type="button">
+          <button className="disconnectButton" onClick={closeDatabase} type="button">
             Close database
           </button>
         </div>

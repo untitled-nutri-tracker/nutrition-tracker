@@ -5,18 +5,24 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {closeDatabase, createDatabase, DatabaseSessionInfo, getDatabaseSession, openDatabase} from "../generated";
+import { invoke } from "@tauri-apps/api/core";
 
-interface DatabaseSessionContextValue {
-  session: DatabaseSessionInfo;
-  loading: boolean;
-  refresh: () => Promise<DatabaseSessionInfo>;
-  createDb: (path: string) => Promise<string>;
-  openDb: (path: string) => Promise<string>;
-  closeDb: () => Promise<void>;
+export interface DatabaseSession {
+  connectedPath: string | null;
+  lastPath: string | null;
+  defaultDatabaseDirectory: string;
 }
 
-const EMPTY_SESSION: DatabaseSessionInfo = {
+interface DatabaseSessionContextValue {
+  session: DatabaseSession;
+  loading: boolean;
+  refresh: () => Promise<DatabaseSession>;
+  createDatabase: (path: string) => Promise<string>;
+  openDatabase: (path: string) => Promise<string>;
+  closeDatabase: () => Promise<void>;
+}
+
+const EMPTY_SESSION: DatabaseSession = {
   connectedPath: null,
   lastPath: null,
   defaultDatabaseDirectory: "",
@@ -25,29 +31,29 @@ const EMPTY_SESSION: DatabaseSessionInfo = {
 const DatabaseSessionContext = createContext<DatabaseSessionContextValue | null>(null);
 
 export function DatabaseSessionProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<DatabaseSessionInfo>(EMPTY_SESSION);
+  const [session, setSession] = useState<DatabaseSession>(EMPTY_SESSION);
   const [loading, setLoading] = useState(true);
 
-  async function refresh(): Promise<DatabaseSessionInfo> {
-    const next = await getDatabaseSession();
+  async function refresh(): Promise<DatabaseSession> {
+    const next = await invoke<DatabaseSession>("get_database_session");
     setSession(next);
     return next;
   }
 
-  async function createDb(path: string): Promise<string> {
-    const connectedPath = await createDatabase({path});
+  async function createDatabase(path: string): Promise<string> {
+    const connectedPath = await invoke<string>("create_database", { path });
     await refresh();
     return connectedPath;
   }
 
-  async function openDb(path: string): Promise<string> {
-    const connectedPath = await openDatabase({path});
+  async function openDatabase(path: string): Promise<string> {
+    const connectedPath = await invoke<string>("open_database", { path });
     await refresh();
     return connectedPath;
   }
 
-  async function closeDb(): Promise<void> {
-    await closeDatabase();
+  async function closeDatabase(): Promise<void> {
+    await invoke("close_database");
     await refresh();
   }
 
@@ -65,9 +71,9 @@ export function DatabaseSessionProvider({ children }: { children: ReactNode }) {
     session,
     loading,
     refresh,
-    createDb,
-    openDb,
-    closeDb
+    createDatabase,
+    openDatabase,
+    closeDatabase,
   };
 
   return (
