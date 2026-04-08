@@ -57,6 +57,7 @@ The app is designed to be **offline-first and local-first**. The database is a l
 ### 2. Tauri IPC and Type Safety
 Communication between the React frontend and Rust backend strictly uses Tauri commands.
 - **Rust to TS:** `tauri-typegen` automatically generates `src/generated/types.ts` and `src/generated/commands.ts` from the Rust backend. When modifying Rust structs or command signatures, running `cargo build` updates the frontend bindings.
+- **Frontend Call Site Rule:** React/TypeScript code should call the generated functions from `src/generated/` rather than using raw `@tauri-apps/api/core` `invoke(...)` calls directly. If a command is missing from the generated bindings, fix the Rust export/typegen flow instead of adding a new manual invoke wrapper.
 - **Error Propagation:** Tauri commands should return `Result<T, String>`. Use `.map_err(|e| e.to_string())` to pass errors cleanly across the IPC boundary so they can be caught and displayed by the React UI.
 
 ### 3. External Network & API Handling
