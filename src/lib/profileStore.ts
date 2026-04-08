@@ -1,4 +1,5 @@
 import type { UserProfile } from "../types/profile";
+import { clearProfile as clearProfileCommand, loadProfile as loadProfileCommand, saveProfile as saveProfileCommand } from "../generated";
 
 /**
  * Local persistence key for the user profile (v1 schema).
@@ -17,18 +18,6 @@ const LS_KEY = "nutrilog.userProfile.v1";
  *   - clear_profile
  */
 const USE_TAURI = true;
-
-/**
- * Safe wrapper around Tauri invoke.
- * Dynamic import prevents bundlers from failing in non-Tauri contexts.
- */
-async function tauriInvoke<T>(
-  cmd: string,
-  args?: Record<string, unknown>
-): Promise<T> {
-  const mod = await import("@tauri-apps/api/core");
-  return mod.invoke<T>(cmd, args);
-}
 
 /**
  * Basic runtime validation to avoid crashing on corrupted storage.
@@ -55,7 +44,7 @@ function isUserProfileV1(x: unknown): x is UserProfile {
  */
 export async function loadProfile(): Promise<UserProfile | null> {
   if (USE_TAURI) {
-    const profile = await tauriInvoke<UserProfile | null>("load_profile");
+    const profile = await loadProfileCommand();
     return profile && isUserProfileV1(profile) ? profile : null;
   }
 
@@ -77,8 +66,7 @@ export async function loadProfile(): Promise<UserProfile | null> {
  */
 export async function saveProfile(profile: UserProfile): Promise<void> {
   if (USE_TAURI) {
-    // Requires Rust command: save_profile(profile: UserProfile)
-    await tauriInvoke<void>("save_profile", { profile });
+    await saveProfileCommand({ profile });
     return;
   }
 
@@ -90,8 +78,7 @@ export async function saveProfile(profile: UserProfile): Promise<void> {
  */
 export async function clearProfile(): Promise<void> {
   if (USE_TAURI) {
-    // Requires Rust command: clear_profile()
-    await tauriInvoke<void>("clear_profile");
+    await clearProfileCommand();
     return;
   }
 

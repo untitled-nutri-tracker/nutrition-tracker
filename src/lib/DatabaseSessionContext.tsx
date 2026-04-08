@@ -5,7 +5,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import {
+  closeDatabase as closeDatabaseCommand,
+  createDatabase as createDatabaseCommand,
+  getDatabaseSession,
+  openDatabase as openDatabaseCommand,
+} from "../generated";
 
 export interface DatabaseSession {
   connectedPath: string | null;
@@ -35,25 +40,30 @@ export function DatabaseSessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   async function refresh(): Promise<DatabaseSession> {
-    const next = await invoke<DatabaseSession>("get_database_session");
+    const nextRaw = await getDatabaseSession();
+    const next: DatabaseSession = {
+      connectedPath: nextRaw.connectedPath ?? null,
+      lastPath: nextRaw.lastPath ?? null,
+      defaultDatabaseDirectory: nextRaw.defaultDatabaseDirectory,
+    };
     setSession(next);
     return next;
   }
 
   async function createDatabase(path: string): Promise<string> {
-    const connectedPath = await invoke<string>("create_database", { path });
+    const connectedPath = await createDatabaseCommand({ path });
     await refresh();
     return connectedPath;
   }
 
   async function openDatabase(path: string): Promise<string> {
-    const connectedPath = await invoke<string>("open_database", { path });
+    const connectedPath = await openDatabaseCommand({ path });
     await refresh();
     return connectedPath;
   }
 
   async function closeDatabase(): Promise<void> {
-    await invoke("close_database");
+    await closeDatabaseCommand();
     await refresh();
   }
 

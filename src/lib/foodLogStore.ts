@@ -6,6 +6,17 @@
 //
 
 import type { FoodEntry, FoodEntryDraft } from "../types/foodLog";
+import {
+  createFood,
+  createMeal,
+  createMealItem,
+  createNutritionFacts,
+  createServing,
+  deleteMealItem,
+  getNutritionFacts,
+  listMealItemsByMeal,
+  listMealsByDateRange,
+} from "../generated";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -16,14 +27,6 @@ const LS_PREFIX = "nutrilog.foodLog.v1";
 
 function dayKey(date: string): string {
   return `${LS_PREFIX}.${date}`;
-}
-
-async function tauriInvoke<T>(
-  cmd: string,
-  args?: Record<string, unknown>
-): Promise<T> {
-  const mod = await import("@tauri-apps/api/core");
-  return mod.invoke<T>(cmd, args);
 }
 
 function isValidEntry(x: unknown): x is FoodEntry {
@@ -65,13 +68,13 @@ export async function loadEntriesByDate(date: string): Promise<FoodEntry[]> {
     const start = Math.floor(d.getTime() / 1000);
     const end = start + 86400;
 
-    const meals = await tauriInvoke<any[]>("list_meals_by_date_range", { start, end });
+    const meals = await listMealsByDateRange({ start, end });
     const entries: FoodEntry[] = [];
 
     for (const meal of meals) {
-      const items = await tauriInvoke<any[]>("list_meal_items_by_meal", { mealId: meal.id });
+      const items = await listMealItemsByMeal({ mealId: meal.id });
       for (const item of items) {
-        const facts = await tauriInvoke<any>("get_nutrition_facts", { servingId: item.serving.id });
+        const facts = await getNutritionFacts({ servingId: item.serving.id });
         
         entries.push({
           id: String(item.id),
@@ -113,7 +116,7 @@ export async function createEntry(draft: FoodEntryDraft & { date: string }): Pro
     const ts = Math.floor(d.getTime() / 1000);
     
     // Create food
-    const food = await tauriInvoke<any>("create_food", {
+    const food = await createFood({
       food: {
         id: 0, name: draft.foodName, brand: draft.brand || "",
         category: "Manual", source: "user", refUrl: "", barcode: "",
@@ -122,7 +125,7 @@ export async function createEntry(draft: FoodEntryDraft & { date: string }): Pro
     });
 
     // Create serving
-    const serving = await tauriInvoke<any>("create_serving", {
+    const serving = await createServing({
       serving: {
         id: 0, food, amount: 1, unit: "SERVING", gramsEquiv: 100,
         isDefault: true, createdAt: ts, updatedAt: ts
@@ -130,7 +133,7 @@ export async function createEntry(draft: FoodEntryDraft & { date: string }): Pro
     });
 
     // Create nutrition facts
-    await tauriInvoke("create_nutrition_facts", {
+    await createNutritionFacts({
       nutritionFacts: {
         SERVING: serving,
         CALORIES_KCAL: draft.calories,
@@ -143,16 +146,16 @@ export async function createEntry(draft: FoodEntryDraft & { date: string }): Pro
     });
 
     // Create Meal
-    const meal = await tauriInvoke<any>("create_meal", {
+    const meal = await createMeal({
       meal: {
-        id: 0, occurredAt: ts, mealType: String(draft.mealType).toUpperCase(), 
+        id: 0, occurredAt: ts, mealType: String(draft.mealType).toUpperCase() as any, 
         title: draft.mealType.charAt(0).toUpperCase() + draft.mealType.slice(1),
         note: "", createdAt: ts, updatedAt: ts
       }
     });
 
     // Create Meal Item
-    const item = await tauriInvoke<any>("create_meal_item", {
+    const item = await createMealItem({
        mealItem: {
          id: 0, meal, food, serving, quantity: 1.0, note: draft.notes || "",
          createdAt: ts, updatedAt: ts
@@ -186,7 +189,7 @@ export async function createEntry(draft: FoodEntryDraft & { date: string }): Pro
 export async function deleteEntry(id: string, date: string): Promise<void> {
   if (USE_TAURI) {
     const numericId = parseInt(id, 10);
-    await tauriInvoke<boolean>("delete_meal_item", { id: numericId });
+    await deleteMealItem({ id: numericId });
     return;
   }
 
