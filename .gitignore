@@ -11,6 +11,7 @@ dist/
 target/
 src-tauri/target/
 src-rust-crates/**/target/
+src/bindings
 
 # OS / misc
 .DS_Store
