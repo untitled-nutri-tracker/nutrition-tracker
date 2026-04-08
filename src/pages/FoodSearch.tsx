@@ -9,7 +9,7 @@ import {
   createServing,
   fetchFoodByBarcode,
   searchFoodOnline,
-} from "../generated";
+} from "../bindings";
 
 // Toggle: false = localStorage (works now), true = Tauri IPC
 const USE_TAURI = false;

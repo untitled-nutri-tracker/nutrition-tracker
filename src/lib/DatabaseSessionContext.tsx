@@ -10,7 +10,7 @@ import {
   createDatabase as createDatabaseCommand,
   getDatabaseSession,
   openDatabase as openDatabaseCommand,
-} from "../generated";
+} from "../bindings";
 
 export interface DatabaseSession {
   connectedPath: string | null;

@@ -11,7 +11,7 @@ import {
   hasCredential,
   listCredentials as listCredentialsCommand,
   storeCredential,
-} from "../generated";
+} from "../bindings";
 
 const USE_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 

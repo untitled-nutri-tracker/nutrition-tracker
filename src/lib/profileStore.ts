@@ -1,5 +1,5 @@
 import type { UserProfile } from "../types/profile";
-import { clearProfile as clearProfileCommand, loadProfile as loadProfileCommand, saveProfile as saveProfileCommand } from "../generated";
+import { clearProfile as clearProfileCommand, loadProfile as loadProfileCommand, saveProfile as saveProfileCommand } from "../bindings";
 
 /**
  * Local persistence key for the user profile (v1 schema).

@@ -16,7 +16,7 @@ import {
   getNutritionFacts,
   listMealItemsByMeal,
   listMealsByDateRange,
-} from "../generated";
+} from "../bindings";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
