@@ -1,0 +1,99 @@
+name: Nightly Release
+
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: "Build even if main has not been updated in the last 24 hours"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nightly-release
+  cancel-in-progress: false
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+      release_name: ${{ steps.meta.outputs.release_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Compute nightly release metadata
+        id: meta
+        run: |
+          DATE_TAG="$(date -u +'%m%d%y')"
+          echo "release_tag=nightly-${DATE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "release_name=nightly-${DATE_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Check for updates on main in the last 24 hours
+        id: check
+        run: |
+          LAST_COMMIT_TS="$(git log -1 --format=%ct origin/main)"
+          NOW_TS="$(date -u +%s)"
+          AGE_SECONDS="$((NOW_TS - LAST_COMMIT_TS))"
+
+          if [ "$AGE_SECONDS" -le 86400 ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-nightly:
+    needs: check-updates
+    if: github.event_name == 'workflow_dispatch' && inputs.force_build || needs.check-updates.outputs.should_build == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            runner: windows-latest
+          - platform: macos-arm
+            runner: macos-14
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build and publish nightly package
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ needs.check-updates.outputs.release_tag }}
+          releaseName: ${{ needs.check-updates.outputs.release_name }}
+          releaseBody: |
+            Automated nightly build from `main`.
+          releaseDraft: false
+          prerelease: true
+          includeUpdaterJson: false
