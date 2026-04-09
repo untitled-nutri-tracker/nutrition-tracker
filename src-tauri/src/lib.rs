@@ -151,6 +151,10 @@ pub fn run() {
             nutrack_database::user_profile::list_profiles,
             nutrack_database::user_profile::update_profile,
             nutrack_database::user_profile::delete_profile,
+            // XLSX Export
+            nutrack_database::export::get_xlsx_export_schema,
+            nutrack_database::export::export_xlsx_records,
+            nutrack_database::export::export_xlsx_to_path,
             // Credential management
             credentials::commands::store_credential,
             credentials::commands::delete_credential,
