@@ -2,6 +2,9 @@ use crate::food::{Food, Serving};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 
+pub const DAY_SECONDS: i64 = 86_400;
+pub const WEEK_SECONDS: i64 = 7 * DAY_SECONDS;
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Meal {
@@ -38,6 +41,42 @@ pub struct MealItem {
     pub note: String,
     pub created_at: i64, // timestamp
     pub updated_at: i64, // timestamp
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct NutritionTotals {
+    pub calories_kcal: f64,
+    pub fat_g: f64,
+    pub saturated_fat_g: f64,
+    pub trans_fat_g: f64,
+    pub cholesterol_mg: f64,
+    pub sodium_mg: f64,
+    pub total_carbohydrate_g: f64,
+    pub dietary_fiber_g: f64,
+    pub total_sugars_g: f64,
+    pub added_sugars_g: f64,
+    pub protein_g: f64,
+    pub vitamin_d_mcg: f64,
+    pub calcium_mg: f64,
+    pub iron_mg: f64,
+    pub meal_count: i64,
+    pub item_count: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct NutritionTrendPoint {
+    pub period_start: i64,
+    pub period_end: i64,
+    pub totals: NutritionTotals,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum TrendBucket {
+    Day,
+    Week,
 }
 
 impl crate::validate::Validate for Meal {
@@ -192,4 +231,3 @@ mod tests {
         assert!(mi.validate().is_err());
     }
 }
-
