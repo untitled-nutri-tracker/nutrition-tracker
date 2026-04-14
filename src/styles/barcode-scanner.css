@@ -258,3 +258,44 @@
   font-size: 13px;
   color: var(--text);
 }
+
+.food-photo-wrap {
+  border-color: rgba(80, 200, 120, 0.45);
+}
+
+.food-photo-guide {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  text-align: center;
+}
+
+.food-photo-file-only {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.72);
+  color: white;
+  display: flex;
+  font-size: 1rem;
+  height: 100%;
+  justify-content: center;
+  line-height: 1.4;
+  padding: 24px;
+  text-align: center;
+  width: 100%;
+}
+
+.food-photo-capture-btn {
+  border-color: rgba(80, 200, 120, 0.4);
+  background: rgba(80, 200, 120, 0.16);
+}
+
+.food-photo-capture-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

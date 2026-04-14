@@ -6,10 +6,11 @@ import { createEntry } from "../lib/foodLogStore";
 // Toggle: false = localStorage (works now), true = Tauri IPC
 const USE_TAURI = false;
 import {
-  SearchProduct, SearchResult, MEAL_TYPES,
+  SearchProduct, SearchResult, PhotoFoodEstimate, MEAL_TYPES,
   r, defaultMealType, todayStr,
 } from "../types";
 import BarcodeScanner from "../components/BarcodeScanner";
+import FoodPhotoScanner from "../components/FoodPhotoScanner";
 import "../styles/barcode-scanner.css";
 
 /* ------------------------------------------------------------------ */
@@ -79,6 +80,21 @@ export default function LogFood() {
   const [confirmQty, setConfirmQty] = useState("1");
   const [confirmLogged, setConfirmLogged] = useState(false);
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
+
+  // ---- Food photo scan state ----
+  const [showPhotoScanner, setShowPhotoScanner] = useState(false);
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const [photoEstimate, setPhotoEstimate] = useState<PhotoFoodEstimate | null>(null);
+  const [photoForm, setPhotoForm] = useState({
+    foodName: "",
+    estimatedGrams: "100",
+    calories: "0",
+    proteinG: "0",
+    carbsG: "0",
+    fatG: "0",
+    notes: "",
+  });
+  const [photoLogged, setPhotoLogged] = useState(false);
 
   async function handleTextSearch() {
     if (!query.trim()) return;
@@ -156,6 +172,68 @@ export default function LogFood() {
     setShowScanner(false);
     setBarcode(barcodeValue);
     lookupBarcode(barcodeValue);
+  }
+
+  async function handlePhotoCaptured(photo: { imageBase64: string; mimeType: string }) {
+    setShowPhotoScanner(false);
+    setPhotoLoading(true);
+    setPhotoEstimate(null);
+    setPhotoLogged(false);
+    setError(null);
+    try {
+      const storedProvider = localStorage.getItem("nutrilog_vision_provider") || "ollama";
+      const allowCloud = localStorage.getItem("nutrilog_photo_scan_cloud_enabled") === "true";
+      const selectedProvider = allowCloud || storedProvider === "ollama" ? storedProvider : "ollama";
+      const estimate = await invoke<PhotoFoodEstimate>("analyze_food_photo", {
+        imageBase64: photo.imageBase64,
+        mimeType: photo.mimeType,
+        visionProvider: selectedProvider,
+        allowCloud,
+      });
+      setPhotoEstimate(estimate);
+      setPhotoForm({
+        foodName: estimate.foodName,
+        estimatedGrams: String(r(estimate.estimatedGrams || 100)),
+        calories: String(r(estimate.calories || 0)),
+        proteinG: String(r(estimate.proteinG || 0)),
+        carbsG: String(r(estimate.carbsG || 0)),
+        fatG: String(r(estimate.fatG || 0)),
+        notes: estimate.notes || "",
+      });
+    } catch (e: any) {
+      setError(e?.toString() ?? "Food photo analysis failed");
+    } finally {
+      setPhotoLoading(false);
+    }
+  }
+
+  async function handlePhotoLog() {
+    if (!photoEstimate) return;
+    try {
+      const grams = parseFloat(photoForm.estimatedGrams) || 100;
+      const sourceNotes = [
+        photoEstimate.usdaFdcId ? "Source: USDA + local vision estimate." : "Source: local vision estimate; USDA match unavailable.",
+        `Confidence: ${Math.round((photoEstimate.confidence || 0) * 100)}%.`,
+        photoEstimate.usdaDescription ? `USDA match: ${photoEstimate.usdaDescription}.` : "USDA match unavailable.",
+        photoEstimate.usdaFdcId ? `FDC ID: ${photoEstimate.usdaFdcId}.` : "",
+        photoForm.notes.trim(),
+      ].filter(Boolean).join(" ");
+
+      await createEntry({
+        date,
+        mealType: mealType as any,
+        foodName: photoForm.foodName.trim() || photoEstimate.foodName,
+        calories: Math.round(parseFloat(photoForm.calories) || 0),
+        proteinG: r(parseFloat(photoForm.proteinG) || 0),
+        carbsG: r(parseFloat(photoForm.carbsG) || 0),
+        fatG: r(parseFloat(photoForm.fatG) || 0),
+        servingDesc: `${r(grams)}g estimated`,
+        notes: sourceNotes,
+      });
+      setPhotoLogged(true);
+    } catch (e: any) {
+      setError(e?.toString() ?? "Failed to log food photo estimate");
+    }
   }
 
   /** Log a product from the confirmation card. */
@@ -386,7 +464,7 @@ export default function LogFood() {
         </div>
 
         {/* Barcode input row */}
-        <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr auto auto", gap: 10, alignItems: "start" }}>
+        <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: 10, alignItems: "start" }}>
           <div>
             <div style={{ position: "relative" }}>
               <input
@@ -478,6 +556,22 @@ export default function LogFood() {
           >
             📷 Scan
           </button>
+
+          <button
+            id="food-photo-scan-btn"
+            onClick={() => setShowPhotoScanner(true)}
+            disabled={loading || photoLoading}
+            style={{
+              ...buttonStyle,
+              background: "linear-gradient(135deg, rgba(80,200,120,0.22), rgba(0,209,255,0.10))",
+              borderColor: "rgba(80,200,120,0.38)",
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+            }}
+          >
+            {photoLoading ? "Analyzing…" : "🥗 Snap Food"}
+          </button>
         </div>
       </div>
 
@@ -487,6 +581,109 @@ export default function LogFood() {
           onBarcodeDetected={handleBarcodeDetected}
           onClose={() => setShowScanner(false)}
         />
+      )}
+
+      {showPhotoScanner && (
+        <FoodPhotoScanner
+          onPhotoCaptured={handlePhotoCaptured}
+          onClose={() => setShowPhotoScanner(false)}
+        />
+      )}
+
+      {photoLoading && (
+        <div className="card" style={{ maxWidth: 900, border: "1px solid rgba(80,200,120,0.28)", background: "rgba(80,200,120,0.05)" }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Analyzing food photo…</div>
+          <div style={{ marginTop: 6, color: "var(--muted)", fontSize: 12 }}>
+            The photo is sent to the selected vision model, then only the predicted food name is used for USDA nutrition lookup.
+          </div>
+        </div>
+      )}
+
+      {photoEstimate && (
+        <div className="card confirm-card" style={{ maxWidth: 900 }}>
+          <div style={{ fontSize: 11, color: "var(--muted2)", fontWeight: 600, marginBottom: 10 }}>
+            Food photo estimate · Source: USDA + vision estimate · Confidence {Math.round((photoEstimate.confidence || 0) * 100)}%
+          </div>
+
+          <div style={{ display: "grid", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1.3fr 0.7fr", gap: 10 }}>
+              <label style={{ display: "grid", gap: 4, fontSize: 11, color: "var(--muted2)" }}>
+                Food
+                <input
+                  value={photoForm.foodName}
+                  onChange={(e) => setPhotoForm((prev) => ({ ...prev, foodName: e.target.value }))}
+                  style={inputStyle}
+                />
+              </label>
+              <label style={{ display: "grid", gap: 4, fontSize: 11, color: "var(--muted2)" }}>
+                Estimated grams
+                <input
+                  type="number"
+                  min="1"
+                  value={photoForm.estimatedGrams}
+                  onChange={(e) => setPhotoForm((prev) => ({ ...prev, estimatedGrams: e.target.value }))}
+                  style={inputStyle}
+                />
+              </label>
+            </div>
+
+            {photoEstimate.usdaDescription && (
+              <div style={{ fontSize: 12, color: "var(--muted2)" }}>
+                USDA match: {photoEstimate.usdaDescription}
+                {photoEstimate.usdaFdcId ? ` · FDC ${photoEstimate.usdaFdcId}` : ""}
+              </div>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+              {[
+                ["Calories", "calories", "kcal"],
+                ["Protein", "proteinG", "g"],
+                ["Carbs", "carbsG", "g"],
+                ["Fat", "fatG", "g"],
+              ].map(([label, key, unit]) => (
+                <label key={key} style={{ display: "grid", gap: 4, fontSize: 11, color: "var(--muted2)" }}>
+                  {label} ({unit})
+                  <input
+                    type="number"
+                    min="0"
+                    value={photoForm[key as keyof typeof photoForm]}
+                    onChange={(e) => setPhotoForm((prev) => ({ ...prev, [key]: e.target.value }))}
+                    style={inputStyle}
+                  />
+                </label>
+              ))}
+            </div>
+
+            <label style={{ display: "grid", gap: 4, fontSize: 11, color: "var(--muted2)" }}>
+              Notes
+              <input
+                value={photoForm.notes}
+                onChange={(e) => setPhotoForm((prev) => ({ ...prev, notes: e.target.value }))}
+                placeholder="Adjust anything uncertain before logging"
+                style={inputStyle}
+              />
+            </label>
+          </div>
+
+          <div className="confirm-card-actions">
+            <button
+              className="confirm-add-btn"
+              onClick={handlePhotoLog}
+              disabled={photoLogged}
+            >
+              {photoLogged ? "✓ Logged" : "📝 Add to Log"}
+            </button>
+            <button
+              className="confirm-cancel-btn"
+              onClick={() => {
+                setPhotoEstimate(null);
+                setPhotoLogged(false);
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Confirmation card (after barcode scan/lookup) */}

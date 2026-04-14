@@ -18,6 +18,7 @@ const ALLOWED_SERVICES: &[&str] = &[
     crate::credentials::providers::ANTHROPIC,
     crate::credentials::providers::GOOGLE,
     crate::credentials::providers::OLLAMA_ENDPOINT,
+    crate::credentials::providers::USDA_FDC,
 ];
 
 /// Store a credential (API key) for a given service/provider.
@@ -77,4 +78,14 @@ pub fn list_credentials() -> Result<Vec<CredentialInfo>, String> {
 #[tauri::command]
 pub fn get_credential_preview(service: String) -> Result<String, String> {
     CredentialManager::global().get_preview(&service)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ALLOWED_SERVICES;
+
+    #[test]
+    fn usda_fooddata_central_is_allowed() {
+        assert!(ALLOWED_SERVICES.contains(&crate::credentials::providers::USDA_FDC));
+    }
 }

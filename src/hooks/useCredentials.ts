@@ -23,6 +23,13 @@ export interface LlmProviderConfig {
   description: string;
 }
 
+export interface ExternalDataProviderConfig {
+  id: string;
+  name: string;
+  service: string;
+  description: string;
+}
+
 /** All supported LLM providers. */
 export const LLM_PROVIDERS: LlmProviderConfig[] = [
   {
@@ -52,6 +59,15 @@ export const LLM_PROVIDERS: LlmProviderConfig[] = [
     service: "llm.google",
     requiresKey: true,
     description: "Gemini 2.0 Flash. Requires an API key from aistudio.google.com.",
+  },
+];
+
+export const EXTERNAL_DATA_PROVIDERS: ExternalDataProviderConfig[] = [
+  {
+    id: "usda_fdc",
+    name: "USDA FoodData Central",
+    service: "nutrition.usda.fdc",
+    description: "Used to compute calories and macros after local food-photo identification.",
   },
 ];
 

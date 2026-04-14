@@ -1,10 +1,12 @@
 pub mod api;
 pub mod credentials;
 pub mod network_config;
+pub mod camera_permission;
 pub mod utils;
 
 use api::ai::{self, AiResponse, ChatMessage};
 use api::openfoodfacts::{self, SearchResult};
+use api::photo_food::PhotoFoodEstimate;
 use tauri::Manager;
 
 #[tauri::command]
@@ -66,11 +68,33 @@ async fn get_ai_advice(
     let nlog_data = nutrack_database::meal::build_nlog(days, offset_minutes.unwrap_or(0)).await?;
 
     // Parse provider (default to Ollama for backwards compatibility)
-    let llm_provider =
-        ai::LlmProvider::from_str(&provider.unwrap_or_else(|| "ollama".into()))?;
+    let llm_provider = ai::LlmProvider::from_str(&provider.unwrap_or_else(|| "ollama".into()))?;
 
     // Send to the selected LLM provider
-    ai::ask_llm(&nlog_data, &question, history.unwrap_or_default(), &llm_provider).await
+    ai::ask_llm(
+        &nlog_data,
+        &question,
+        history.unwrap_or_default(),
+        &llm_provider,
+    )
+    .await
+}
+
+/// Analyze a single food photo with a vision model, then enrich with USDA nutrition.
+#[tauri::command]
+async fn analyze_food_photo(
+    image_base64: String,
+    mime_type: String,
+    vision_provider: Option<String>,
+    allow_cloud: bool,
+) -> Result<PhotoFoodEstimate, String> {
+    api::photo_food::analyze(image_base64, mime_type, vision_provider, allow_cloud).await
+}
+
+/// Ask the OS for camera permission before using WebView getUserMedia.
+#[tauri::command]
+fn ensure_camera_permission() -> Result<String, String> {
+    camera_permission::ensure_camera_permission()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -96,7 +120,7 @@ pub fn run() {
                     e
                 ))
             })?;
-          
+
             // Initialize credential manager (OS keychain or encrypted file fallback)
             credentials::CredentialManager::initialize(&app_data_dir);
 
@@ -107,6 +131,8 @@ pub fn run() {
             search_food_online,
             fetch_food_by_barcode,
             get_ai_advice,
+            analyze_food_photo,
+            ensure_camera_permission,
             network_config::get_network_config,
             nutrack_database::session::get_db_path,
             nutrack_database::session::get_database_session,
