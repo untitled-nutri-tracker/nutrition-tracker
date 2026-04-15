@@ -34,9 +34,7 @@ impl SecureFileStore {
     /// Create a new `SecureFileStore` at the given path.
     /// The encryption key is derived from the machine's unique ID.
     pub fn new(vault_path: &std::path::Path) -> Result<Self, String> {
-        let machine_id = machine_uid::get()
-            .unwrap_or_else(|_| "nutrilog-fallback-device-id".to_string());
-
+        let machine_id = "123456abcdef";
         let mut key = [0u8; 32];
         pbkdf2::pbkdf2_hmac::<Sha256>(
             machine_id.as_bytes(),
