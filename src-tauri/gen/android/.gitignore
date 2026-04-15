@@ -29,3 +29,4 @@ key.properties
 /.idea/compiler.xml
 /.idea/deploymentTargetSelector.xml
 /.idea/kotlinc.xml
+/keystore.properties
