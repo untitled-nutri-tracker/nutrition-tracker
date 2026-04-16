@@ -646,6 +646,24 @@ async fn list_models_google() -> Result<Vec<AiModelInfo>, String> {
 pub async fn verify_ai_provider(provider: String) -> Result<Vec<AiModelInfo>, String> {
     let models = list_ai_models(provider.clone()).await?;
 
+    if models.is_empty() {
+        return Err("No models available for this provider.".to_string());
+    }
+
+    // Deep inference verification
+    let p = LlmProvider::from_str(&provider)?;
+    let test_prompt = "Respond with exactly one word: OK";
+    let test_model = &models[0].id;
+    let empty_history = vec![];
+    let empty_nlog = "";
+
+    let _ = match p {
+        LlmProvider::Ollama => ask_ollama(empty_nlog, test_prompt, empty_history, test_model).await,
+        LlmProvider::OpenAi => ask_openai(empty_nlog, test_prompt, empty_history, test_model).await,
+        LlmProvider::Anthropic => ask_anthropic(empty_nlog, test_prompt, empty_history, test_model).await,
+        LlmProvider::Google => ask_google(empty_nlog, test_prompt, empty_history, test_model).await,
+    }.map_err(|e| format!("Key is valid but model inference failed: {}", e))?;
+
     // Mark as verified in persistent config
     AiConfig::mark_verified(&provider)?;
 

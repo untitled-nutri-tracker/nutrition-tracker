@@ -168,6 +168,9 @@ function ApiKeySection() {
       if (!providerModels[pid]) {
         aiCfg.listModels(pid).then((models) => {
           setProviderModels((prev) => ({ ...prev, [pid]: models }));
+          if (models.length > 0 && !aiCfg.selectedModel(pid)) {
+            aiCfg.selectModel(pid, models[0].id).catch(() => {});
+          }
         }).catch(() => {});
       }
     }
@@ -175,6 +178,9 @@ function ApiKeySection() {
     if (!providerModels["anthropic"]) {
       aiCfg.listModels("anthropic").then((models) => {
         setProviderModels((prev) => ({ ...prev, anthropic: models }));
+        if (models.length > 0 && !aiCfg.selectedModel("anthropic")) {
+          aiCfg.selectModel("anthropic", models[0].id).catch(() => {});
+        }
       }).catch(() => {});
     }
   }, [aiCfg.config]);
@@ -241,6 +247,9 @@ function ApiKeySection() {
     try {
       const models = await aiCfg.verifyProvider(providerId);
       setProviderModels((prev) => ({ ...prev, [providerId]: models }));
+      if (models.length > 0 && !aiCfg.selectedModel(providerId)) {
+        await aiCfg.selectModel(providerId, models[0].id);
+      }
       const pName = LLM_PROVIDERS.find(p => p.id === providerId)?.name ?? providerId;
       setSaveMsg(`✅ ${pName} connection verified!`);
       setTimeout(() => setSaveMsg(null), 3000);
@@ -257,11 +266,20 @@ function ApiKeySection() {
   };
 
   const handleOllamaEndpointSave = async () => {
-    const trimmed = ollamaInput.trim();
+    let trimmed = ollamaInput.trim();
     if (!trimmed) return;
-    await aiCfg.setOllamaEndpoint(trimmed);
-    setSaveMsg("✅ Ollama endpoint updated");
-    setTimeout(() => setSaveMsg(null), 3000);
+    try {
+      if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+        trimmed = "http://" + trimmed;
+      }
+      new URL(trimmed); // Validate
+      await aiCfg.setOllamaEndpoint(trimmed);
+      setOllamaInput(trimmed); // sync corrected value
+      setSaveMsg("✅ Ollama endpoint updated");
+      setTimeout(() => setSaveMsg(null), 3000);
+    } catch {
+      setSaveMsg("❌ Invalid URL. Please provide a valid endpoint like http://localhost:11434");
+    }
   };
 
   if (aiCfg.loading) return null;
