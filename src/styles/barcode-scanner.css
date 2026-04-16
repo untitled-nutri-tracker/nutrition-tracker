@@ -281,9 +281,8 @@
   --food-photo-aspect: 1.7778;
   aspect-ratio: var(--food-photo-aspect);
   border-color: rgba(80, 200, 120, 0.45);
-  max-width: 1200px;
-  width: min(98vw, calc((100vh - 150px) * var(--food-photo-aspect)));
-  width: min(98vw, calc((100svh - 150px) * var(--food-photo-aspect)));
+  width: min(98vw, calc((100vh - 96px) * var(--food-photo-aspect)));
+  width: min(98vw, calc((100svh - 96px) * var(--food-photo-aspect)));
 }
 
 .food-photo-wrap video {
