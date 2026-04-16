@@ -145,6 +145,10 @@ pub fn run() {
             nutrack_database::meal::update_meal_item,
             nutrack_database::meal::delete_meal_item,
             nutrack_database::meal::build_nlog,
+            nutrack_database::meal::get_nutrition_totals_by_date_range,
+            nutrack_database::meal::get_daily_nutrition_totals,
+            nutrack_database::meal::get_weekly_nutrition_totals,
+            nutrack_database::meal::get_nutrition_trend,
             // User Profile
             nutrack_database::user_profile::create_profile,
             nutrack_database::user_profile::get_profile,

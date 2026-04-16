@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [Unreleased]
+
+### Added
+- Nutrition aggregation APIs in the database layer for arbitrary date ranges, local-day totals, local-week totals, and trend buckets.
+- Shared analytics DTOs in `nutrack-model` for `NutritionTotals`, `NutritionTrendPoint`, and `TrendBucket`.
+
+### Changed
+- Tauri command registration now includes nutrition aggregation and trend endpoints exposed from the database crate.
+- Meal analytics now compute totals directly from `meals`, `meal_items`, and `nutrition_facts` with timezone-aware day and week boundaries.
+
 ## [0.8.0] - 2026-04-02
 
 ### Added
