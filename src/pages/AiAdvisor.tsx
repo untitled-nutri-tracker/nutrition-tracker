@@ -1,7 +1,8 @@
 import { useNetwork } from "../lib/NetworkContext";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { LLM_PROVIDERS } from "../hooks/useCredentials";
+import { useAiConfig } from "../hooks/useAiConfig";
 import { createEntry } from "../lib/foodLogStore";
 import { loadProfile } from "../lib/profileStore";
 import ReactMarkdown from "react-markdown";
@@ -36,6 +37,15 @@ export default function AiAdvisor() {
   const [error, setError] = useState<string | null>(null);
   const [showNlog, setShowNlog] = useState<number | null>(null);
   const [contextDays, setContextDays] = useState<number>(7);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, loading]);
 
   const [groceryList, setGroceryList] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('nutrilog_grocery') || '[]'); } 
@@ -59,9 +69,12 @@ export default function AiAdvisor() {
     });
   }
 
-  // Read selected provider from localStorage (set in Settings)
-  const selectedProvider = localStorage.getItem("nutrilog_ai_provider") || "ollama";
+  const aiCfg = useAiConfig();
+
+  // Read selected provider from backend config
+  const selectedProvider = aiCfg.config?.selectedProvider || "ollama";
   const providerConfig = LLM_PROVIDERS.find((p) => p.id === selectedProvider) || LLM_PROVIDERS[0];
+  const selectedModel = aiCfg.selectedModel(selectedProvider);
 
   async function sendQuestion(question: string) {
     if (!question.trim() || loading) return;
@@ -91,6 +104,7 @@ export default function AiAdvisor() {
         question: contextualQuestion,
         days: contextDays,
         provider: selectedProvider,
+        model: selectedModel || null,
         history: historyPayload,
         offsetMinutes: new Date().getTimezoneOffset(),
       });
@@ -98,9 +112,9 @@ export default function AiAdvisor() {
       let finalAdvice = result.advice;
 
       // Intercept Frontend WRITE Actions from the AI safely
-      const writeRegex = /\[FRONTEND_ACTION:\s*log_food\((.*?)\)\]/;
-      const match = finalAdvice.match(writeRegex);
-      if (match) {
+      const writeRegex = /\[FRONTEND_ACTION:\s*log_food\((.*?)\)\]/g;
+      const logMatches = [...finalAdvice.matchAll(writeRegex)];
+      for (const match of logMatches) {
         const parts = match[1].split('|');
         if (parts.length >= 7) {
           const [foodName, cal, p, c, f, mealType, dateStr] = parts;
@@ -341,11 +355,24 @@ export default function AiAdvisor() {
 
       {/* Loading */}
       {loading && (
-        <div className="card" style={{ borderLeft: "3px solid rgba(124,92,255,0.5)" }}>
-          <div style={{ fontSize: 13, color: "var(--muted)" }}>
-            🔄 Analyzing your nutrition data…
+        <>
+          <style>
+            {`
+              @keyframes spin-ai { 100% { transform: rotate(360deg); } }
+              @keyframes pulse-ai { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+            `}
+          </style>
+          <div className="card" style={{ borderLeft: "3px solid rgba(124,92,255,0.5)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "var(--text)" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "spin-ai 1s linear infinite", color: "rgba(124,92,255,1)" }}>
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              <span style={{ animation: "pulse-ai 2s ease-in-out infinite" }}>
+                Consulting NutriLog AI...
+              </span>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Error */}
@@ -355,8 +382,22 @@ export default function AiAdvisor() {
         </div>
       )}
 
+      {/* Invisible element to scroll to */}
+      <div ref={messagesEndRef} style={{ height: 1 }} />
+      
+      {/* Spacer so the sticky input doesn't overlap the last message */}
+      <div style={{ paddingBottom: 60 }} />
+
       {/* Input */}
-      <div className="card" style={{ position: "sticky", bottom: 0 }}>
+      <div className="card" style={{ 
+        position: "sticky", 
+        bottom: 0, 
+        zIndex: 10,
+        background: "rgba(20, 20, 20, 0.85)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+        borderTop: "1px solid rgba(255,255,255,0.05)" /* Subtle separation line */
+      }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10 }}>
           <textarea
             value={input}

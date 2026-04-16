@@ -6,6 +6,7 @@ import {
   LLM_PROVIDERS,
   type LlmProviderConfig,
 } from "../hooks/useCredentials";
+import { useAiConfig, type AiModelInfo } from "../hooks/useAiConfig";
 import "../styles/credentials.css";
 
 export default function Settings() {
@@ -107,6 +108,7 @@ export default function Settings() {
  * ================================================================== */
 function ApiKeySection() {
   const cred = useCredentials();
+  const aiCfg = useAiConfig();
   const [providerStatus, setProviderStatus] = useState<
     Record<string, { hasKey: boolean; preview: string }>
   >({});
@@ -114,11 +116,37 @@ function ApiKeySection() {
   const [keyInput, setKeyInput] = useState("");
   const [savingKey, setSavingKey] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState(() => {
-    return localStorage.getItem("nutrilog_ai_provider") || "ollama";
-  });
 
-  // Load provider status on mount
+  // Model listing state
+  const [providerModels, setProviderModels] = useState<
+    Record<string, AiModelInfo[]>
+  >({});
+  const [verifying, setVerifying] = useState<string | null>(null);
+  const [verifyError, setVerifyError] = useState<Record<string, string>>({});
+
+  // Ollama endpoint editing
+  const [ollamaInput, setOllamaInput] = useState("");
+
+  const selectedProvider = aiCfg.config?.selectedProvider ?? "ollama";
+
+  // One-time localStorage migration
+  useEffect(() => {
+    if (!aiCfg.config) return;
+    const legacy = localStorage.getItem("nutrilog_ai_provider");
+    if (legacy) {
+      aiCfg.selectProvider(legacy);
+      localStorage.removeItem("nutrilog_ai_provider");
+    }
+  }, [aiCfg.config]);
+
+  // Sync Ollama endpoint input when config loads
+  useEffect(() => {
+    if (aiCfg.config) {
+      setOllamaInput(aiCfg.config.ollamaEndpoint || "http://localhost:11434");
+    }
+  }, [aiCfg.config]);
+
+  // Load provider key status on mount
   const refreshStatus = useCallback(async () => {
     const status: Record<string, { hasKey: boolean; preview: string }> = {};
     for (const p of LLM_PROVIDERS) {
@@ -133,6 +161,24 @@ function ApiKeySection() {
     refreshStatus();
   }, [refreshStatus]);
 
+  // Pre-load models for verified providers
+  useEffect(() => {
+    if (!aiCfg.config) return;
+    for (const pid of aiCfg.config.verifiedProviders) {
+      if (!providerModels[pid]) {
+        aiCfg.listModels(pid).then((models) => {
+          setProviderModels((prev) => ({ ...prev, [pid]: models }));
+        }).catch(() => {});
+      }
+    }
+    // Also always load Anthropic's hardcoded list
+    if (!providerModels["anthropic"]) {
+      aiCfg.listModels("anthropic").then((models) => {
+        setProviderModels((prev) => ({ ...prev, anthropic: models }));
+      }).catch(() => {});
+    }
+  }, [aiCfg.config]);
+
   const handleSaveKey = async (provider: LlmProviderConfig) => {
     if (!keyInput.trim()) return;
     setSavingKey(true);
@@ -141,9 +187,22 @@ function ApiKeySection() {
       await cred.storeKey(provider.service, keyInput.trim());
       setKeyInput("");
       setEditingProvider(null);
-      setSaveMsg(`✅ ${provider.name} key saved`);
+      setSaveMsg(`✅ ${provider.name} key saved — click "Test Connection" to verify.`);
+      // Clear cached models since verification was invalidated
+      setProviderModels((prev) => {
+        const next = { ...prev };
+        delete next[provider.id];
+        return next;
+      });
+      setVerifyError((prev) => {
+        const next = { ...prev };
+        delete next[provider.id];
+        return next;
+      });
       await refreshStatus();
-      setTimeout(() => setSaveMsg(null), 3000);
+      // Reload config to get updated verifiedProviders
+      await aiCfg.loadConfig();
+      setTimeout(() => setSaveMsg(null), 4000);
     } catch (e: any) {
       setSaveMsg(`❌ ${e?.toString()}`);
     } finally {
@@ -155,6 +214,12 @@ function ApiKeySection() {
     try {
       await cred.deleteKey(provider.service);
       await refreshStatus();
+      setProviderModels((prev) => {
+        const next = { ...prev };
+        delete next[provider.id];
+        return next;
+      });
+      await aiCfg.loadConfig();
       setSaveMsg(`🗑️ ${provider.name} key removed`);
       setTimeout(() => setSaveMsg(null), 3000);
     } catch (e: any) {
@@ -162,10 +227,44 @@ function ApiKeySection() {
     }
   };
 
-  const handleSelectProvider = (id: string) => {
-    setSelectedProvider(id);
-    localStorage.setItem("nutrilog_ai_provider", id);
+  const handleSelectProvider = async (id: string) => {
+    await aiCfg.selectProvider(id);
   };
+
+  const handleVerify = async (providerId: string) => {
+    setVerifying(providerId);
+    setVerifyError((prev) => {
+      const next = { ...prev };
+      delete next[providerId];
+      return next;
+    });
+    try {
+      const models = await aiCfg.verifyProvider(providerId);
+      setProviderModels((prev) => ({ ...prev, [providerId]: models }));
+      const pName = LLM_PROVIDERS.find(p => p.id === providerId)?.name ?? providerId;
+      setSaveMsg(`✅ ${pName} connection verified!`);
+      setTimeout(() => setSaveMsg(null), 3000);
+    } catch (e: any) {
+      const errStr = e?.toString() ?? "Connection failed";
+      setVerifyError((prev) => ({ ...prev, [providerId]: errStr }));
+    } finally {
+      setVerifying(null);
+    }
+  };
+
+  const handleModelSelect = async (providerId: string, modelId: string) => {
+    await aiCfg.selectModel(providerId, modelId);
+  };
+
+  const handleOllamaEndpointSave = async () => {
+    const trimmed = ollamaInput.trim();
+    if (!trimmed) return;
+    await aiCfg.setOllamaEndpoint(trimmed);
+    setSaveMsg("✅ Ollama endpoint updated");
+    setTimeout(() => setSaveMsg(null), 3000);
+  };
+
+  if (aiCfg.loading) return null;
 
   return (
     <div className="card pop-in-delay-2" style={{ maxWidth: 720 }}>
@@ -216,6 +315,11 @@ function ApiKeySection() {
           const status = providerStatus[provider.id];
           const isSelected = selectedProvider === provider.id;
           const isEditing = editingProvider === provider.id;
+          const verified = aiCfg.isVerified(provider.id);
+          const models = providerModels[provider.id] ?? [];
+          const currentModel = aiCfg.selectedModel(provider.id);
+          const isVerifyingThis = verifying === provider.id;
+          const vError = verifyError[provider.id];
 
           return (
             <div
@@ -228,13 +332,19 @@ function ApiKeySection() {
                   <div className="provider-desc">{provider.description}</div>
                 </div>
 
-                {/* Status badge */}
+                {/* Status badge — three states */}
                 {!provider.requiresKey ? (
-                  <span className="key-status local">🟢 Local</span>
-                ) : status?.hasKey ? (
-                  <span className="key-status stored">✅ Key stored</span>
-                ) : (
+                  verified ? (
+                    <span className="key-status stored">✅ Verified</span>
+                  ) : (
+                    <span className="key-status local">🟢 Local</span>
+                  )
+                ) : !status?.hasKey ? (
                   <span className="key-status missing">⚠️ No key</span>
+                ) : verified ? (
+                  <span className="key-status stored">✅ Verified</span>
+                ) : (
+                  <span className="key-status" style={{ color: "var(--muted)", fontSize: 11 }}>🔑 Key saved · Not verified</span>
                 )}
               </div>
 
@@ -242,12 +352,7 @@ function ApiKeySection() {
               {provider.requiresKey && status?.hasKey && !isEditing && (
                 <div className="key-preview">
                   <span>{status.preview}</span>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 6,
-                    }}
-                  >
+                  <div style={{ display: "flex", gap: 6 }}>
                     <button
                       className="key-delete-btn"
                       onClick={() => setEditingProvider(provider.id)}
@@ -302,14 +407,80 @@ function ApiKeySection() {
 
               {/* Ollama endpoint config */}
               {!provider.requiresKey && provider.id === "ollama" && (
-                <div
-                  style={{
-                    marginTop: 8,
-                    fontSize: 11,
-                    color: "var(--muted2)",
-                  }}
-                >
-                  Default endpoint: http://localhost:11434
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 11, color: "var(--muted2)", marginBottom: 4 }}>
+                    Ollama Endpoint URL
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input
+                      className="key-input"
+                      type="text"
+                      value={ollamaInput}
+                      onChange={(e) => setOllamaInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleOllamaEndpointSave();
+                      }}
+                      onBlur={handleOllamaEndpointSave}
+                      style={{ flex: 1, fontSize: 12 }}
+                      placeholder="http://localhost:11434"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Test Connection button */}
+              {(provider.requiresKey ? status?.hasKey : true) && (
+                <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center" }}>
+                  <button
+                    onClick={() => handleVerify(provider.id)}
+                    disabled={isVerifyingThis}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(124,92,255,0.35)",
+                      background: "linear-gradient(135deg, rgba(124,92,255,0.2), rgba(0,209,255,0.08))",
+                      color: "var(--text)",
+                      cursor: isVerifyingThis ? "wait" : "pointer",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      opacity: isVerifyingThis ? 0.6 : 1,
+                    }}
+                  >
+                    {isVerifyingThis ? "Verifying…" : "Test Connection"}
+                  </button>
+                  {vError && (
+                    <span style={{ fontSize: 11, color: "#ff5050" }}>
+                      ❌ {vError.length > 80 ? vError.slice(0, 80) + "…" : vError}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Model selector (visible after verification) */}
+              {models.length > 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 11, color: "var(--muted2)", marginBottom: 4 }}>
+                    Model
+                  </div>
+                  <select
+                    value={currentModel ?? models[0]?.id ?? ""}
+                    onChange={(e) => handleModelSelect(provider.id, e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      border: "1px solid var(--border)",
+                      background: "rgba(255,255,255,0.04)",
+                      color: "var(--text)",
+                      fontSize: 12,
+                    }}
+                  >
+                    {models.map((m) => (
+                      <option key={m.id} value={m.id} style={{ color: "black" }}>
+                        {m.name || m.id}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
             </div>

@@ -3,6 +3,7 @@
 /// Supports Ollama (local), OpenAI, Anthropic, and Google Gemini.
 /// API keys are retrieved at request time from the CredentialManager —
 /// never exposed to the frontend.
+use crate::ai_config::AiConfig;
 use crate::credentials::{self, CredentialManager};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,14 @@ pub struct AiResponse {
     pub nlog_data: String,
     pub advice: String,
     pub token_count: u32,
+    pub provider: String,
+}
+
+/// Metadata for an available model from any provider.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AiModelInfo {
+    pub id: String,
+    pub name: String,
     pub provider: String,
 }
 
@@ -40,6 +49,16 @@ impl LlmProvider {
             "anthropic" => Ok(LlmProvider::Anthropic),
             "google" => Ok(LlmProvider::Google),
             _ => Err(format!("Unknown provider: {}", s)),
+        }
+    }
+
+    /// String id matching the frontend provider keys.
+    pub fn id(&self) -> &'static str {
+        match self {
+            LlmProvider::Ollama => "ollama",
+            LlmProvider::OpenAi => "openai",
+            LlmProvider::Anthropic => "anthropic",
+            LlmProvider::Google => "google",
         }
     }
 
@@ -103,11 +122,14 @@ Default daily targets (use ONLY when no user profile is provided):
 /// Send .nlog data to an LLM provider and get nutrition advice.
 ///
 /// This is the main entry point — provider-agnostic.
+/// The `model` parameter selects which model to use; if empty, falls back to
+/// the user's configured default from `AiConfig`.
 pub async fn ask_llm(
     nlog_data: &str,
     user_question: &str,
     history: Vec<ChatMessage>,
     provider: &LlmProvider,
+    model: &str,
 ) -> Result<AiResponse, String> {
     // Pre-compute totals from .nlog data so the LLM doesn't hallucinate math
     let summary = compute_summary(nlog_data);
@@ -138,10 +160,10 @@ pub async fn ask_llm(
         };
 
         let response = match provider {
-            LlmProvider::Ollama => ask_ollama(&markdown_data, &prompt, current_history.clone()).await,
-            LlmProvider::OpenAi => ask_openai(&markdown_data, &prompt, current_history.clone()).await,
-            LlmProvider::Anthropic => ask_anthropic(&markdown_data, &prompt, current_history.clone()).await,
-            LlmProvider::Google => ask_google(&markdown_data, &prompt, current_history.clone()).await,
+            LlmProvider::Ollama => ask_ollama(&markdown_data, &prompt, current_history.clone(), model).await,
+            LlmProvider::OpenAi => ask_openai(&markdown_data, &prompt, current_history.clone(), model).await,
+            LlmProvider::Anthropic => ask_anthropic(&markdown_data, &prompt, current_history.clone(), model).await,
+            LlmProvider::Google => ask_google(&markdown_data, &prompt, current_history.clone(), model).await,
         }?;
 
         // Universal Interceptor: If the AI requested a Tool, perform it and loop!
@@ -181,11 +203,20 @@ pub async fn ask_llm(
 
 // ── Ollama (local) ─────────────────────────────────────────────────────
 
-async fn ask_ollama(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>) -> Result<AiResponse, String> {
-    let endpoint = CredentialManager::global()
+/// Resolve the Ollama base URL from AiConfig (preferred) or CredentialManager (legacy).
+fn resolve_ollama_endpoint() -> String {
+    if let Ok(cfg) = AiConfig::current() {
+        if !cfg.ollama_endpoint.is_empty() {
+            return cfg.ollama_endpoint;
+        }
+    }
+    CredentialManager::global()
         .retrieve(credentials::providers::OLLAMA_ENDPOINT)
-        .unwrap_or_else(|_| "http://localhost:11434".to_string());
+        .unwrap_or_else(|_| "http://localhost:11434".to_string())
+}
 
+async fn ask_ollama(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str) -> Result<AiResponse, String> {
+    let endpoint = resolve_ollama_endpoint();
     let client = build_client()?;
 
     let mut messages = Vec::new();
@@ -198,9 +229,10 @@ async fn ask_ollama(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>) ->
     messages.push(json!({ "role": "user", "content": prompt }));
 
     let body = json!({
-        "model": "llama3.2",
+        "model": model,
         "messages": messages,
-        "stream": false
+        "stream": false,
+        "max_tokens": 16384
     });
 
     let res = client
@@ -231,7 +263,7 @@ async fn ask_ollama(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>) ->
 
 // ── OpenAI ─────────────────────────────────────────────────────────────
 
-async fn ask_openai(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>) -> Result<AiResponse, String> {
+async fn ask_openai(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str) -> Result<AiResponse, String> {
     let api_key = CredentialManager::global()
         .retrieve(credentials::providers::OPENAI)
         .map_err(|_| "No OpenAI API key configured. Add it in Settings → API Keys.")?;
@@ -248,9 +280,9 @@ async fn ask_openai(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>) ->
     messages.push(json!({ "role": "user", "content": prompt }));
 
     let body = json!({
-        "model": "gpt-4o-mini",
+        "model": model,
         "messages": messages,
-        "max_tokens": 1024
+        "max_tokens": 16384
     });
 
     let res = client
@@ -279,7 +311,7 @@ async fn ask_openai(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>) ->
 
 // ── Anthropic ──────────────────────────────────────────────────────────
 
-async fn ask_anthropic(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>) -> Result<AiResponse, String> {
+async fn ask_anthropic(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str) -> Result<AiResponse, String> {
     let api_key = CredentialManager::global()
         .retrieve(credentials::providers::ANTHROPIC)
         .map_err(|_| "No Anthropic API key configured. Add it in Settings → API Keys.")?;
@@ -293,8 +325,8 @@ async fn ask_anthropic(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>)
     messages.push(json!({ "role": "user", "content": prompt }));
 
     let body = json!({
-        "model": "claude-3-5-haiku-latest",
-        "max_tokens": 1024,
+        "model": model,
+        "max_tokens": 8192,
         "system": SYSTEM_PROMPT,
         "messages": messages
     });
@@ -339,7 +371,7 @@ async fn ask_anthropic(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>)
 
 // ── Google Gemini ──────────────────────────────────────────────────────
 
-async fn ask_google(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>) -> Result<AiResponse, String> {
+async fn ask_google(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str) -> Result<AiResponse, String> {
     let api_key = CredentialManager::global()
         .retrieve(credentials::providers::GOOGLE)
         .map_err(|_| "No Google API key configured. Add it in Settings → API Keys.")?;
@@ -364,13 +396,13 @@ async fn ask_google(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>) ->
     let body = json!({
         "contents": contents,
         "generationConfig": {
-            "maxOutputTokens": 1024
+            "maxOutputTokens": 65536
         }
     });
 
     let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={}",
-        api_key
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+        model, api_key
     );
 
     let res = client
@@ -393,10 +425,18 @@ async fn ask_google(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>) ->
         return Err(format!("Google Gemini error ({}): {}", status, err_msg));
     }
 
-    let advice = json["candidates"][0]["content"]["parts"][0]["text"]
+    let mut advice = json["candidates"][0]["content"]["parts"][0]["text"]
         .as_str()
         .unwrap_or("No response from model.")
         .to_string();
+
+    // Detect truncation — Gemini sets finishReason to "MAX_TOKENS" when output is cut short
+    let finish_reason = json["candidates"][0]["finishReason"]
+        .as_str()
+        .unwrap_or("");
+    if finish_reason == "MAX_TOKENS" {
+        advice.push_str("\n\n---\n*⚠️ Response was truncated due to length limits. Ask a more specific question or reduce the context window for a complete answer.*");
+    }
 
     let tokens = json["usageMetadata"]["totalTokenCount"]
         .as_u64()
@@ -410,12 +450,214 @@ async fn ask_google(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>) ->
     })
 }
 
+// ── Model Listing ─────────────────────────────────────────────────────
+
+/// List available models for the given provider.
+///
+/// - **Ollama:** `GET /api/tags` on the configured endpoint (local models).
+/// - **OpenAI:** `GET /v1/models`, filtered to `gpt-*` chat models.
+/// - **Anthropic:** Hardcoded curated list (no public list-models API).
+/// - **Google Gemini:** `GET /v1beta/models`, filtered to those supporting `generateContent`.
+#[tauri::command]
+pub async fn list_ai_models(provider: String) -> Result<Vec<AiModelInfo>, String> {
+    let llm = LlmProvider::from_str(&provider)?;
+    match llm {
+        LlmProvider::Ollama => list_models_ollama().await,
+        LlmProvider::OpenAi => list_models_openai().await,
+        LlmProvider::Anthropic => Ok(list_models_anthropic()),
+        LlmProvider::Google => list_models_google().await,
+    }
+}
+
+async fn list_models_ollama() -> Result<Vec<AiModelInfo>, String> {
+    let endpoint = resolve_ollama_endpoint();
+    let client = build_client()?;
+
+    let res = client
+        .get(format!("{}/api/tags", endpoint.trim_end_matches('/')))
+        .send()
+        .await
+        .map_err(|e| format!("Failed to reach Ollama at {}. Is it running? Error: {}", endpoint, e))?;
+
+    if !res.status().is_success() {
+        return Err(format!("Ollama returned status {}", res.status()));
+    }
+
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| format!("Invalid Ollama response: {}", e))?;
+
+    let models = json["models"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|m| {
+                    let name = m["name"].as_str()?;
+                    Some(AiModelInfo {
+                        id: name.to_string(),
+                        name: name.to_string(),
+                        provider: "ollama".into(),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    Ok(models)
+}
+
+async fn list_models_openai() -> Result<Vec<AiModelInfo>, String> {
+    let api_key = CredentialManager::global()
+        .retrieve(credentials::providers::OPENAI)
+        .map_err(|_| "No OpenAI API key configured. Add it in Settings → API Keys.")?;
+
+    let client = build_client()?;
+
+    let res = client
+        .get("https://api.openai.com/v1/models")
+        .bearer_auth(&api_key)
+        .send()
+        .await
+        .map_err(|e| format!("OpenAI request failed: {}", e))?;
+
+    let status = res.status();
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| format!("Invalid response: {}", e))?;
+
+    if !status.is_success() {
+        let err_msg = json["error"]["message"].as_str().unwrap_or("Unknown error");
+        return Err(format!("OpenAI error ({}): {}", status, err_msg));
+    }
+
+    let mut models: Vec<AiModelInfo> = json["data"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|m| {
+                    let id = m["id"].as_str()?;
+                    // Filter to chat-capable models (gpt-* and o1/o3/o4 reasoning models)
+                    if id.starts_with("gpt-") || id.starts_with("o1") || id.starts_with("o3") || id.starts_with("o4") {
+                        Some(AiModelInfo {
+                            id: id.to_string(),
+                            name: id.to_string(),
+                            provider: "openai".into(),
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    models.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(models)
+}
+
+fn list_models_anthropic() -> Vec<AiModelInfo> {
+    let models = [
+        ("claude-sonnet-4-20250514", "Claude Sonnet 4"),
+        ("claude-3-5-sonnet-latest", "Claude 3.5 Sonnet"),
+        ("claude-3-5-haiku-latest", "Claude 3.5 Haiku"),
+        ("claude-3-haiku-20240307", "Claude 3 Haiku"),
+    ];
+    models
+        .iter()
+        .map(|(id, name)| AiModelInfo {
+            id: id.to_string(),
+            name: name.to_string(),
+            provider: "anthropic".into(),
+        })
+        .collect()
+}
+
+async fn list_models_google() -> Result<Vec<AiModelInfo>, String> {
+    let api_key = CredentialManager::global()
+        .retrieve(credentials::providers::GOOGLE)
+        .map_err(|_| "No Google API key configured. Add it in Settings → API Keys.")?;
+
+    let client = build_client()?;
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models?key={}",
+        api_key
+    );
+
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Google Gemini request failed: {}", e.to_string().replace(&api_key, "***")))?;
+
+    let status = res.status();
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| format!("Invalid response: {}", e))?;
+
+    if !status.is_success() {
+        let err_msg = json["error"]["message"].as_str().unwrap_or("Unknown error");
+        return Err(format!("Google Gemini error ({}): {}", status, err_msg));
+    }
+
+    let models: Vec<AiModelInfo> = json["models"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|m| {
+                    let name = m["name"].as_str()?;
+                    let display = m["displayName"].as_str().unwrap_or(name);
+
+                    // Only include models that support generateContent
+                    let methods = m["supportedGenerationMethods"].as_array()?;
+                    let supports_generate = methods
+                        .iter()
+                        .any(|method| method.as_str() == Some("generateContent"));
+
+                    if supports_generate {
+                        // name comes as "models/gemini-2.0-flash" — strip prefix
+                        let id = name.strip_prefix("models/").unwrap_or(name);
+                        Some(AiModelInfo {
+                            id: id.to_string(),
+                            name: display.to_string(),
+                            provider: "google".into(),
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    Ok(models)
+}
+
+// ── Connectivity Verification ─────────────────────────────────────────
+
+/// Verify that the configured API key (or endpoint, for Ollama) is valid.
+///
+/// Internally calls `list_ai_models` — if it succeeds, the key is good.
+/// On success, marks the provider as verified in `AiConfig` and returns
+/// the available model list. On failure, returns a user-friendly error.
+#[tauri::command]
+pub async fn verify_ai_provider(provider: String) -> Result<Vec<AiModelInfo>, String> {
+    let models = list_ai_models(provider.clone()).await?;
+
+    // Mark as verified in persistent config
+    AiConfig::mark_verified(&provider)?;
+
+    Ok(models)
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────
 
 fn build_client() -> Result<Client, String> {
     Client::builder()
         .user_agent("NutriLog/1.0")
-        .timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(120))
         .build()
         .map_err(|e| format!("HTTP client error: {}", e))
 }
@@ -512,7 +754,7 @@ fn format_nlog_to_markdown(nlog_data: &str) -> String {
     let mut table = String::from("| Date | Food | Calories | Protein (g) | Carbs (g) | Fat (g) | Sat Fat (g) | Sugar (g) | Fiber (g) | Sodium (mg) | Chol (mg) | Meal |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n");
     for line in nlog_data.lines() {
         if line.trim().is_empty() { continue; }
-        let mut cells: Vec<&str> = line.split('|').collect();
+        let cells: Vec<&str> = line.split('|').collect();
         if cells.len() >= 11 {
             // Reformat the YYMMDD date to YYYY-MM-DD for the LLM
             let raw_date = cells[0];
