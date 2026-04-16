@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, OnceLock};
 use thiserror::Error;
 
+pub mod export;
 pub mod food;
 pub mod meal;
 pub mod session;
@@ -44,6 +45,9 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         meal::update_meal_item,
         meal::delete_meal_item,
         meal::build_nlog,
+        export::get_xlsx_export_schema,
+        export::export_xlsx_records,
+        export::export_xlsx_to_path,
         session::get_db_path,
         session::get_database_session,
         session::create_database,
