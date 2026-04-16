@@ -37,6 +37,7 @@ export default function AiAdvisor() {
   const [error, setError] = useState<string | null>(null);
   const [showNlog, setShowNlog] = useState<number | null>(null);
   const [contextDays, setContextDays] = useState<number>(7);
+  const [goal, setGoal] = useState<string>(() => localStorage.getItem('nutrilog_goal') || 'maintenance');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -220,8 +221,12 @@ export default function AiAdvisor() {
         <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
           <span style={{ fontSize: 12, color: "var(--muted2)" }}>🎯 Goal:</span>
           <select 
-            value={localStorage.getItem('nutrilog_goal') || 'maintenance'}
-            onChange={(e) => { localStorage.setItem('nutrilog_goal', e.target.value); /* force re-render */ setContextDays(c => c); }}
+            value={goal}
+            onChange={(e) => { 
+              const newGoal = e.target.value;
+              localStorage.setItem('nutrilog_goal', newGoal);
+              setGoal(newGoal);
+            }}
             style={{ 
               background: "rgba(255,255,255,0.05)", 
               border: "1px solid var(--border)", 
