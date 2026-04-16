@@ -63,10 +63,12 @@ export function useAiConfig() {
     loadConfig();
   }, [loadConfig]);
 
-  /** Persist a partial config update. Merges with current config. */
+  /** Persist a partial config update. Merges with current config from backend. */
   async function saveConfig(patch: Partial<AiConfig>): Promise<void> {
-    const current = config ?? DEFAULT_CONFIG;
+    // Always fetch latest truth from backend to avoid state race conditions
+    const current = await loadConfig();
     const merged: AiConfig = { ...current, ...patch };
+
     if (!USE_TAURI) {
       setConfig(merged);
       return;
@@ -85,9 +87,16 @@ export function useAiConfig() {
     providerId: string,
     modelId: string
   ): Promise<void> {
-    const current = config ?? DEFAULT_CONFIG;
+    // 1. Fetch latest truth from backend
+    const current = await loadConfig();
+    // 2. Perform merge on the fresh data
     const updatedModels = { ...current.selectedModels, [providerId]: modelId };
-    await saveConfig({ selectedModels: updatedModels });
+    const merged = { ...current, selectedModels: updatedModels };
+    // 3. Persist and update state
+    if (USE_TAURI) {
+      await invoke("save_ai_config", { config: merged });
+    }
+    setConfig(merged);
   }
 
   /** Update the Ollama endpoint and persist immediately. */
@@ -121,13 +130,8 @@ export function useAiConfig() {
       provider: providerId,
     });
 
-    // Optimistically update local state so the badge flips immediately
-    setConfig((prev) => {
-      if (!prev) return prev;
-      const verified = new Set(prev.verifiedProviders);
-      verified.add(providerId);
-      return { ...prev, verifiedProviders: Array.from(verified) };
-    });
+    // Reload full config from backend to pick up the new 'verifiedProviders' update
+    await loadConfig();
 
     return models;
   }
