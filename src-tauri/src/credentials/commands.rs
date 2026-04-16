@@ -19,6 +19,7 @@ const ALLOWED_SERVICES: &[&str] = &[
     crate::credentials::providers::ANTHROPIC,
     crate::credentials::providers::GOOGLE,
     crate::credentials::providers::OLLAMA_ENDPOINT,
+    crate::credentials::providers::CUSTOM,
 ];
 
 /// Store a credential (API key) for a given service/provider.
@@ -103,6 +104,7 @@ fn service_to_provider_id(service: &str) -> Option<&'static str> {
         crate::credentials::providers::ANTHROPIC => Some("anthropic"),
         crate::credentials::providers::GOOGLE => Some("google"),
         crate::credentials::providers::OLLAMA_ENDPOINT => Some("ollama"),
+        crate::credentials::providers::CUSTOM => Some("custom"),
         _ => None,
     }
 }

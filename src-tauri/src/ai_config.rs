@@ -32,9 +32,17 @@ pub struct AiConfig {
     /// Base URL for the Ollama instance (default `http://localhost:11434`).
     pub ollama_endpoint: String,
 
+    /// Base URL for the Custom OpenAI-compatible instance (default `https://openrouter.ai/api/v1`).
+    #[serde(default = "default_custom_endpoint")]
+    pub custom_endpoint: String,
+
     /// Set of provider ids whose API keys have been verified via "Test Connection".
     /// Cleared for a provider whenever its key is stored or deleted.
     pub verified_providers: HashSet<String>,
+}
+
+fn default_custom_endpoint() -> String {
+    "https://openrouter.ai/api/v1".into()
 }
 
 impl Default for AiConfig {
@@ -43,6 +51,7 @@ impl Default for AiConfig {
             selected_provider: "ollama".into(),
             selected_models: HashMap::new(),
             ollama_endpoint: "http://localhost:11434".into(),
+            custom_endpoint: "https://openrouter.ai/api/v1".into(),
             verified_providers: HashSet::new(),
         }
     }
@@ -170,6 +179,7 @@ impl AiConfig {
             "openai" => "gpt-4o-mini".into(),
             "anthropic" => "claude-3-5-haiku-latest".into(),
             "google" => "gemini-2.0-flash".into(),
+            "custom" => "".into(), // Custom endpoints have no safe default, must rely on list_models
             _ => return Err(format!("No default model for provider: {provider_id}")),
         })
     }
@@ -186,6 +196,14 @@ pub fn get_ai_config() -> Result<AiConfig, String> {
 /// Persists updated AI configuration.
 #[tauri::command]
 pub fn save_ai_config(config: AiConfig) -> Result<(), String> {
+    AiConfig::save(config)
+}
+
+/// Helper to set custom openrouter endpoint easily.
+#[tauri::command]
+pub fn set_custom_endpoint(endpoint: String) -> Result<(), String> {
+    let mut config = AiConfig::current()?;
+    config.custom_endpoint = endpoint;
     AiConfig::save(config)
 }
 

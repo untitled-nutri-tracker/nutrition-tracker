@@ -222,6 +222,7 @@ function ApiKeySection() {
 
   // Ollama endpoint editing
   const [ollamaInput, setOllamaInput] = useState("");
+  const [customEndpointInput, setCustomEndpointInput] = useState("");
 
   const selectedProvider = aiCfg.config?.selectedProvider ?? "ollama";
 
@@ -239,6 +240,7 @@ function ApiKeySection() {
   useEffect(() => {
     if (aiCfg.config) {
       setOllamaInput(aiCfg.config.ollamaEndpoint || "http://localhost:11434");
+      setCustomEndpointInput(aiCfg.config.customEndpoint || "https://openrouter.ai/api/v1");
     }
   }, [aiCfg.config]);
 
@@ -375,6 +377,23 @@ function ApiKeySection() {
       setTimeout(() => setSaveMsg(null), 3000);
     } catch {
       setSaveMsg("❌ Invalid URL. Please provide a valid endpoint like http://localhost:11434");
+    }
+  };
+
+  const handleCustomEndpointSave = async () => {
+    let trimmed = customEndpointInput.trim();
+    if (!trimmed) return;
+    try {
+      if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+        trimmed = "https://" + trimmed;
+      }
+      new URL(trimmed); // Validate
+      await aiCfg.setCustomEndpoint(trimmed);
+      setCustomEndpointInput(trimmed); // sync corrected value
+      setSaveMsg("✅ Custom endpoint updated");
+      setTimeout(() => setSaveMsg(null), 3000);
+    } catch {
+      setSaveMsg("❌ Invalid URL. Please provide a valid endpoint like https://openrouter.ai/api/v1");
     }
   };
 
@@ -537,6 +556,29 @@ function ApiKeySection() {
                       onBlur={handleOllamaEndpointSave}
                       style={{ flex: 1, fontSize: 12 }}
                       placeholder="http://localhost:11434"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Custom OpenRouter/OpenAI-compatible endpoint config */}
+              {provider.requiresKey && provider.id === "custom" && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 11, color: "var(--muted2)", marginBottom: 4 }}>
+                    Custom Endpoint URL
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input
+                      className="key-input"
+                      type="text"
+                      value={customEndpointInput}
+                      onChange={(e) => setCustomEndpointInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleCustomEndpointSave();
+                      }}
+                      onBlur={handleCustomEndpointSave}
+                      style={{ flex: 1, fontSize: 12 }}
+                      placeholder="https://openrouter.ai/api/v1"
                     />
                   </div>
                 </div>

@@ -17,6 +17,7 @@ export interface AiConfig {
   selectedProvider: string;
   selectedModels: Record<string, string>;
   ollamaEndpoint: string;
+  customEndpoint: string;
   verifiedProviders: string[];
 }
 
@@ -30,6 +31,7 @@ const DEFAULT_CONFIG: AiConfig = {
   selectedProvider: "ollama",
   selectedModels: {},
   ollamaEndpoint: "http://localhost:11434",
+  customEndpoint: "https://openrouter.ai/api/v1",
   verifiedProviders: [],
 };
 
@@ -101,6 +103,13 @@ export function useAiConfig() {
     });
   }
 
+  /** Update custom remote endpoint in the backend and reload config locally. */
+  async function setCustomEndpoint(endpoint: string) {
+    if (!USE_TAURI) return;
+    await invoke("set_custom_endpoint", { endpoint });
+    await loadConfig();
+  }
+
   /**
    * Verify connectivity for a provider.
    * On success, marks the provider as verified and returns the model list.
@@ -141,6 +150,7 @@ export function useAiConfig() {
     selectProvider,
     selectModel,
     setOllamaEndpoint,
+    setCustomEndpoint,
     listModels,
     verifyProvider,
     isVerified,

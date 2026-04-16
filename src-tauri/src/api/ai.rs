@@ -38,6 +38,7 @@ pub enum LlmProvider {
     OpenAi,
     Anthropic,
     Google,
+    Custom,
 }
 
 impl LlmProvider {
@@ -48,6 +49,7 @@ impl LlmProvider {
             "openai" => Ok(LlmProvider::OpenAi),
             "anthropic" => Ok(LlmProvider::Anthropic),
             "google" => Ok(LlmProvider::Google),
+            "custom" => Ok(LlmProvider::Custom),
             _ => Err(format!("Unknown provider: {}", s)),
         }
     }
@@ -59,6 +61,7 @@ impl LlmProvider {
             LlmProvider::OpenAi => "openai",
             LlmProvider::Anthropic => "anthropic",
             LlmProvider::Google => "google",
+            LlmProvider::Custom => "custom",
         }
     }
 
@@ -69,6 +72,7 @@ impl LlmProvider {
             LlmProvider::OpenAi => credentials::providers::OPENAI,
             LlmProvider::Anthropic => credentials::providers::ANTHROPIC,
             LlmProvider::Google => credentials::providers::GOOGLE,
+            LlmProvider::Custom => credentials::providers::CUSTOM,
         }
     }
 
@@ -79,6 +83,7 @@ impl LlmProvider {
             LlmProvider::OpenAi => "OpenAI",
             LlmProvider::Anthropic => "Anthropic",
             LlmProvider::Google => "Google Gemini",
+            LlmProvider::Custom => "Custom (OpenAI-Compatible)",
         }
     }
 }
@@ -164,6 +169,7 @@ pub async fn ask_llm(
             LlmProvider::OpenAi => ask_openai(&markdown_data, &prompt, current_history.clone(), model).await,
             LlmProvider::Anthropic => ask_anthropic(&markdown_data, &prompt, current_history.clone(), model).await,
             LlmProvider::Google => ask_google(&markdown_data, &prompt, current_history.clone(), model).await,
+            LlmProvider::Custom => ask_custom(&markdown_data, &prompt, current_history.clone(), model).await,
         }?;
 
         // Universal Interceptor: If the AI requested a Tool, perform it and loop!
@@ -235,8 +241,7 @@ async fn ask_ollama(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
     let body = json!({
         "model": model,
         "messages": messages,
-        "stream": false,
-        "max_tokens": 16384
+        "stream": false
     });
 
     let res = client
@@ -285,8 +290,7 @@ async fn ask_openai(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
 
     let body = json!({
         "model": model,
-        "messages": messages,
-        "max_tokens": 16384
+        "messages": messages
     });
 
     let res = client
@@ -311,6 +315,62 @@ async fn ask_openai(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
     }
 
     Ok(parse_openai_style_response(nlog_data, &json, "openai"))
+}
+
+// ── Custom OpenAI-Compatible ───────────────────────────────────────────
+
+async fn ask_custom(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str) -> Result<AiResponse, String> {
+    let api_key = CredentialManager::global()
+        .retrieve(credentials::providers::CUSTOM)
+        .map_err(|_| "No Custom API key configured. Add it in Settings → API Keys.")?;
+
+    let mut endpoint = AiConfig::current()
+        .map(|c| c.custom_endpoint)
+        .unwrap_or_else(|_| "https://openrouter.ai/api/v1".to_string());
+    
+    endpoint = endpoint.trim_end_matches('/').to_string();
+    if endpoint.ends_with("/v1") {
+        endpoint = endpoint.strip_suffix("/v1").unwrap().to_string();
+    }
+
+    let client = build_client()?;
+
+    let mut messages = Vec::new();
+    messages.push(json!({ "role": "system", "content": SYSTEM_PROMPT }));
+    
+    for msg in history {
+        messages.push(json!({ "role": msg.role, "content": msg.content }));
+    }
+    
+    messages.push(json!({ "role": "user", "content": prompt }));
+
+    let body = json!({
+        "model": model,
+        "messages": messages
+    });
+
+    let res = client
+        .post(format!("{}/v1/chat/completions", endpoint))
+        .bearer_auth(&api_key)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Custom AI request failed: {}", e))?;
+
+    let status = res.status();
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| format!("Invalid response: {}", e))?;
+
+    if !status.is_success() {
+        let err_msg = json["error"]["message"]
+            .as_str()
+            .unwrap_or("Unknown error");
+        return Err(format!("Custom API error ({}): {}", status, err_msg));
+    }
+
+    Ok(parse_openai_style_response(nlog_data, &json, "custom"))
 }
 
 // ── Anthropic ──────────────────────────────────────────────────────────
@@ -398,10 +458,7 @@ async fn ask_google(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
     contents.push(json!({ "role": "user", "parts": [{ "text": prompt }] }));
 
     let body = json!({
-        "contents": contents,
-        "generationConfig": {
-            "maxOutputTokens": 65536
-        }
+        "contents": contents
     });
 
     let url = format!(
@@ -470,6 +527,7 @@ pub async fn list_ai_models(provider: String) -> Result<Vec<AiModelInfo>, String
         LlmProvider::OpenAi => list_models_openai().await,
         LlmProvider::Anthropic => Ok(list_models_anthropic()),
         LlmProvider::Google => list_models_google().await,
+        LlmProvider::Custom => list_models_custom().await,
     }
 }
 
@@ -558,6 +616,61 @@ async fn list_models_openai() -> Result<Vec<AiModelInfo>, String> {
                     } else {
                         None
                     }
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    models.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(models)
+}
+
+async fn list_models_custom() -> Result<Vec<AiModelInfo>, String> {
+    let api_key = CredentialManager::global()
+        .retrieve(credentials::providers::CUSTOM)
+        .map_err(|_| "No Custom API key configured. Add it in Settings → API Keys.")?;
+
+    let mut endpoint = AiConfig::current()
+        .map(|c| c.custom_endpoint)
+        .unwrap_or_else(|_| "https://openrouter.ai/api/v1".to_string());
+        
+    endpoint = endpoint.trim_end_matches('/').to_string();
+    if endpoint.ends_with("/v1") {
+        endpoint = endpoint.strip_suffix("/v1").unwrap().to_string();
+    }
+
+    let client = build_client()?;
+
+    let res = client
+        .get(format!("{}/v1/models", endpoint))
+        .bearer_auth(&api_key)
+        .send()
+        .await
+        .map_err(|e| format!("Custom request failed: {}", e))?;
+
+    let status = res.status();
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| format!("Invalid response: {}", e))?;
+
+    if !status.is_success() {
+        let err_msg = json["error"]["message"].as_str().unwrap_or("Unknown error");
+        return Err(format!("Custom API error ({}): {}", status, err_msg));
+    }
+
+    let mut models: Vec<AiModelInfo> = json["data"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|m| {
+                    let id = m["id"].as_str()?;
+                    let name = m["name"].as_str().unwrap_or(id);
+                    Some(AiModelInfo {
+                        id: id.to_string(),
+                        name: name.to_string(),
+                        provider: "custom".into(),
+                    })
                 })
                 .collect()
         })
@@ -672,6 +785,7 @@ pub async fn verify_ai_provider(provider: String) -> Result<Vec<AiModelInfo>, St
         LlmProvider::OpenAi => ask_openai(empty_nlog, test_prompt, empty_history, test_model).await,
         LlmProvider::Anthropic => ask_anthropic(empty_nlog, test_prompt, empty_history, test_model).await,
         LlmProvider::Google => ask_google(empty_nlog, test_prompt, empty_history, test_model).await,
+        LlmProvider::Custom => ask_custom(empty_nlog, test_prompt, empty_history, test_model).await,
     }.map_err(|e| format!("Key is valid but model inference failed: {}", e))?;
 
     // Mark as verified in persistent config

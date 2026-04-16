@@ -126,6 +126,7 @@ pub fn run() {
             get_ai_advice,
             ai_config::get_ai_config,
             ai_config::save_ai_config,
+            ai_config::set_custom_endpoint,
             api::ai::list_ai_models,
             api::ai::verify_ai_provider,
             network_config::get_network_config,
