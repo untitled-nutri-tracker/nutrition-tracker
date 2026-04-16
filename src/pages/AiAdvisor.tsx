@@ -41,6 +41,10 @@ export default function AiAdvisor() {
   const [goal, setGoal] = useState<string>(() => localStorage.getItem('nutrilog_goal') || 'maintenance');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Input history state
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [draftInput, setDraftInput] = useState("");
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -82,6 +86,8 @@ export default function AiAdvisor() {
     if (!question.trim() || loading) return;
     setInput("");
     setError(null);
+    setHistoryIndex(-1);
+    setDraftInput("");
 
     const userMsg: ChatMessage = { role: "user", content: question };
     setMessages((prev) => [...prev, userMsg]);
@@ -177,12 +183,77 @@ export default function AiAdvisor() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendQuestion(input);
+      return;
+    }
+
+    // Command History cycling
+    const userHistory = messages
+      .filter(m => m.role === "user")
+      .map(m => m.content);
+
+    if (e.key === "ArrowUp") {
+      // Don't cycle if textarea has multiple lines and cursor isn't at the top
+      // (Simplified for now: only cycle if we're not using Shift/Alt etc)
+      if (userHistory.length === 0) return;
+
+      e.preventDefault();
+      let nextIndex: number;
+      
+      if (historyIndex === -1) {
+        setDraftInput(input);
+        nextIndex = userHistory.length - 1;
+      } else {
+        nextIndex = Math.max(0, historyIndex - 1);
+      }
+      
+      setHistoryIndex(nextIndex);
+      setInput(userHistory[nextIndex]);
+    } else if (e.key === "ArrowDown") {
+      if (historyIndex === -1) return;
+
+      e.preventDefault();
+      const nextIndex = historyIndex + 1;
+      
+      if (nextIndex >= userHistory.length) {
+        setHistoryIndex(-1);
+        setInput(draftInput);
+      } else {
+        setHistoryIndex(nextIndex);
+        setInput(userHistory[nextIndex]);
+      }
     }
   }
 
+  // Auto-expand textarea
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    }
+  }, [input]);
+
+  const startNewChat = () => {
+    // A fresh start doesn't always need a scary confirm if it's just 'cleaning the screen'
+    // but we'll keep a check if there are many messages to prevent accidents
+    if (messages.length > 5) {
+      if (!confirm("Start a new conversation?")) return;
+    }
+    setMessages([]);
+    setError(null);
+  };
+
+  const clearGroceryList = () => {
+    if (confirm("Empty your grocery list?")) {
+      setGroceryList([]);
+      localStorage.setItem('nutrilog_grocery', '[]');
+    }
+  };
+
   return (
     <div className="page-enter pop-in ai-advisor-shell">
-      {!isOnline && (
+      {(!isOnline && selectedProvider !== "ollama") && (
         <div
           className="card"
           style={{
@@ -193,8 +264,8 @@ export default function AiAdvisor() {
         >
           <div style={{ fontWeight: 600 }}>You're offline</div>
           <div style={{ marginTop: 6, color: "var(--muted)" }}>
-            AI nutrition advice requires an internet connection. Connect to the
-            network, then come back.
+            Cloud AI advice requires an internet connection. Switch to <strong>Ollama (Local)</strong> or connect to the
+            network to continue.
           </div>
         </div>
       )}
@@ -245,14 +316,33 @@ export default function AiAdvisor() {
             </select>
           </div>
         </div>
+
+        {messages.length > 0 && (
+          <button 
+            className="ai-advisor-toolbar-action" 
+            onClick={startNewChat}
+            title="New Chat"
+          >
+            <span>+</span>
+            <span style={{ fontSize: 11, fontWeight: "bold", marginLeft: 4 }}>New Chat</span>
+          </button>
+        )}
       </div>
 
       {/* Grocery List UI */}
       {groceryList.length > 0 && (
         <div className="card" style={{ borderLeft: "3px solid #10b981", background: "rgba(16, 185, 129, 0.05)", flexShrink: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>🛒 Smart Grocery List</span>
-            <span style={{ fontSize: 11, color: "var(--muted2)", fontWeight: "normal" }}>AI Managed</span>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button 
+                onClick={clearGroceryList}
+                style={{ background: "none", border: "none", color: "var(--muted2)", fontSize: 10, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.05em" }}
+              >
+                Clear All
+              </button>
+              <span style={{ fontSize: 11, color: "var(--muted2)", fontWeight: "normal" }}>AI Managed</span>
+            </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {groceryList.map((item) => (
@@ -368,6 +458,7 @@ export default function AiAdvisor() {
       {/* ── Fixed input bar ── */}
       <div className="ai-advisor-input-bar">
         <textarea
+          ref={textareaRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}

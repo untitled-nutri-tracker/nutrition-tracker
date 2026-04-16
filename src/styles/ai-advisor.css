@@ -145,6 +145,27 @@
   padding: 2px 4px;
 }
 
+.ai-advisor-toolbar-action {
+  background: rgba(124,92,255,0.08);
+  border: 1px solid rgba(124,92,255,0.2);
+  color: var(--text);
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s;
+  margin-left: auto;
+}
+
+.ai-advisor-toolbar-action:hover {
+  background: rgba(124,92,255,0.15);
+  border-color: rgba(124,92,255,0.4);
+  transform: translateY(-1px);
+}
+
+
+
 /* ── Scrollable messages area ── */
 .ai-advisor-messages {
   flex: 1;
