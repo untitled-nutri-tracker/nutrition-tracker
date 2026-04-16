@@ -9,6 +9,7 @@ import {
   LLM_PROVIDERS,
   type LlmProviderConfig,
 } from "../hooks/useCredentials";
+import { useAiConfig, type AiModelInfo } from "../hooks/useAiConfig";
 import "../styles/credentials.css";
 
 export default function Settings() {
@@ -203,6 +204,7 @@ export default function Settings() {
  * ================================================================== */
 function ApiKeySection() {
   const cred = useCredentials();
+  const aiCfg = useAiConfig();
   const [providerStatus, setProviderStatus] = useState<
     Record<string, { hasKey: boolean; preview: string }>
   >({});
@@ -210,11 +212,39 @@ function ApiKeySection() {
   const [keyInput, setKeyInput] = useState("");
   const [savingKey, setSavingKey] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState(() => {
-    return localStorage.getItem("nutrilog_ai_provider") || "ollama";
-  });
 
-  // Load provider status on mount
+  // Model listing state
+  const [providerModels, setProviderModels] = useState<
+    Record<string, AiModelInfo[]>
+  >({});
+  const [verifying, setVerifying] = useState<string | null>(null);
+  const [verifyError, setVerifyError] = useState<Record<string, string>>({});
+
+  // Ollama endpoint editing
+  const [ollamaInput, setOllamaInput] = useState("");
+  const [customEndpointInput, setCustomEndpointInput] = useState("");
+
+  const selectedProvider = aiCfg.config?.selectedProvider ?? "ollama";
+
+  // One-time localStorage migration
+  useEffect(() => {
+    if (!aiCfg.config) return;
+    const legacy = localStorage.getItem("nutrilog_ai_provider");
+    if (legacy) {
+      aiCfg.selectProvider(legacy);
+      localStorage.removeItem("nutrilog_ai_provider");
+    }
+  }, [aiCfg.config]);
+
+  // Sync Ollama endpoint input when config loads
+  useEffect(() => {
+    if (aiCfg.config) {
+      setOllamaInput(aiCfg.config.ollamaEndpoint || "http://localhost:11434");
+      setCustomEndpointInput(aiCfg.config.customEndpoint || "https://openrouter.ai/api/v1");
+    }
+  }, [aiCfg.config]);
+
+  // Load provider key status on mount
   const refreshStatus = useCallback(async () => {
     const status: Record<string, { hasKey: boolean; preview: string }> = {};
     for (const p of LLM_PROVIDERS) {
@@ -229,6 +259,30 @@ function ApiKeySection() {
     refreshStatus();
   }, [refreshStatus]);
 
+  // Pre-load models for verified providers
+  useEffect(() => {
+    if (!aiCfg.config) return;
+    for (const pid of aiCfg.config.verifiedProviders) {
+      if (!providerModels[pid]) {
+        aiCfg.listModels(pid).then((models) => {
+          setProviderModels((prev) => ({ ...prev, [pid]: models }));
+          if (models.length > 0 && !aiCfg.selectedModel(pid)) {
+            aiCfg.selectModel(pid, models[0].id).catch(() => {});
+          }
+        }).catch(() => {});
+      }
+    }
+    // Also always load Anthropic's hardcoded list
+    if (!providerModels["anthropic"]) {
+      aiCfg.listModels("anthropic").then((models) => {
+        setProviderModels((prev) => ({ ...prev, anthropic: models }));
+        if (models.length > 0 && !aiCfg.selectedModel("anthropic")) {
+          aiCfg.selectModel("anthropic", models[0].id).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+  }, [aiCfg.config]);
+
   const handleSaveKey = async (provider: LlmProviderConfig) => {
     if (!keyInput.trim()) return;
     setSavingKey(true);
@@ -237,9 +291,22 @@ function ApiKeySection() {
       await cred.storeKey(provider.service, keyInput.trim());
       setKeyInput("");
       setEditingProvider(null);
-      setSaveMsg(`✅ ${provider.name} key saved`);
+      setSaveMsg(`✅ ${provider.name} key saved — click "Test Connection" to verify.`);
+      // Clear cached models since verification was invalidated
+      setProviderModels((prev) => {
+        const next = { ...prev };
+        delete next[provider.id];
+        return next;
+      });
+      setVerifyError((prev) => {
+        const next = { ...prev };
+        delete next[provider.id];
+        return next;
+      });
       await refreshStatus();
-      setTimeout(() => setSaveMsg(null), 3000);
+      // Reload config to get updated verifiedProviders
+      await aiCfg.loadConfig();
+      setTimeout(() => setSaveMsg(null), 4000);
     } catch (e: any) {
       setSaveMsg(`❌ ${e?.toString()}`);
     } finally {
@@ -251,6 +318,12 @@ function ApiKeySection() {
     try {
       await cred.deleteKey(provider.service);
       await refreshStatus();
+      setProviderModels((prev) => {
+        const next = { ...prev };
+        delete next[provider.id];
+        return next;
+      });
+      await aiCfg.loadConfig();
       setSaveMsg(`🗑️ ${provider.name} key removed`);
       setTimeout(() => setSaveMsg(null), 3000);
     } catch (e: any) {
@@ -258,24 +331,85 @@ function ApiKeySection() {
     }
   };
 
-  const handleSelectProvider = (id: string) => {
-    setSelectedProvider(id);
-    localStorage.setItem("nutrilog_ai_provider", id);
+  const handleSelectProvider = async (id: string) => {
+    await aiCfg.selectProvider(id);
   };
+
+  const handleVerify = async (providerId: string) => {
+    setVerifying(providerId);
+    setVerifyError((prev) => {
+      const next = { ...prev };
+      delete next[providerId];
+      return next;
+    });
+    try {
+      const models = await aiCfg.verifyProvider(providerId);
+      setProviderModels((prev) => ({ ...prev, [providerId]: models }));
+      if (models.length > 0 && !aiCfg.selectedModel(providerId)) {
+        await aiCfg.selectModel(providerId, models[0].id);
+      }
+      const pName = LLM_PROVIDERS.find(p => p.id === providerId)?.name ?? providerId;
+      setSaveMsg(`✅ ${pName} connection verified!`);
+      setTimeout(() => setSaveMsg(null), 3000);
+    } catch (e: any) {
+      const errStr = e?.toString() ?? "Connection failed";
+      setVerifyError((prev) => ({ ...prev, [providerId]: errStr }));
+    } finally {
+      setVerifying(null);
+    }
+  };
+
+  const handleModelSelect = async (providerId: string, modelId: string) => {
+    await aiCfg.selectModel(providerId, modelId);
+  };
+
+  const handleOllamaEndpointSave = async () => {
+    let trimmed = ollamaInput.trim();
+    if (!trimmed) return;
+    try {
+      if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+        trimmed = "http://" + trimmed;
+      }
+      new URL(trimmed); // Validate
+      await aiCfg.setOllamaEndpoint(trimmed);
+      setOllamaInput(trimmed); // sync corrected value
+      setSaveMsg("✅ Ollama endpoint updated");
+      setTimeout(() => setSaveMsg(null), 3000);
+    } catch {
+      setSaveMsg("❌ Invalid URL. Please provide a valid endpoint like http://localhost:11434");
+    }
+  };
+
+  const handleCustomEndpointSave = async () => {
+    let trimmed = customEndpointInput.trim();
+    if (!trimmed) return;
+    try {
+      if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+        trimmed = "https://" + trimmed;
+      }
+      new URL(trimmed); // Validate
+      await aiCfg.setCustomEndpoint(trimmed);
+      setCustomEndpointInput(trimmed); // sync corrected value
+      setSaveMsg("✅ Custom endpoint updated");
+      setTimeout(() => setSaveMsg(null), 3000);
+    } catch {
+      setSaveMsg("❌ Invalid URL. Please provide a valid endpoint like https://openrouter.ai/api/v1");
+    }
+  };
+
+  if (aiCfg.loading) return null;
 
   return (
     <div className="card pop-in-delay-2" style={{ maxWidth: 720 }}>
-      <div style={{ fontSize: 16, fontWeight: 600 }}>
+      <div className="ai-config-header">
         AI Provider Configuration
       </div>
-      <div
-        style={{ fontSize: 12, color: "var(--muted2)", marginTop: 4 }}
-      >
+      <div className="ai-config-subtitle">
         Select your preferred AI provider and manage API keys. Keys are
         stored securely in your OS keychain.
       </div>
 
-      {/* Provider selector */}
+      {/* Provider selector pills */}
       <div className="provider-select-row">
         {LLM_PROVIDERS.map((p) => (
           <button
@@ -288,36 +422,31 @@ function ApiKeySection() {
         ))}
       </div>
 
-      {/* Status message */}
+      {/* Status message banner */}
       {saveMsg && (
-        <div
-          style={{
-            marginTop: 10,
-            padding: "8px 12px",
-            borderRadius: 10,
-            fontSize: 12,
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid var(--border)",
-          }}
-        >
+        <div className="provider-status-msg">
           {saveMsg}
         </div>
       )}
 
       {/* Provider cards */}
-      <div
-        style={{ marginTop: 14, display: "grid", gap: 10 }}
-      >
+      <div className="provider-cards-grid">
         {LLM_PROVIDERS.map((provider) => {
           const status = providerStatus[provider.id];
           const isSelected = selectedProvider === provider.id;
           const isEditing = editingProvider === provider.id;
+          const verified = aiCfg.isVerified(provider.id);
+          const models = providerModels[provider.id] ?? [];
+          const currentModel = aiCfg.selectedModel(provider.id);
+          const isVerifyingThis = verifying === provider.id;
+          const vError = verifyError[provider.id];
 
           return (
             <div
               key={provider.id}
               className={`provider-card ${isSelected ? "active" : ""}`}
             >
+              {/* Header: name + status badge */}
               <div className="provider-card-header">
                 <div>
                   <div className="provider-name">{provider.name}</div>
@@ -326,31 +455,28 @@ function ApiKeySection() {
 
                 {/* Status badge */}
                 {!provider.requiresKey ? (
-                  <span className="key-status local">🟢 Local</span>
-                ) : status?.hasKey ? (
-                  <span className="key-status stored">✅ Key stored</span>
-                ) : (
+                  verified ? (
+                    <span className="key-status stored">✅ Verified</span>
+                  ) : (
+                    <span className="key-status local">🟢 Local</span>
+                  )
+                ) : !status?.hasKey ? (
                   <span className="key-status missing">⚠️ No key</span>
+                ) : verified ? (
+                  <span className="key-status stored">✅ Verified</span>
+                ) : (
+                  <span className="key-status unverified">🔑 Key saved · Not verified</span>
                 )}
               </div>
 
-              {/* Key preview + actions (only for providers that need keys) */}
+              {/* Key preview + change/remove actions */}
               {provider.requiresKey && status?.hasKey && !isEditing && (
                 <div className="key-preview">
                   <span>{status.preview}</span>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 6,
-                    }}
-                  >
+                  <div className="key-preview-actions">
                     <button
-                      className="key-delete-btn"
+                      className="key-change-btn"
                       onClick={() => setEditingProvider(provider.id)}
-                      style={{
-                        borderColor: "rgba(124,92,255,0.3)",
-                        background: "rgba(124,92,255,0.08)",
-                      }}
                     >
                       Change
                     </button>
@@ -398,14 +524,83 @@ function ApiKeySection() {
 
               {/* Ollama endpoint config */}
               {!provider.requiresKey && provider.id === "ollama" && (
-                <div
-                  style={{
-                    marginTop: 8,
-                    fontSize: 11,
-                    color: "var(--muted2)",
-                  }}
-                >
-                  Default endpoint: http://localhost:11434
+                <div className="endpoint-section">
+                  <div className="endpoint-label">
+                    Endpoint URL
+                  </div>
+                  <div className="endpoint-input-row">
+                    <input
+                      className="endpoint-input"
+                      type="text"
+                      value={ollamaInput}
+                      onChange={(e) => setOllamaInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleOllamaEndpointSave();
+                      }}
+                      onBlur={handleOllamaEndpointSave}
+                      placeholder="http://localhost:11434"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Custom OpenAI-compatible endpoint config */}
+              {provider.requiresKey && provider.id === "custom" && (
+                <div className="endpoint-section">
+                  <div className="endpoint-label">
+                    Endpoint URL
+                  </div>
+                  <div className="endpoint-input-row">
+                    <input
+                      className="endpoint-input"
+                      type="text"
+                      value={customEndpointInput}
+                      onChange={(e) => setCustomEndpointInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleCustomEndpointSave();
+                      }}
+                      onBlur={handleCustomEndpointSave}
+                      placeholder="https://openrouter.ai/api/v1"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Test Connection button */}
+              {(provider.requiresKey ? status?.hasKey : true) && (
+                <div className="verify-row">
+                  <button
+                    className="verify-btn"
+                    onClick={() => handleVerify(provider.id)}
+                    disabled={isVerifyingThis}
+                  >
+                    {isVerifyingThis ? "Verifying…" : "Test Connection"}
+                  </button>
+                  {vError && (
+                    <span className="verify-error">
+                      ❌ {vError.length > 80 ? vError.slice(0, 80) + "…" : vError}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Model selector (visible after verification) */}
+              {models.length > 0 && (
+                <div className="model-section">
+                  <div className="model-label">
+                    Model
+                  </div>
+                  <select
+                    className="model-select"
+                    value={currentModel ?? models[0]?.id ?? ""}
+                    onChange={(e) => handleModelSelect(provider.id, e.target.value)}
+                  >
+                    {models.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name || m.id}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
             </div>
@@ -418,7 +613,7 @@ function ApiKeySection() {
         <div className="privacy-consent">
           <div className="privacy-consent-title">⚠️ Privacy Notice</div>
           <div className="privacy-consent-text">
-            When using cloud AI providers (OpenAI, Anthropic, Google),
+            When using cloud AI providers (OpenAI, Anthropic, Google, Custom),
             your meal data will be sent to their servers for analysis.
             No personal information beyond food logs is shared. Your
             API keys are stored locally in your OS keychain and never

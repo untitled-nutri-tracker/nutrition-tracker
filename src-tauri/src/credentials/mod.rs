@@ -143,6 +143,7 @@ pub mod providers {
     pub const ANTHROPIC: &str = "llm.anthropic";
     pub const GOOGLE: &str = "llm.google";
     pub const OLLAMA_ENDPOINT: &str = "llm.ollama.endpoint";
+    pub const CUSTOM: &str = "llm.custom.key";
 }
 
 #[cfg(test)]

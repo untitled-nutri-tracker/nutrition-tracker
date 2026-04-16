@@ -1,3 +1,4 @@
+pub mod ai_config;
 pub mod api;
 pub mod credentials;
 pub mod network_config;
@@ -53,24 +54,37 @@ async fn fetch_food_by_barcode(barcode: String) -> Result<SearchResult, String> 
 }
 
 /// Get AI nutrition advice based on recent meals.
-/// Provider defaults to "ollama" if not specified.
+/// Provider defaults to the user's saved preference.
+/// Model defaults to the user's saved model for that provider.
 #[tauri::command]
 async fn get_ai_advice(
     question: String,
     days: i64,
     provider: Option<String>,
-    history: Option<Vec<ChatMessage>>, // Use the bare name
+    model: Option<String>,
+    history: Option<Vec<ChatMessage>>,
     offset_minutes: Option<i64>,
 ) -> Result<AiResponse, String> {
     // Build .nlog from database (via database crate)
     let nlog_data = nutrack_database::meal::build_nlog(days, offset_minutes.unwrap_or(0)).await?;
 
-    // Parse provider (default to Ollama for backwards compatibility)
-    let llm_provider =
-        ai::LlmProvider::from_str(&provider.unwrap_or_else(|| "ollama".into()))?;
+    // Resolve provider — fall back to AiConfig.selected_provider
+    let provider_id = match &provider {
+        Some(p) => p.clone(),
+        None => ai_config::AiConfig::current()
+            .map(|c| c.selected_provider)
+            .unwrap_or_else(|_| "ollama".into()),
+    };
+    let llm_provider = ai::LlmProvider::from_str(&provider_id)?;
+
+    // Resolve model — fall back to AiConfig.selected_models[provider]
+    let resolved_model = match &model {
+        Some(m) if !m.is_empty() => m.clone(),
+        _ => ai_config::AiConfig::model_for_provider(&provider_id)?,
+    };
 
     // Send to the selected LLM provider
-    ai::ask_llm(&nlog_data, &question, history.unwrap_or_default(), &llm_provider).await
+    ai::ask_llm(&nlog_data, &question, history.unwrap_or_default(), &llm_provider, &resolved_model).await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -100,6 +114,9 @@ pub fn run() {
             // Initialize credential manager (OS keychain or encrypted file fallback)
             credentials::CredentialManager::initialize(&app_data_dir);
 
+            // Initialize AI configuration (provider, model, endpoint preferences)
+            ai_config::AiConfig::initialize(&app_data_dir);
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -107,6 +124,11 @@ pub fn run() {
             search_food_online,
             fetch_food_by_barcode,
             get_ai_advice,
+            ai_config::get_ai_config,
+            ai_config::save_ai_config,
+            ai_config::set_custom_endpoint,
+            api::ai::list_ai_models,
+            api::ai::verify_ai_provider,
             network_config::get_network_config,
             nutrack_database::session::get_db_path,
             nutrack_database::session::get_database_session,

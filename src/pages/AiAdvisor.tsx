@@ -1,10 +1,12 @@
 import { useNetwork } from "../lib/NetworkContext";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { LLM_PROVIDERS } from "../hooks/useCredentials";
+import { useAiConfig } from "../hooks/useAiConfig";
 import { createEntry } from "../lib/foodLogStore";
 import { loadProfile } from "../lib/profileStore";
 import ReactMarkdown from "react-markdown";
+import "../styles/ai-advisor.css";
 
 interface AiResponse {
   nlog_data: string;
@@ -36,6 +38,20 @@ export default function AiAdvisor() {
   const [error, setError] = useState<string | null>(null);
   const [showNlog, setShowNlog] = useState<number | null>(null);
   const [contextDays, setContextDays] = useState<number>(7);
+  const [goal, setGoal] = useState<string>(() => localStorage.getItem('nutrilog_goal') || 'maintenance');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Input history state
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [draftInput, setDraftInput] = useState("");
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, loading]);
 
   const [groceryList, setGroceryList] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('nutrilog_grocery') || '[]'); } 
@@ -59,14 +75,19 @@ export default function AiAdvisor() {
     });
   }
 
-  // Read selected provider from localStorage (set in Settings)
-  const selectedProvider = localStorage.getItem("nutrilog_ai_provider") || "ollama";
+  const aiCfg = useAiConfig();
+
+  // Read selected provider from backend config
+  const selectedProvider = aiCfg.config?.selectedProvider || "ollama";
   const providerConfig = LLM_PROVIDERS.find((p) => p.id === selectedProvider) || LLM_PROVIDERS[0];
+  const selectedModel = aiCfg.selectedModel(selectedProvider);
 
   async function sendQuestion(question: string) {
     if (!question.trim() || loading) return;
     setInput("");
     setError(null);
+    setHistoryIndex(-1);
+    setDraftInput("");
 
     const userMsg: ChatMessage = { role: "user", content: question };
     setMessages((prev) => [...prev, userMsg]);
@@ -91,6 +112,7 @@ export default function AiAdvisor() {
         question: contextualQuestion,
         days: contextDays,
         provider: selectedProvider,
+        model: selectedModel || null,
         history: historyPayload,
         offsetMinutes: new Date().getTimezoneOffset(),
       });
@@ -98,9 +120,9 @@ export default function AiAdvisor() {
       let finalAdvice = result.advice;
 
       // Intercept Frontend WRITE Actions from the AI safely
-      const writeRegex = /\[FRONTEND_ACTION:\s*log_food\((.*?)\)\]/;
-      const match = finalAdvice.match(writeRegex);
-      if (match) {
+      const writeRegex = /\[FRONTEND_ACTION:\s*log_food\((.*?)\)\]/g;
+      const logMatches = [...finalAdvice.matchAll(writeRegex)];
+      for (const match of logMatches) {
         const parts = match[1].split('|');
         if (parts.length >= 7) {
           const [foodName, cal, p, c, f, mealType, dateStr] = parts;
@@ -161,88 +183,172 @@ export default function AiAdvisor() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendQuestion(input);
+      return;
+    }
+
+    // Command History cycling
+    const userHistory = messages
+      .filter(m => m.role === "user")
+      .map(m => m.content);
+
+    if (e.key === "ArrowUp") {
+      // Don't cycle if textarea has multiple lines and cursor isn't at the top
+      // (Simplified for now: only cycle if we're not using Shift/Alt etc)
+      if (userHistory.length === 0) return;
+
+      e.preventDefault();
+      let nextIndex: number;
+      
+      if (historyIndex === -1) {
+        setDraftInput(input);
+        nextIndex = userHistory.length - 1;
+      } else {
+        nextIndex = Math.max(0, historyIndex - 1);
+      }
+      
+      setHistoryIndex(nextIndex);
+      setInput(userHistory[nextIndex]);
+    } else if (e.key === "ArrowDown") {
+      if (historyIndex === -1) return;
+
+      e.preventDefault();
+      const nextIndex = historyIndex + 1;
+      
+      if (nextIndex >= userHistory.length) {
+        setHistoryIndex(-1);
+        setInput(draftInput);
+      } else {
+        setHistoryIndex(nextIndex);
+        setInput(userHistory[nextIndex]);
+      }
     }
   }
 
+  // Auto-expand textarea
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    }
+  }, [input]);
+
+  const startNewChat = () => {
+    // A fresh start doesn't always need a scary confirm if it's just 'cleaning the screen'
+    // but we'll keep a check if there are many messages to prevent accidents
+    if (messages.length > 5) {
+      if (!confirm("Start a new conversation?")) return;
+    }
+    setMessages([]);
+    setError(null);
+  };
+
+  const clearGroceryList = () => {
+    if (confirm("Empty your grocery list?")) {
+      setGroceryList([]);
+      localStorage.setItem('nutrilog_grocery', '[]');
+    }
+  };
+
   return (
-    <div className="page-enter pop-in" style={{ display: "grid", gap: 14, maxWidth: 900 }}>
-      {!isOnline && (
+    <div className="page-enter pop-in ai-advisor-shell">
+      {(!isOnline && selectedProvider !== "ollama") && (
         <div
           className="card"
           style={{
             border: "1px solid rgba(255, 180, 0, 0.3)",
             background: "rgba(255, 180, 0, 0.06)",
+            flexShrink: 0,
           }}
         >
           <div style={{ fontWeight: 600 }}>You're offline</div>
           <div style={{ marginTop: 6, color: "var(--muted)" }}>
-            AI nutrition advice requires an internet connection. Connect to the
-            network, then come back.
+            Cloud AI advice requires an internet connection. Switch to <strong>Ollama (Local)</strong> or connect to the
+            network to continue.
           </div>
         </div>
       )}
 
-      {/* Info card */}
-      <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>🤖 AI Nutrition Advisor</div>
-          <select 
-            value={contextDays} 
-            onChange={(e) => setContextDays(Number(e.target.value))}
-            style={{ 
-              background: "rgba(255,255,255,0.05)", 
-              border: "1px solid var(--border)", 
-              color: "var(--text)", 
-              borderRadius: 6, 
-              padding: "4px 8px", 
-              fontSize: 12 
-            }}
+      {/* Toolbar */}
+      <div className="ai-advisor-toolbar">
+        <div className="ai-advisor-toolbar-left">
+          <span className="ai-advisor-chip provider">{providerConfig.name}</span>
+          {selectedModel && (
+            <span className="ai-advisor-chip model" title={selectedModel}>
+              {selectedModel}
+            </span>
+          )}
+          {selectedProvider === "ollama" ? (
+            <span className="ai-advisor-chip local">🔒 Local</span>
+          ) : (
+            <span className="ai-advisor-chip cloud">☁️ Cloud</span>
+          )}
+        </div>
+        <span className="ai-advisor-toolbar-divider" />
+        <div className="ai-advisor-toolbar-right">
+          <div className="ai-advisor-control">
+            <span className="ai-advisor-control-label">Goal</span>
+            <select
+              className="ai-advisor-toolbar-select"
+              value={goal}
+              onChange={(e) => {
+                const newGoal = e.target.value;
+                localStorage.setItem('nutrilog_goal', newGoal);
+                setGoal(newGoal);
+              }}
+            >
+              <option value="weight_loss">🔥 Cut</option>
+              <option value="maintenance">⚖️ Maintain</option>
+              <option value="muscle_gain">💪 Bulk</option>
+            </select>
+          </div>
+          <div className="ai-advisor-control">
+            <span className="ai-advisor-control-label">Context</span>
+            <select
+              className="ai-advisor-toolbar-select"
+              value={contextDays}
+              onChange={(e) => setContextDays(Number(e.target.value))}
+            >
+              <option value={1}>Today</option>
+              <option value={7}>7 Days</option>
+              <option value={30}>30 Days</option>
+            </select>
+          </div>
+        </div>
+
+        {messages.length > 0 && (
+          <button 
+            className="ai-advisor-toolbar-action" 
+            onClick={startNewChat}
+            title="New Chat"
           >
-            <option value={1} style={{ color: "black" }}>Today</option>
-            <option value={7} style={{ color: "black" }}>Last 7 Days</option>
-            <option value={30} style={{ color: "black" }}>Last 30 Days</option>
-          </select>
-        </div>
-        <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
-          <span style={{ fontSize: 12, color: "var(--muted2)" }}>🎯 Goal:</span>
-          <select 
-            value={localStorage.getItem('nutrilog_goal') || 'maintenance'}
-            onChange={(e) => { localStorage.setItem('nutrilog_goal', e.target.value); /* force re-render */ setContextDays(c => c); }}
-            style={{ 
-              background: "rgba(255,255,255,0.05)", 
-              border: "1px solid var(--border)", 
-              color: "var(--text)", 
-              borderRadius: 6, 
-              padding: "4px 8px", 
-              fontSize: 12 
-            }}
-          >
-            <option value="weight_loss" style={{ color: "black" }}>🔥 Weight Loss</option>
-            <option value="maintenance" style={{ color: "black" }}>⚖️ Maintenance</option>
-            <option value="muscle_gain" style={{ color: "black" }}>💪 Muscle Gain</option>
-          </select>
-        </div>
-        <div style={{ marginTop: 4, fontSize: 12, color: "var(--muted2)" }}>
-          Powered by {providerConfig.name}.
-          {selectedProvider === "ollama"
-            ? " Your data never leaves your device."
-            : " Meal data is sent securely to the provider for analysis."}
-          {" "}Ask questions about your nutrition and get personalized advice.
-        </div>
+            <span>+</span>
+            <span style={{ fontSize: 11, fontWeight: "bold", marginLeft: 4 }}>New Chat</span>
+          </button>
+        )}
       </div>
 
       {/* Grocery List UI */}
       {groceryList.length > 0 && (
-        <div className="card" style={{ borderLeft: "3px solid #10b981", background: "rgba(16, 185, 129, 0.05)" }}>
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
+        <div className="card" style={{ borderLeft: "3px solid #10b981", background: "rgba(16, 185, 129, 0.05)", flexShrink: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>🛒 Smart Grocery List</span>
-            <span style={{ fontSize: 11, color: "var(--muted2)", fontWeight: "normal" }}>AI Managed</span>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button 
+                onClick={clearGroceryList}
+                style={{ background: "none", border: "none", color: "var(--muted2)", fontSize: 10, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.05em" }}
+              >
+                Clear All
+              </button>
+              <span style={{ fontSize: 11, color: "var(--muted2)", fontWeight: "normal" }}>AI Managed</span>
+            </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {groceryList.map((item, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(0,0,0,0.2)", padding: "6px 10px", borderRadius: 8 }}>
+            {groceryList.map((item) => (
+              <div key={item} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(0,0,0,0.2)", padding: "6px 10px", borderRadius: 8 }}>
                 <span style={{ fontSize: 13 }}>{item}</span>
-                <button 
+                <button
                   onClick={() => removeGroceryItem(item)}
                   style={{ background: "none", border: "none", color: "var(--muted2)", cursor: "pointer", fontSize: 16 }}
                 >
@@ -254,159 +360,120 @@ export default function AiAdvisor() {
         </div>
       )}
 
-      {/* Quick prompts */}
-      {messages.length === 0 && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {QUICK_PROMPTS.map((qp) => (
-            <button
-              key={qp.label}
-              onClick={() => sendQuestion(qp.prompt)}
-              disabled={loading}
-              style={quickBtnStyle}
-            >
-              {qp.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* ── Scrollable messages area ── */}
+      <div className="ai-advisor-messages" id="ai-messages-scroll">
 
-      {/* Chat messages */}
-      {messages.map((msg, i) => (
-        <div
-          key={i}
-          className="card"
-          style={{
-            borderLeft: msg.role === "assistant"
-              ? "3px solid rgba(124,92,255,0.5)"
-              : "3px solid rgba(0,209,255,0.4)",
-          }}
-        >
-          <div style={{ fontSize: 11, color: "var(--muted2)", marginBottom: 6, fontWeight: 600 }}>
-            {msg.role === "user" ? "You" : "NutriLog AI"}
-          </div>
-          {msg.role === "assistant" ? (
-            <div className="ai-markdown" style={{ fontSize: 14, lineHeight: 1.7 }}>
-              <ReactMarkdown>{msg.content}</ReactMarkdown>
+        {/* Quick prompts (only when empty) */}
+        {messages.length === 0 && (
+          <div className="ai-advisor-empty">
+            <div className="ai-advisor-empty-icon">💬</div>
+            <div className="ai-advisor-empty-title">Start a conversation</div>
+            <div className="ai-advisor-empty-text">
+              Ask anything about your nutrition, or try one of these:
             </div>
-          ) : (
-            <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-              {msg.content}
-            </div>
-          )}
-
-          {/* .nlog data toggle */}
-          {msg.nlogData && (
-            <div style={{ marginTop: 10 }}>
-              <button
-                onClick={() => setShowNlog(showNlog === i ? null : i)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "var(--muted2)",
-                  fontSize: 11,
-                  cursor: "pointer",
-                  textDecoration: "underline",
-                  padding: 0,
-                }}
-              >
-                {showNlog === i ? "Hide .nlog data" : "Show .nlog data sent to AI"}
-              </button>
-              {showNlog === i && (
-                <pre
-                  style={{
-                    marginTop: 6,
-                    padding: 10,
-                    borderRadius: 8,
-                    background: "rgba(0,0,0,0.3)",
-                    fontSize: 11,
-                    overflow: "auto",
-                    maxHeight: 200,
-                    color: "var(--muted)",
-                    border: "1px solid var(--border)",
-                  }}
+            <div className="ai-advisor-quick-grid">
+              {QUICK_PROMPTS.map((qp) => (
+                <button
+                  key={qp.label}
+                  onClick={() => sendQuestion(qp.prompt)}
+                  disabled={loading}
+                  className="ai-advisor-quick-btn"
                 >
-                  {msg.nlogData}
-                </pre>
-              )}
+                  {qp.label}
+                </button>
+              ))}
             </div>
-          )}
-
-          {msg.tokens && msg.tokens > 0 && (
-            <div style={{ marginTop: 6, fontSize: 10, color: "var(--muted2)" }}>
-              {msg.tokens} tokens used
-            </div>
-          )}
-        </div>
-      ))}
-
-      {/* Loading */}
-      {loading && (
-        <div className="card" style={{ borderLeft: "3px solid rgba(124,92,255,0.5)" }}>
-          <div style={{ fontSize: 13, color: "var(--muted)" }}>
-            🔄 Analyzing your nutrition data…
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Error */}
-      {error && !loading && (
-        <div className="card" style={{ border: "1px solid rgba(255,80,80,0.35)", background: "rgba(255,80,80,0.08)" }}>
-          <div style={{ fontSize: 13 }}>{error}</div>
-        </div>
-      )}
-
-      {/* Input */}
-      <div className="card" style={{ position: "sticky", bottom: 0 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10 }}>
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask about your nutrition…"
-            rows={2}
-            style={{
-              padding: "10px 12px",
-              borderRadius: 12,
-              border: "1px solid var(--border)",
-              background: "rgba(255,255,255,0.04)",
-              color: "var(--text)",
-              resize: "none",
-              fontSize: 13,
-              outline: "none",
-              fontFamily: "inherit",
-            }}
-          />
-          <button
-            onClick={() => sendQuestion(input)}
-            disabled={loading || !input.trim()}
-            style={{
-              padding: "10px 18px",
-              borderRadius: 12,
-              border: "1px solid rgba(124,92,255,0.35)",
-              background: "linear-gradient(135deg, rgba(124,92,255,0.25), rgba(0,209,255,0.10))",
-              color: "var(--text)",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
-              alignSelf: "end",
-              opacity: loading || !input.trim() ? 0.5 : 1,
-            }}
+        {/* Chat messages */}
+        {messages.map((msg, i) => (
+          <div
+            key={i}
+            className={`card ai-chat-bubble ${msg.role === "assistant" ? "ai-chat-assistant" : "ai-chat-user"}`}
           >
-            {loading ? "…" : "Send"}
-          </button>
-        </div>
+            <div className="ai-chat-role">
+              {msg.role === "user" ? "You" : "NutriLog AI"}
+            </div>
+            {msg.role === "assistant" ? (
+              <div className="ai-markdown" style={{ fontSize: 14, lineHeight: 1.7 }}>
+                <ReactMarkdown>{msg.content}</ReactMarkdown>
+              </div>
+            ) : (
+              <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                {msg.content}
+              </div>
+            )}
+
+            {/* .nlog data toggle */}
+            {msg.nlogData && (
+              <div style={{ marginTop: 10 }}>
+                <button
+                  onClick={() => setShowNlog(showNlog === i ? null : i)}
+                  className="ai-nlog-toggle"
+                >
+                  {showNlog === i ? "Hide .nlog data" : "Show .nlog data sent to AI"}
+                </button>
+                {showNlog === i && (
+                  <pre className="ai-nlog-pre">
+                    {msg.nlogData}
+                  </pre>
+                )}
+              </div>
+            )}
+
+            {msg.tokens && msg.tokens > 0 && (
+              <div className="ai-chat-tokens">
+                {msg.tokens} tokens used
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Loading indicator */}
+        {loading && (
+            <div className="card ai-chat-bubble ai-chat-assistant">
+              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "var(--text)" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ai-loading-spinner">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                <span className="ai-loading-text">
+                  Consulting NutriLog AI...
+                </span>
+              </div>
+            </div>
+        )}
+
+        {/* Error */}
+        {error && !loading && (
+          <div className="card" style={{ border: "1px solid rgba(255,80,80,0.35)", background: "rgba(255,80,80,0.08)" }}>
+            <div style={{ fontSize: 13 }}>{error}</div>
+          </div>
+        )}
+
+        {/* Scroll anchor */}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* ── Fixed input bar ── */}
+      <div className="ai-advisor-input-bar">
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask about your nutrition…"
+          rows={1}
+          className="ai-advisor-textarea"
+        />
+        <button
+          onClick={() => sendQuestion(input)}
+          disabled={loading || !input.trim()}
+          className="ai-advisor-send-btn"
+        >
+          {loading ? "…" : "Send"}
+        </button>
       </div>
     </div>
   );
 }
-
-const quickBtnStyle: React.CSSProperties = {
-  padding: "10px 16px",
-  borderRadius: 12,
-  border: "1px solid rgba(124,92,255,0.3)",
-  background: "linear-gradient(135deg, rgba(124,92,255,0.15), rgba(0,209,255,0.08))",
-  color: "var(--text)",
-  cursor: "pointer",
-  fontSize: 13,
-  fontWeight: 600,
-};

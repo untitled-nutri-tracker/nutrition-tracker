@@ -53,6 +53,13 @@ export const LLM_PROVIDERS: LlmProviderConfig[] = [
     requiresKey: true,
     description: "Gemini 2.0 Flash. Requires an API key from aistudio.google.com.",
   },
+  {
+    id: "custom",
+    name: "Custom (OpenAI-Compatible)",
+    service: "llm.custom.key",
+    requiresKey: true,
+    description: "Connect to OpenRouter, Groq, DeepSeek, Together AI, or any remote OpenAI standard.",
+  },
 ];
 
 export function useCredentials() {
