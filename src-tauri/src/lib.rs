@@ -166,12 +166,20 @@ pub fn run() {
             nutrack_database::meal::update_meal_item,
             nutrack_database::meal::delete_meal_item,
             nutrack_database::meal::build_nlog,
+            nutrack_database::meal::get_nutrition_totals_by_date_range,
+            nutrack_database::meal::get_daily_nutrition_totals,
+            nutrack_database::meal::get_weekly_nutrition_totals,
+            nutrack_database::meal::get_nutrition_trend,
             // User Profile
             nutrack_database::user_profile::create_profile,
             nutrack_database::user_profile::get_profile,
             nutrack_database::user_profile::list_profiles,
             nutrack_database::user_profile::update_profile,
             nutrack_database::user_profile::delete_profile,
+            // XLSX Export
+            nutrack_database::export::get_xlsx_export_schema,
+            nutrack_database::export::export_xlsx_records,
+            nutrack_database::export::export_xlsx_to_path,
             // Credential management
             credentials::commands::store_credential,
             credentials::commands::delete_credential,

@@ -1,8 +1,50 @@
 use nutrack_model::food::{Food, Serving};
-use nutrack_model::meal::{Meal, MealItem, MealType};
+use nutrack_model::meal::{
+    DAY_SECONDS, WEEK_SECONDS, Meal, MealItem, MealType, NutritionTotals,
+    NutritionTrendPoint, TrendBucket,
+};
 use nutrack_model::metric_unit::MetricUnit;
 use nutrack_model::validate::Validate;
 use rusqlite::{params, Connection, OptionalExtension};
+use std::collections::{BTreeMap, BTreeSet};
+
+#[derive(Debug, Clone)]
+struct NutritionAggregateRow {
+    occurred_at: i64,
+    meal_id: i64,
+    calories_kcal: f64,
+    fat_g: f64,
+    saturated_fat_g: f64,
+    trans_fat_g: f64,
+    cholesterol_mg: f64,
+    sodium_mg: f64,
+    total_carbohydrate_g: f64,
+    dietary_fiber_g: f64,
+    total_sugars_g: f64,
+    added_sugars_g: f64,
+    protein_g: f64,
+    vitamin_d_mcg: f64,
+    calcium_mg: f64,
+    iron_mg: f64,
+}
+
+fn add_row_to_totals(totals: &mut NutritionTotals, row: &NutritionAggregateRow) {
+    totals.calories_kcal += row.calories_kcal;
+    totals.fat_g += row.fat_g;
+    totals.saturated_fat_g += row.saturated_fat_g;
+    totals.trans_fat_g += row.trans_fat_g;
+    totals.cholesterol_mg += row.cholesterol_mg;
+    totals.sodium_mg += row.sodium_mg;
+    totals.total_carbohydrate_g += row.total_carbohydrate_g;
+    totals.dietary_fiber_g += row.dietary_fiber_g;
+    totals.total_sugars_g += row.total_sugars_g;
+    totals.added_sugars_g += row.added_sugars_g;
+    totals.protein_g += row.protein_g;
+    totals.vitamin_d_mcg += row.vitamin_d_mcg;
+    totals.calcium_mg += row.calcium_mg;
+    totals.iron_mg += row.iron_mg;
+    totals.item_count += 1;
+}
 
 fn meal_from_row(row: &rusqlite::Row<'_>) -> Result<Meal, String> {
     let meal_type = row.get::<_, i64>(2).map_err(|e| crate::sanitize_db_error(e.to_string()))?;
@@ -16,6 +58,183 @@ fn meal_from_row(row: &rusqlite::Row<'_>) -> Result<Meal, String> {
         created_at: row.get(5).map_err(|e| crate::sanitize_db_error(e.to_string()))?,
         updated_at: row.get(6).map_err(|e| crate::sanitize_db_error(e.to_string()))?,
     })
+}
+
+fn floor_to_local_day(ts: i64, offset_minutes: i64) -> i64 {
+    let offset_seconds = offset_minutes * 60;
+    let adjusted = ts + offset_seconds;
+    adjusted.div_euclid(DAY_SECONDS) * DAY_SECONDS - offset_seconds
+}
+
+fn start_of_local_week(ts: i64, offset_minutes: i64) -> i64 {
+    let local_day_start = floor_to_local_day(ts, offset_minutes);
+    let local_day_number = (local_day_start + (offset_minutes * 60)).div_euclid(DAY_SECONDS);
+    let weekday_from_monday = (local_day_number + 3).rem_euclid(7);
+    local_day_start - weekday_from_monday * DAY_SECONDS
+}
+
+fn period_bounds(anchor: i64, offset_minutes: i64, bucket: TrendBucket) -> (i64, i64) {
+    let start = match bucket {
+        TrendBucket::Day => floor_to_local_day(anchor, offset_minutes),
+        TrendBucket::Week => start_of_local_week(anchor, offset_minutes),
+    };
+    let span = match bucket {
+        TrendBucket::Day => DAY_SECONDS,
+        TrendBucket::Week => WEEK_SECONDS,
+    };
+    (start, start + span)
+}
+
+fn next_bucket_start(start: i64, bucket: TrendBucket) -> i64 {
+    start + match bucket {
+        TrendBucket::Day => DAY_SECONDS,
+        TrendBucket::Week => WEEK_SECONDS,
+    }
+}
+
+fn collect_bucket_starts(start: i64, end: i64, offset_minutes: i64, bucket: TrendBucket) -> Vec<i64> {
+    if end <= start {
+        return Vec::new();
+    }
+
+    let mut bucket_start = match bucket {
+        TrendBucket::Day => floor_to_local_day(start, offset_minutes),
+        TrendBucket::Week => start_of_local_week(start, offset_minutes),
+    };
+
+    if bucket_start < start {
+        bucket_start = next_bucket_start(bucket_start, bucket);
+    }
+
+    let mut buckets = Vec::new();
+    while bucket_start < end {
+        buckets.push(bucket_start);
+        bucket_start = next_bucket_start(bucket_start, bucket);
+    }
+    buckets
+}
+
+fn bucket_start_for_timestamp(ts: i64, offset_minutes: i64, bucket: TrendBucket) -> i64 {
+    match bucket {
+        TrendBucket::Day => floor_to_local_day(ts, offset_minutes),
+        TrendBucket::Week => start_of_local_week(ts, offset_minutes),
+    }
+}
+
+fn list_nutrition_rows_by_date_range_with_conn(
+    conn: &Connection,
+    start: i64,
+    end: i64,
+) -> Result<Vec<NutritionAggregateRow>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT
+                m.occurred_at,
+                m.id,
+                mi.id,
+                COALESCE(nf.calories_kcal, 0) * mi.quantity,
+                COALESCE(nf.fat_g, 0) * mi.quantity,
+                COALESCE(nf.saturated_fat_g, 0) * mi.quantity,
+                COALESCE(nf.trans_fat_g, 0) * mi.quantity,
+                COALESCE(nf.cholesterol_mg, 0) * mi.quantity,
+                COALESCE(nf.sodium_mg, 0) * mi.quantity,
+                COALESCE(nf.total_carbohydrate_g, 0) * mi.quantity,
+                COALESCE(nf.dietary_fiber_g, 0) * mi.quantity,
+                COALESCE(nf.total_sugars_g, 0) * mi.quantity,
+                COALESCE(nf.added_sugars_g, 0) * mi.quantity,
+                COALESCE(nf.protein_g, 0) * mi.quantity,
+                COALESCE(nf.vitamin_d_mcg, 0) * mi.quantity,
+                COALESCE(nf.calcium_mg, 0) * mi.quantity,
+                COALESCE(nf.iron_mg, 0) * mi.quantity
+             FROM meal_items mi
+             JOIN meals m ON mi.meal_id = m.id
+             LEFT JOIN nutrition_facts nf ON nf.serving_id = mi.serving_id
+             WHERE m.occurred_at >= ?1 AND m.occurred_at < ?2
+             ORDER BY m.occurred_at ASC, mi.id ASC",
+        )
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+
+    let rows = stmt
+        .query_map(params![start, end], |row| {
+            Ok(NutritionAggregateRow {
+                occurred_at: row.get(0)?,
+                meal_id: row.get(1)?,
+                calories_kcal: row.get(3)?,
+                fat_g: row.get(4)?,
+                saturated_fat_g: row.get(5)?,
+                trans_fat_g: row.get(6)?,
+                cholesterol_mg: row.get(7)?,
+                sodium_mg: row.get(8)?,
+                total_carbohydrate_g: row.get(9)?,
+                dietary_fiber_g: row.get(10)?,
+                total_sugars_g: row.get(11)?,
+                added_sugars_g: row.get(12)?,
+                protein_g: row.get(13)?,
+                vitamin_d_mcg: row.get(14)?,
+                calcium_mg: row.get(15)?,
+                iron_mg: row.get(16)?,
+            })
+        })
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+
+    let mut aggregate_rows = Vec::new();
+    for row in rows {
+        aggregate_rows.push(row.map_err(|e| crate::sanitize_db_error(e.to_string()))?);
+    }
+    Ok(aggregate_rows)
+}
+
+fn accumulate_totals(rows: &[NutritionAggregateRow]) -> NutritionTotals {
+    let mut totals = NutritionTotals::default();
+    let mut meal_ids = BTreeSet::new();
+
+    for row in rows {
+        add_row_to_totals(&mut totals, row);
+        meal_ids.insert(row.meal_id);
+    }
+
+    totals.meal_count = meal_ids.len() as i64;
+    totals
+}
+
+fn get_nutrition_totals_by_date_range_with_conn(
+    conn: &Connection,
+    start: i64,
+    end: i64,
+) -> Result<NutritionTotals, String> {
+    let rows = list_nutrition_rows_by_date_range_with_conn(conn, start, end)?;
+    Ok(accumulate_totals(&rows))
+}
+
+fn get_nutrition_trend_with_conn(
+    conn: &Connection,
+    start: i64,
+    end: i64,
+    bucket: TrendBucket,
+    offset_minutes: i64,
+) -> Result<Vec<NutritionTrendPoint>, String> {
+    let rows = list_nutrition_rows_by_date_range_with_conn(conn, start, end)?;
+    let bucket_starts = collect_bucket_starts(start, end, offset_minutes, bucket);
+    let mut grouped: BTreeMap<i64, Vec<NutritionAggregateRow>> = BTreeMap::new();
+
+    for row in rows {
+        let bucket_start = bucket_start_for_timestamp(row.occurred_at, offset_minutes, bucket);
+        if bucket_start >= start && bucket_start < end {
+            grouped.entry(bucket_start).or_default().push(row);
+        }
+    }
+
+    Ok(bucket_starts
+        .into_iter()
+        .map(|period_start| NutritionTrendPoint {
+            period_start,
+            period_end: next_bucket_start(period_start, bucket),
+            totals: grouped
+                .get(&period_start)
+                .map(|bucket_rows| accumulate_totals(bucket_rows))
+                .unwrap_or_default(),
+        })
+        .collect())
 }
 
 fn get_meal_with_conn(conn: &Connection, id: i64) -> Result<Option<Meal>, String> {
@@ -482,6 +701,71 @@ pub async fn list_meals_by_date_range(start: i64, end: i64) -> Result<Vec<Meal>,
     list_meals_by_date_range_with_conn(&conn, start, end)
 }
 
+/// Aggregates nutrition totals across an arbitrary half-open timestamp range `[start, end)`.
+#[tauri::command]
+pub async fn get_nutrition_totals_by_date_range(
+    start: i64,
+    end: i64,
+) -> Result<NutritionTotals, String> {
+    let manager = crate::DatabaseConnectionManager::global()
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager
+        .connection()
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    get_nutrition_totals_by_date_range_with_conn(&conn, start, end)
+}
+
+/// Aggregates nutrition totals for the local day containing `anchor`.
+///
+/// `offset_minutes` is the caller's UTC offset in minutes and is used to compute
+/// the local midnight boundaries correctly.
+#[tauri::command]
+pub async fn get_daily_nutrition_totals(
+    anchor: i64,
+    offset_minutes: i64,
+) -> Result<NutritionTotals, String> {
+    let manager = crate::DatabaseConnectionManager::global()
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager
+        .connection()
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let (start, end) = period_bounds(anchor, offset_minutes, TrendBucket::Day);
+    get_nutrition_totals_by_date_range_with_conn(&conn, start, end)
+}
+
+/// Aggregates nutrition totals for the ISO-style local week containing `anchor`.
+///
+/// Weeks start on Monday in the caller's local timezone.
+#[tauri::command]
+pub async fn get_weekly_nutrition_totals(
+    anchor: i64,
+    offset_minutes: i64,
+) -> Result<NutritionTotals, String> {
+    let manager = crate::DatabaseConnectionManager::global()
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager
+        .connection()
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let (start, end) = period_bounds(anchor, offset_minutes, TrendBucket::Week);
+    get_nutrition_totals_by_date_range_with_conn(&conn, start, end)
+}
+
+/// Returns nutrition totals bucketed by local day or local week across `[start, end)`.
+#[tauri::command]
+pub async fn get_nutrition_trend(
+    start: i64,
+    end: i64,
+    bucket: TrendBucket,
+    offset_minutes: i64,
+) -> Result<Vec<NutritionTrendPoint>, String> {
+    let manager = crate::DatabaseConnectionManager::global()
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager
+        .connection()
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    get_nutrition_trend_with_conn(&conn, start, end, bucket, offset_minutes)
+}
+
 // ─── .nlog builder ──────────────────────────────────────────────────────────
 
 fn r64(n: f64) -> f64 {
@@ -630,6 +914,34 @@ mod tests {
         get_serving_with_conn(conn, id).unwrap().unwrap()
     }
 
+    fn seed_nutrition_facts(conn: &Connection, serving_id: i64, calories_kcal: f64, protein_g: f64) {
+        conn.execute(
+            "INSERT INTO nutrition_facts (
+                serving_id, calories_kcal, fat_g, saturated_fat_g, trans_fat_g,
+                cholesterol_mg, sodium_mg, total_carbohydrate_g, dietary_fiber_g,
+                total_sugars_g, added_sugars_g, protein_g, vitamin_d_mcg, calcium_mg, iron_mg
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+            params![
+                serving_id,
+                calories_kcal,
+                1.0,
+                0.2,
+                0.0,
+                5.0,
+                10.0,
+                12.0,
+                2.0,
+                4.0,
+                1.0,
+                protein_g,
+                0.5,
+                20.0,
+                1.5
+            ],
+        )
+        .unwrap();
+    }
+
     fn sample_meal(id: i64, meal_type: MealType, title: &str) -> Meal {
         Meal {
             id,
@@ -640,6 +952,48 @@ mod tests {
             created_at: 5000 + id,
             updated_at: 6000 + id,
         }
+    }
+
+    fn add_meal_item_with_nutrition(
+        conn: &Connection,
+        meal_id: i64,
+        occurred_at: i64,
+        item_id: i64,
+        quantity: f32,
+        calories_kcal: f64,
+        protein_g: f64,
+    ) {
+        let meal = create_meal_with_conn(
+            conn,
+            Meal {
+                id: meal_id,
+                occurred_at,
+                meal_type: MealType::Lunch,
+                title: format!("Meal {meal_id}"),
+                note: String::new(),
+                created_at: occurred_at,
+                updated_at: occurred_at,
+            },
+        )
+        .unwrap();
+        let food = seed_food(conn, meal_id + 1000, &format!("Food {meal_id}"));
+        let serving = seed_serving(conn, meal_id + 2000, food.id);
+        seed_nutrition_facts(conn, serving.id, calories_kcal, protein_g);
+
+        create_meal_item_with_conn(
+            conn,
+            MealItem {
+                id: item_id,
+                meal,
+                food,
+                serving,
+                quantity,
+                note: String::new(),
+                created_at: occurred_at,
+                updated_at: occurred_at,
+            },
+        )
+        .unwrap();
     }
 
     #[test]
@@ -757,5 +1111,82 @@ mod tests {
 
         assert!(delete_meal_with_conn(&conn, 50).unwrap());
         assert!(get_meal_item_with_conn(&conn, 80).unwrap().is_none());
+    }
+
+    #[test]
+    fn test_daily_nutrition_totals_use_local_day_boundaries() {
+        let conn = setup_conn();
+        let offset_minutes = 120;
+        let anchor = 1_710_000_000;
+        let day_start = floor_to_local_day(anchor, offset_minutes);
+
+        add_meal_item_with_nutrition(&conn, 1, day_start - 60, 11, 1.0, 99.0, 9.0);
+        add_meal_item_with_nutrition(&conn, 2, day_start + 60, 22, 1.5, 200.0, 10.0);
+        add_meal_item_with_nutrition(&conn, 3, day_start + DAY_SECONDS - 60, 33, 1.0, 150.0, 12.0);
+        add_meal_item_with_nutrition(&conn, 4, day_start + DAY_SECONDS + 60, 44, 1.0, 77.0, 7.0);
+
+        let totals =
+            get_nutrition_totals_by_date_range_with_conn(&conn, day_start, day_start + DAY_SECONDS)
+                .unwrap();
+
+        assert_eq!(totals.calories_kcal, 450.0);
+        assert_eq!(totals.protein_g, 27.0);
+        assert_eq!(totals.meal_count, 2);
+        assert_eq!(totals.item_count, 2);
+    }
+
+    #[test]
+    fn test_weekly_nutrition_totals_and_daily_trend_are_correct() {
+        let conn = setup_conn();
+        let offset_minutes = -300;
+        let anchor = 1_710_000_000;
+        let week_start = start_of_local_week(anchor, offset_minutes);
+
+        add_meal_item_with_nutrition(&conn, 10, week_start + 3_600, 101, 1.0, 100.0, 8.0);
+        add_meal_item_with_nutrition(&conn, 11, week_start + DAY_SECONDS + 7_200, 111, 2.0, 120.0, 5.0);
+        add_meal_item_with_nutrition(
+            &conn,
+            12,
+            week_start + (6 * DAY_SECONDS) + 18_000,
+            121,
+            1.0,
+            300.0,
+            20.0,
+        );
+        add_meal_item_with_nutrition(&conn, 13, week_start + WEEK_SECONDS + 30, 131, 1.0, 999.0, 99.0);
+
+        let weekly_totals =
+            get_nutrition_totals_by_date_range_with_conn(&conn, week_start, week_start + WEEK_SECONDS)
+                .unwrap();
+        assert_eq!(weekly_totals.calories_kcal, 640.0);
+        assert_eq!(weekly_totals.protein_g, 38.0);
+        assert_eq!(weekly_totals.meal_count, 3);
+        assert_eq!(weekly_totals.item_count, 3);
+
+        let daily_trend = get_nutrition_trend_with_conn(
+            &conn,
+            week_start,
+            week_start + WEEK_SECONDS,
+            TrendBucket::Day,
+            offset_minutes,
+        )
+        .unwrap();
+        assert_eq!(daily_trend.len(), 7);
+        assert_eq!(daily_trend[0].totals.calories_kcal, 100.0);
+        assert_eq!(daily_trend[1].totals.calories_kcal, 240.0);
+        assert_eq!(daily_trend[6].totals.calories_kcal, 300.0);
+        assert_eq!(daily_trend[2].totals.calories_kcal, 0.0);
+
+        let weekly_trend = get_nutrition_trend_with_conn(
+            &conn,
+            week_start,
+            week_start + (2 * WEEK_SECONDS),
+            TrendBucket::Week,
+            offset_minutes,
+        )
+        .unwrap();
+        assert_eq!(weekly_trend.len(), 2);
+        assert_eq!(weekly_trend[0].totals.calories_kcal, 640.0);
+        assert_eq!(weekly_trend[1].totals.calories_kcal, 999.0);
     }
 }

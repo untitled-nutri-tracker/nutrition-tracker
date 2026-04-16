@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
 import ProfileForm from "../components/ProfileForm";
 import { useUserProfile } from "../hooks/useUserProfile";
+import { useDatabaseSession } from "../lib/DatabaseSessionContext";
 import {
   useCredentials,
   LLM_PROVIDERS,
@@ -10,8 +13,45 @@ import { useAiConfig, type AiModelInfo } from "../hooks/useAiConfig";
 import "../styles/credentials.css";
 
 export default function Settings() {
+  const { session } = useDatabaseSession();
   const { profile, loading, saving, error, computed, persist, reset } =
     useUserProfile();
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
+
+  async function handleExportXlsx() {
+    setExportMessage(null);
+
+    const connectedPath = session.connectedPath?.trim();
+    if (!connectedPath) {
+      setExportMessage("No database is currently connected.");
+      return;
+    }
+
+    const defaultPath = connectedPath.replace(/\.[^/.]+$/, "") || connectedPath;
+    const selectedPath = await save({
+      defaultPath: `${defaultPath}.xlsx`,
+      filters: [{ name: "Excel Workbook", extensions: ["xlsx"] }],
+    });
+
+    if (typeof selectedPath !== "string" || !selectedPath.trim()) {
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const writtenPath = await invoke<string>("export_xlsx_to_path", {
+        path: selectedPath,
+      });
+      setExportMessage(`Exported database to ${writtenPath}`);
+    } catch (err) {
+      setExportMessage(
+        err instanceof Error ? err.message : "Failed to export database",
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -93,6 +133,62 @@ export default function Settings() {
             >
               Reset profile
             </button>
+          </div>
+        )}
+      </div>
+
+      <div className="card pop-in-delay-1" style={{ maxWidth: 720 }}>
+        <div style={{ fontSize: 16, fontWeight: 600 }}>Database export</div>
+        <div
+          style={{ fontSize: 12, color: "var(--muted2)", marginTop: 4 }}
+        >
+          Export the currently connected database as an Excel workbook.
+        </div>
+
+        <div
+          style={{
+            marginTop: 14,
+            display: "flex",
+            gap: 10,
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ fontSize: 12, color: "var(--muted)" }}>
+            {session.connectedPath ?? "No database connected"}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleExportXlsx}
+            disabled={exporting || !session.connectedPath}
+            style={{
+              padding: "10px 14px",
+              borderRadius: 12,
+              border: "1px solid var(--border)",
+              background: "rgba(255,255,255,0.04)",
+              color: "var(--text)",
+              cursor:
+                exporting || !session.connectedPath ? "not-allowed" : "pointer",
+              opacity: exporting || !session.connectedPath ? 0.6 : 1,
+            }}
+          >
+            {exporting ? "Exporting..." : "Export as XLSX"}
+          </button>
+        </div>
+
+        {exportMessage && (
+          <div
+            style={{
+              marginTop: 12,
+              fontSize: 12,
+              color: exportMessage.startsWith("Exported")
+                ? "var(--muted)"
+                : "#ff9a9a",
+            }}
+          >
+            {exportMessage}
           </div>
         )}
       </div>
