@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "../styles/barcode-scanner.css";
 
@@ -23,7 +23,11 @@ export default function FoodPhotoScanner({
   const [cameraReady, setCameraReady] = useState(false);
   const prefersPickerCapture = useMemo(() => prefersFileCapture(), []);
   const [livePreviewUnavailable, setLivePreviewUnavailable] = useState(false);
+  const [videoAspectRatio, setVideoAspectRatio] = useState(4 / 3);
   const usePickerCapture = prefersPickerCapture || livePreviewUnavailable;
+  const frameStyle = {
+    "--food-photo-aspect": String(videoAspectRatio),
+  } as CSSProperties;
 
   function stopCamera() {
     if (streamRef.current) {
@@ -132,6 +136,12 @@ export default function FoodPhotoScanner({
     });
   }
 
+  function handleVideoMetadata() {
+    const video = videoRef.current;
+    if (!video?.videoWidth || !video?.videoHeight) return;
+    setVideoAspectRatio(video.videoWidth / video.videoHeight);
+  }
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -156,7 +166,11 @@ export default function FoodPhotoScanner({
 
   return (
     <div className="scanner-overlay" onClick={handleClose}>
-      <div className="scanner-video-wrap food-photo-wrap" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="scanner-video-wrap food-photo-wrap"
+        onClick={(e) => e.stopPropagation()}
+        style={frameStyle}
+      >
         {usePickerCapture ? (
           <div className="food-photo-file-only">
             {prefersPickerCapture
@@ -164,7 +178,7 @@ export default function FoodPhotoScanner({
               : "Live camera preview is unavailable here. Choose a food photo from your device."}
           </div>
         ) : (
-          <video ref={videoRef} autoPlay playsInline muted />
+          <video ref={videoRef} autoPlay playsInline muted onLoadedMetadata={handleVideoMetadata} />
         )}
         <div className="food-photo-guide">
           Place one food item in the frame

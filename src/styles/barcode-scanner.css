@@ -260,8 +260,15 @@
 }
 
 .food-photo-wrap {
+  --food-photo-aspect: 1.3333;
+  aspect-ratio: var(--food-photo-aspect);
   border-color: rgba(80, 200, 120, 0.45);
-  width: min(860px, 94vw, calc(72vh * 4 / 3));
+  width: min(96vw, calc(82vh * var(--food-photo-aspect)));
+}
+
+.food-photo-wrap video {
+  background: #000;
+  object-fit: contain;
 }
 
 .food-photo-guide {
