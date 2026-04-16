@@ -401,17 +401,15 @@ function ApiKeySection() {
 
   return (
     <div className="card pop-in-delay-2" style={{ maxWidth: 720 }}>
-      <div style={{ fontSize: 16, fontWeight: 600 }}>
+      <div className="ai-config-header">
         AI Provider Configuration
       </div>
-      <div
-        style={{ fontSize: 12, color: "var(--muted2)", marginTop: 4 }}
-      >
+      <div className="ai-config-subtitle">
         Select your preferred AI provider and manage API keys. Keys are
         stored securely in your OS keychain.
       </div>
 
-      {/* Provider selector */}
+      {/* Provider selector pills */}
       <div className="provider-select-row">
         {LLM_PROVIDERS.map((p) => (
           <button
@@ -424,26 +422,15 @@ function ApiKeySection() {
         ))}
       </div>
 
-      {/* Status message */}
+      {/* Status message banner */}
       {saveMsg && (
-        <div
-          style={{
-            marginTop: 10,
-            padding: "8px 12px",
-            borderRadius: 10,
-            fontSize: 12,
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid var(--border)",
-          }}
-        >
+        <div className="provider-status-msg">
           {saveMsg}
         </div>
       )}
 
       {/* Provider cards */}
-      <div
-        style={{ marginTop: 14, display: "grid", gap: 10 }}
-      >
+      <div className="provider-cards-grid">
         {LLM_PROVIDERS.map((provider) => {
           const status = providerStatus[provider.id];
           const isSelected = selectedProvider === provider.id;
@@ -459,13 +446,14 @@ function ApiKeySection() {
               key={provider.id}
               className={`provider-card ${isSelected ? "active" : ""}`}
             >
+              {/* Header: name + status badge */}
               <div className="provider-card-header">
                 <div>
                   <div className="provider-name">{provider.name}</div>
                   <div className="provider-desc">{provider.description}</div>
                 </div>
 
-                {/* Status badge — three states */}
+                {/* Status badge */}
                 {!provider.requiresKey ? (
                   verified ? (
                     <span className="key-status stored">✅ Verified</span>
@@ -477,22 +465,18 @@ function ApiKeySection() {
                 ) : verified ? (
                   <span className="key-status stored">✅ Verified</span>
                 ) : (
-                  <span className="key-status" style={{ color: "var(--muted)", fontSize: 11 }}>🔑 Key saved · Not verified</span>
+                  <span className="key-status unverified">🔑 Key saved · Not verified</span>
                 )}
               </div>
 
-              {/* Key preview + actions (only for providers that need keys) */}
+              {/* Key preview + change/remove actions */}
               {provider.requiresKey && status?.hasKey && !isEditing && (
                 <div className="key-preview">
                   <span>{status.preview}</span>
-                  <div style={{ display: "flex", gap: 6 }}>
+                  <div className="key-preview-actions">
                     <button
-                      className="key-delete-btn"
+                      className="key-change-btn"
                       onClick={() => setEditingProvider(provider.id)}
-                      style={{
-                        borderColor: "rgba(124,92,255,0.3)",
-                        background: "rgba(124,92,255,0.08)",
-                      }}
                     >
                       Change
                     </button>
@@ -540,13 +524,13 @@ function ApiKeySection() {
 
               {/* Ollama endpoint config */}
               {!provider.requiresKey && provider.id === "ollama" && (
-                <div style={{ marginTop: 10 }}>
-                  <div style={{ fontSize: 11, color: "var(--muted2)", marginBottom: 4 }}>
-                    Ollama Endpoint URL
+                <div className="endpoint-section">
+                  <div className="endpoint-label">
+                    Endpoint URL
                   </div>
-                  <div style={{ display: "flex", gap: 6 }}>
+                  <div className="endpoint-input-row">
                     <input
-                      className="key-input"
+                      className="endpoint-input"
                       type="text"
                       value={ollamaInput}
                       onChange={(e) => setOllamaInput(e.target.value)}
@@ -554,22 +538,21 @@ function ApiKeySection() {
                         if (e.key === "Enter") handleOllamaEndpointSave();
                       }}
                       onBlur={handleOllamaEndpointSave}
-                      style={{ flex: 1, fontSize: 12 }}
                       placeholder="http://localhost:11434"
                     />
                   </div>
                 </div>
               )}
 
-              {/* Custom OpenRouter/OpenAI-compatible endpoint config */}
+              {/* Custom OpenAI-compatible endpoint config */}
               {provider.requiresKey && provider.id === "custom" && (
-                <div style={{ marginTop: 10 }}>
-                  <div style={{ fontSize: 11, color: "var(--muted2)", marginBottom: 4 }}>
-                    Custom Endpoint URL
+                <div className="endpoint-section">
+                  <div className="endpoint-label">
+                    Endpoint URL
                   </div>
-                  <div style={{ display: "flex", gap: 6 }}>
+                  <div className="endpoint-input-row">
                     <input
-                      className="key-input"
+                      className="endpoint-input"
                       type="text"
                       value={customEndpointInput}
                       onChange={(e) => setCustomEndpointInput(e.target.value)}
@@ -577,7 +560,6 @@ function ApiKeySection() {
                         if (e.key === "Enter") handleCustomEndpointSave();
                       }}
                       onBlur={handleCustomEndpointSave}
-                      style={{ flex: 1, fontSize: 12 }}
                       placeholder="https://openrouter.ai/api/v1"
                     />
                   </div>
@@ -586,26 +568,16 @@ function ApiKeySection() {
 
               {/* Test Connection button */}
               {(provider.requiresKey ? status?.hasKey : true) && (
-                <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center" }}>
+                <div className="verify-row">
                   <button
+                    className="verify-btn"
                     onClick={() => handleVerify(provider.id)}
                     disabled={isVerifyingThis}
-                    style={{
-                      padding: "6px 14px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(124,92,255,0.35)",
-                      background: "linear-gradient(135deg, rgba(124,92,255,0.2), rgba(0,209,255,0.08))",
-                      color: "var(--text)",
-                      cursor: isVerifyingThis ? "wait" : "pointer",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      opacity: isVerifyingThis ? 0.6 : 1,
-                    }}
                   >
                     {isVerifyingThis ? "Verifying…" : "Test Connection"}
                   </button>
                   {vError && (
-                    <span style={{ fontSize: 11, color: "#ff5050" }}>
+                    <span className="verify-error">
                       ❌ {vError.length > 80 ? vError.slice(0, 80) + "…" : vError}
                     </span>
                   )}
@@ -614,25 +586,17 @@ function ApiKeySection() {
 
               {/* Model selector (visible after verification) */}
               {models.length > 0 && (
-                <div style={{ marginTop: 10 }}>
-                  <div style={{ fontSize: 11, color: "var(--muted2)", marginBottom: 4 }}>
+                <div className="model-section">
+                  <div className="model-label">
                     Model
                   </div>
                   <select
+                    className="model-select"
                     value={currentModel ?? models[0]?.id ?? ""}
                     onChange={(e) => handleModelSelect(provider.id, e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "6px 10px",
-                      borderRadius: 8,
-                      border: "1px solid var(--border)",
-                      background: "rgba(255,255,255,0.04)",
-                      color: "var(--text)",
-                      fontSize: 12,
-                    }}
                   >
                     {models.map((m) => (
-                      <option key={m.id} value={m.id} style={{ color: "black" }}>
+                      <option key={m.id} value={m.id}>
                         {m.name || m.id}
                       </option>
                     ))}
@@ -649,7 +613,7 @@ function ApiKeySection() {
         <div className="privacy-consent">
           <div className="privacy-consent-title">⚠️ Privacy Notice</div>
           <div className="privacy-consent-text">
-            When using cloud AI providers (OpenAI, Anthropic, Google),
+            When using cloud AI providers (OpenAI, Anthropic, Google, Custom),
             your meal data will be sent to their servers for analysis.
             No personal information beyond food logs is shared. Your
             API keys are stored locally in your OS keychain and never

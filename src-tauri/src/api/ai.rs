@@ -388,9 +388,15 @@ async fn ask_anthropic(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>,
     }
     messages.push(json!({ "role": "user", "content": prompt }));
 
+    let max_tokens = if model.contains("3-5-sonnet") || model.contains("sonnet-4") || model.contains("3-5-haiku") {
+        8192
+    } else {
+        4096
+    };
+
     let body = json!({
         "model": model,
-        "max_tokens": 8192,
+        "max_tokens": max_tokens,
         "system": SYSTEM_PROMPT,
         "messages": messages
     });
