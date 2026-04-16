@@ -13,8 +13,11 @@
     "windows": [
       {
         "title": "nutrition-tracker",
-        "width": 1100,
-        "height": 700
+        "width": 1400,
+        "height": 950,
+        "minWidth": 1100,
+        "minHeight": 760,
+        "resizable": true
       }
     ],
     "security": {
