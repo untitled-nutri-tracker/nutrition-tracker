@@ -140,6 +140,7 @@ async fn analyze_with_ollama(client: &Client, image_base64: &str) -> Result<Visi
     let endpoint = CredentialManager::global()
         .retrieve(credentials::providers::OLLAMA_ENDPOINT)
         .unwrap_or_else(|_| "http://localhost:11434".to_string());
+    let endpoint = normalize_ollama_endpoint(&endpoint);
 
     let body = json!({
         "model": "llama3.2-vision",
@@ -153,7 +154,7 @@ async fn analyze_with_ollama(client: &Client, image_base64: &str) -> Result<Visi
 
     let json = post_json(
         client,
-        &format!("{}/api/chat", endpoint.trim_end_matches('/')),
+        &format!("{endpoint}/api/chat"),
         body,
         None,
         "Ollama",
@@ -166,6 +167,15 @@ async fn analyze_with_ollama(client: &Client, image_base64: &str) -> Result<Visi
         .unwrap_or_default()
         .to_string();
     parse_vision_estimate(&text)
+}
+
+fn normalize_ollama_endpoint(endpoint: &str) -> String {
+    endpoint
+        .trim()
+        .trim_end_matches('/')
+        .trim_end_matches("/v1")
+        .trim_end_matches('/')
+        .to_string()
 }
 
 async fn analyze_with_openai(
@@ -325,9 +335,13 @@ async fn post_json(
         .await
         .map_err(|e| format!("Invalid {provider_name} response: {e}"))?;
     if !status.is_success() {
+        let err_msg = json["error"]["message"]
+            .as_str()
+            .or_else(|| json["error"].as_str())
+            .or_else(|| json["message"].as_str())
+            .unwrap_or("Unknown error");
         return Err(format!(
-            "{provider_name} error ({status}): {}",
-            json["error"]["message"].as_str().unwrap_or("Unknown error")
+            "{provider_name} error ({status}): {err_msg}"
         ));
     }
     Ok(json)
@@ -521,6 +535,14 @@ mod tests {
     fn image_validation_rejects_unsupported_mime() {
         let err = validate_image_input("abc", "image/gif").unwrap_err();
         assert!(err.contains("JPEG, PNG, or WebP"));
+    }
+
+    #[test]
+    fn ollama_endpoint_strips_openai_compatible_suffix() {
+        assert_eq!(
+            normalize_ollama_endpoint("http://localhost:11434/v1/"),
+            "http://localhost:11434"
+        );
     }
 
     #[tokio::test]
