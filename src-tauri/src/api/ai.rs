@@ -216,7 +216,11 @@ fn resolve_ollama_endpoint() -> String {
 }
 
 async fn ask_ollama(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str) -> Result<AiResponse, String> {
-    let endpoint = resolve_ollama_endpoint();
+    let mut endpoint = resolve_ollama_endpoint();
+    endpoint = endpoint.trim_end_matches('/').to_string();
+    if endpoint.ends_with("/v1") {
+        endpoint = endpoint.strip_suffix("/v1").unwrap().to_string();
+    }
     let client = build_client()?;
 
     let mut messages = Vec::new();
@@ -470,33 +474,39 @@ pub async fn list_ai_models(provider: String) -> Result<Vec<AiModelInfo>, String
 }
 
 async fn list_models_ollama() -> Result<Vec<AiModelInfo>, String> {
-    let endpoint = resolve_ollama_endpoint();
+    let mut endpoint = resolve_ollama_endpoint();
+    endpoint = endpoint.trim_end_matches('/').to_string();
+    if endpoint.ends_with("/v1") {
+        endpoint = endpoint.strip_suffix("/v1").unwrap().to_string();
+    }
+    
     let client = build_client()?;
 
+    // Use the universal OpenAI-compatible endpoint instead of proprietary /api/tags
     let res = client
-        .get(format!("{}/api/tags", endpoint.trim_end_matches('/')))
+        .get(format!("{}/v1/models", endpoint))
         .send()
         .await
-        .map_err(|e| format!("Failed to reach Ollama at {}. Is it running? Error: {}", endpoint, e))?;
+        .map_err(|e| format!("Failed to reach Local LLM at {}. Is it running? Error: {}", endpoint, e))?;
 
     if !res.status().is_success() {
-        return Err(format!("Ollama returned status {}", res.status()));
+        return Err(format!("Local LLM returned status {}", res.status()));
     }
 
     let json: serde_json::Value = res
         .json()
         .await
-        .map_err(|e| format!("Invalid Ollama response: {}", e))?;
+        .map_err(|e| format!("Invalid LLM response: {}", e))?;
 
-    let models = json["models"]
+    let models = json["data"]
         .as_array()
         .map(|arr| {
             arr.iter()
                 .filter_map(|m| {
-                    let name = m["name"].as_str()?;
+                    let id = m["id"].as_str()?;
                     Some(AiModelInfo {
-                        id: name.to_string(),
-                        name: name.to_string(),
+                        id: id.to_string(),
+                        name: id.to_string(), // Keep name identical to id for local models
                         provider: "ollama".into(),
                     })
                 })
