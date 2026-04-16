@@ -6,11 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
-## [Unreleased]
+## [0.9.0] - 2026-04-16
 
 ### Added
+- **BYOM (Bring-Your-Own-Model) Configuration:** Dedicated `AiConfigManager` implemented in the Rust backend to persist user choices for AI provider, model, and custom Ollama endpoints independently of browser cache.
+- **Dynamic AI Model Discovery:** Backend now queries providers (OpenAI, Google Gemini, Ollama) directly for their live, compatible model lists, replacing hardcoded dropdowns.
+- **Deep Provider Verification:** The "Test Connection" flow now runs an automated, token-minimized inference test (e.g. `max_tokens: 5`) against the provider to guarantee active billing/quota rather than just hitting a `models` endpoint.
 - Nutrition aggregation APIs in the database layer for arbitrary date ranges, local-day totals, local-week totals, and trend buckets.
 - Shared analytics DTOs in `nutrack-model` for `NutritionTotals`, `NutritionTrendPoint`, and `TrendBucket`.
+
+### Changed
+- Increased generic HTTP timeout from `30s` to `120s` globally to better accommodate slow local LLMs (Ollama) or throttled cloud providers.
+- Bypassed arbitrary truncation limits on AI responses by passing native maximum token limits (e.g., 65K for Gemini) into the generation context.
+- Enhanced AI Advisor UX with automatic message scrolling and a polished glassmorphism input style.
 
 ### Changed
 - Tauri command registration now includes nutrition aggregation and trend endpoints exposed from the database crate.
