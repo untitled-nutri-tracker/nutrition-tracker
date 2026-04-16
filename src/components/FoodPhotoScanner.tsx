@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import "../styles/barcode-scanner.css";
 
 interface FoodPhotoPayload {
@@ -23,8 +24,10 @@ export default function FoodPhotoScanner({
   const [cameraReady, setCameraReady] = useState(false);
   const prefersPickerCapture = useMemo(() => prefersFileCapture(), []);
   const [livePreviewUnavailable, setLivePreviewUnavailable] = useState(false);
-  const [videoAspectRatio, setVideoAspectRatio] = useState(4 / 3);
+  const [permissionStatus, setPermissionStatus] = useState<CameraPermissionStatus>("unknown");
+  const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9);
   const usePickerCapture = prefersPickerCapture || livePreviewUnavailable;
+  const permissionBlocked = permissionStatus === "denied" || permissionStatus === "restricted";
   const frameStyle = {
     "--food-photo-aspect": String(videoAspectRatio),
   } as CSSProperties;
@@ -40,6 +43,12 @@ export default function FoodPhotoScanner({
       videoRef.current.srcObject = null;
     }
     setCameraReady(false);
+  }
+
+  function retryLivePreview() {
+    setError(null);
+    setPermissionStatus("unknown");
+    setLivePreviewUnavailable(false);
   }
 
   useEffect(() => {
@@ -59,13 +68,10 @@ export default function FoodPhotoScanner({
       try {
         const nativePermission = await ensureNativeCameraPermission();
         if (cancelled) return;
+        setPermissionStatus(nativePermission);
         if (nativePermission === "denied" || nativePermission === "restricted") {
           setLivePreviewUnavailable(true);
-          setError(
-            nativePermission === "restricted"
-              ? "Camera access is restricted by macOS. Choose a photo instead."
-              : "Camera access is denied by macOS. Allow it in System Settings, or choose a photo instead."
-          );
+          setError(null);
           return;
         }
 
@@ -86,6 +92,7 @@ export default function FoodPhotoScanner({
       } catch {
         if (cancelled) return;
         setLivePreviewUnavailable(true);
+        setPermissionStatus("unknown");
         setError(null);
       }
     }
@@ -142,6 +149,14 @@ export default function FoodPhotoScanner({
     setVideoAspectRatio(video.videoWidth / video.videoHeight);
   }
 
+  async function openCameraSettings() {
+    try {
+      await openUrl("x-apple.systempreferences:com.apple.preference.security?Privacy_Camera");
+    } catch {
+      setError("Open System Settings, then Privacy & Security, then Camera, and allow NutriLog.");
+    }
+  }
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -165,7 +180,7 @@ export default function FoodPhotoScanner({
   }
 
   return (
-    <div className="scanner-overlay" onClick={handleClose}>
+    <div className="scanner-overlay food-photo-overlay" onClick={handleClose}>
       <div
         className="scanner-video-wrap food-photo-wrap"
         onClick={(e) => e.stopPropagation()}
@@ -173,12 +188,30 @@ export default function FoodPhotoScanner({
       >
         {usePickerCapture ? (
           <div className="food-photo-file-only">
-            {prefersPickerCapture
-              ? "Use the camera picker for a single food item, or choose an existing photo."
-              : "Live camera preview is unavailable here. Choose a food photo from your device."}
+            <div>
+              <div>
+                {permissionBlocked
+                  ? "Camera permission is blocked by macOS."
+                  : prefersPickerCapture
+                    ? "Use the camera picker for a single food item, or choose an existing photo."
+                    : "Live camera preview is unavailable here. Choose a food photo from your device."}
+              </div>
+              {permissionBlocked && (
+                <div className="food-photo-permission-help">
+                  Allow NutriLog in System Settings, then retry the live camera.
+                </div>
+              )}
+            </div>
           </div>
         ) : (
-          <video ref={videoRef} autoPlay playsInline muted onLoadedMetadata={handleVideoMetadata} />
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            onLoadedMetadata={handleVideoMetadata}
+            onCanPlay={handleVideoMetadata}
+          />
         )}
         <div className="food-photo-guide">
           Place one food item in the frame
@@ -198,6 +231,16 @@ export default function FoodPhotoScanner({
         <button className="scanner-close-btn" onClick={() => fileRef.current?.click()}>
           {prefersPickerCapture ? "Use Camera" : "Choose Photo"}
         </button>
+        {permissionBlocked && (
+          <>
+            <button className="scanner-close-btn" onClick={openCameraSettings}>
+              Open Camera Settings
+            </button>
+            <button className="scanner-close-btn" onClick={retryLivePreview}>
+              Retry Live Camera
+            </button>
+          </>
+        )}
         <button className="scanner-close-btn" onClick={handleClose}>
           Close
         </button>
@@ -223,6 +266,8 @@ export default function FoodPhotoScanner({
     </div>
   );
 }
+
+type CameraPermissionStatus = "granted" | "denied" | "restricted" | "unsupported" | "unknown";
 
 function stripDataUrl(dataUrl: string): string {
   const comma = dataUrl.indexOf(",");
