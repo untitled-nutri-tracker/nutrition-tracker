@@ -261,6 +261,7 @@
 
 .food-photo-wrap {
   border-color: rgba(80, 200, 120, 0.45);
+  width: min(860px, 94vw, calc(72vh * 4 / 3));
 }
 
 .food-photo-guide {
