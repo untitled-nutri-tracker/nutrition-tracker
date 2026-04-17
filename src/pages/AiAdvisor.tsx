@@ -14,7 +14,7 @@ import {
   getNutritionTrend,
   pruneOldSessions,
 } from "../generated/commands";
-import { AiChatSession, NutritionTrendPoint, type AppUserProfile } from "../generated/types";
+import { AiChatSession, NutritionTrendPoint, type AiChatMessage, type AppUserProfile } from "../generated/types";
 import ReactMarkdown from "react-markdown";
 import "../styles/ai-advisor.css";
 
@@ -416,7 +416,7 @@ export default function AiAdvisor() {
       if (activeSessionId === null) return;
       try {
         const msgs = await getSessionMessages({ sessionId: activeSessionId });
-        const mapped: ChatMessage[] = msgs.map((m: any) => ({
+        const mapped: ChatMessage[] = msgs.map((m: AiChatMessage) => ({
           role: m.role as "user" | "assistant",
           content: m.content,
           tokens: m.tokens,
