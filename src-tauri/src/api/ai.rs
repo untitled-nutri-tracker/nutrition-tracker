@@ -106,14 +106,16 @@ CLINICAL NUTRITIONIST PERSONA & QUALITY GUIDELINES:
 8. Streaks & Consistency: When reviewing multi-day data, identify positive streaks (e.g., "You hit your protein target 5/7 days this week!") and negative patterns (e.g., "Your fiber has been below 15g for 4 consecutive days").
 9. Weekly Digest: When asked for a weekly report, structure it as: (a) Overall Grade (A-F), (b) Daily Average Macros vs Targets, (c) Best Day & Worst Day, (d) Consistency Highlights, (e) Top 3 Action Items for Next Week.
 
-IMPORTANT RULES:
-- Never output raw markdown tables of the user's food log in your response. They already know what they ate.
-- ONLY reference numbers that appear in the data or the pre-computed summary below.
-- Do NOT invent or calculate your own totals. Use ONLY the provided summary totals.
-- Keep your response structured and easy to read using Markdown headings and bullet points.
-- AGENTIC TOOL (READ): To lookup live nutrition stats for arbitrary foods, output EXACTLY: [TOOL_CALL: search_food(query)]
+- AGENTIC TOOL (READ): To lookup live nutrition stats for arbitrary foods, output EXACTLY: [TOOL_CALL: search_food(query)].
 - AGENTIC TOOL (WRITE): To log foods to the user's diary, output EXACTLY: [FRONTEND_ACTION: log_food(FoodName|Calories|Protein|Carbs|Fat|MealType|YYYY-MM-DD)] where MealType is exactly: breakfast, lunch, dinner, or snack. I will intercept this and save it securely! (Use 0 for macros you don't know). Output ONLY this string when logging food.
 - AGENTIC TOOL (GROCERY): To add a healthy ingredient to the user's grocery list, output EXACTLY: [FRONTEND_ACTION: add_grocery(ItemName)]. Only use this tool if you are actively recommending the user to buy a specific ingredient to improve their diet.
+- AGENTIC TOOL (CHART): To visualize a single nutrition trend (calories, protein, carbs, or fat) over 7 or 30 days, output EXACTLY: [FRONTEND_ACTION: nutrition_chart(metric|period)] where metric is one of [calories, protein, carbs, fat] and period is [7d, 30d].
+- AGENTIC TOOL (CHART MULTI): To compare protein, carbs, and fat on one chart over 7 or 30 days, output EXACTLY: [FRONTEND_ACTION: nutrition_multi_chart(period|protein,carbs,fat)] where period is [7d, 30d]. Use this when the user asks for a multi-macro trend, macro comparison, or a single graph with multiple macro lines. The frontend renders this as a shared percent-of-target chart, so keep the request focused on adherence or trend comparison rather than raw grams.
+- AGENTIC TOOL (GOAL): To compare daily goals vs actual intake over 1, 7, or 30 days, output EXACTLY: [FRONTEND_ACTION: goal_vs_actual(period|goal)] where period is [1d, 7d, 30d] and goal is [weight_loss, maintenance, muscle_gain]. Use this when the user asks how they are tracking against their target.
+
+IMPORTANT RULES:
+- If [TOOL_CALL: search_food] fails or is unavailable, you MUST still provide your best professional estimation for the food requested and provide a [FRONTEND_ACTION: log_food] card for the user. Do not give up if search fails.
+- Never output raw markdown tables of the user's food log in your response. They already know what they ate.
 
 Default daily targets (use ONLY when no user profile is provided):
 - Calories: 2000 kcal
@@ -135,10 +137,18 @@ pub async fn ask_llm(
     history: Vec<ChatMessage>,
     provider: &LlmProvider,
     model: &str,
+    memories_context: &str,
 ) -> Result<AiResponse, String> {
     // Pre-compute totals from .nlog data so the LLM doesn't hallucinate math
     let summary = compute_summary(nlog_data);
     let markdown_data = format_nlog_to_markdown(nlog_data);
+    
+    let mut system_prompt = SYSTEM_PROMPT.to_string();
+    if !memories_context.trim().is_empty() {
+        system_prompt.push_str("\n\n=== USER STATUS CONTEXT & KEY MEMORIES ===\n");
+        system_prompt.push_str(memories_context);
+        system_prompt.push_str("\n==========================================\n");
+    }
 
     let mut current_user_query = user_question.to_string();
     let mut current_history = history;
@@ -165,11 +175,11 @@ pub async fn ask_llm(
         };
 
         let response = match provider {
-            LlmProvider::Ollama => ask_ollama(&markdown_data, &prompt, current_history.clone(), model).await,
-            LlmProvider::OpenAi => ask_openai(&markdown_data, &prompt, current_history.clone(), model).await,
-            LlmProvider::Anthropic => ask_anthropic(&markdown_data, &prompt, current_history.clone(), model).await,
-            LlmProvider::Google => ask_google(&markdown_data, &prompt, current_history.clone(), model).await,
-            LlmProvider::Custom => ask_custom(&markdown_data, &prompt, current_history.clone(), model).await,
+            LlmProvider::Ollama => ask_ollama(&markdown_data, &prompt, current_history.clone(), model, &system_prompt).await,
+            LlmProvider::OpenAi => ask_openai(&markdown_data, &prompt, current_history.clone(), model, &system_prompt).await,
+            LlmProvider::Anthropic => ask_anthropic(&markdown_data, &prompt, current_history.clone(), model, &system_prompt).await,
+            LlmProvider::Google => ask_google(&markdown_data, &prompt, current_history.clone(), model, &system_prompt).await,
+            LlmProvider::Custom => ask_custom(&markdown_data, &prompt, current_history.clone(), model, &system_prompt).await,
         }?;
 
         // Universal Interceptor: If the AI requested a Tool, perform it and loop!
@@ -221,7 +231,7 @@ fn resolve_ollama_endpoint() -> String {
         .unwrap_or_else(|_| "http://localhost:11434".to_string())
 }
 
-async fn ask_ollama(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str) -> Result<AiResponse, String> {
+async fn ask_ollama(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str, system_prompt: &str) -> Result<AiResponse, String> {
     let mut endpoint = resolve_ollama_endpoint();
     endpoint = endpoint.trim_end_matches('/').to_string();
     if endpoint.ends_with("/v1") {
@@ -230,7 +240,7 @@ async fn ask_ollama(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
     let client = build_client()?;
 
     let mut messages = Vec::new();
-    messages.push(json!({ "role": "system", "content": SYSTEM_PROMPT }));
+    messages.push(json!({ "role": "system", "content": system_prompt }));
     
     for msg in history {
         messages.push(json!({ "role": msg.role, "content": msg.content }));
@@ -272,7 +282,7 @@ async fn ask_ollama(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
 
 // ── OpenAI ─────────────────────────────────────────────────────────────
 
-async fn ask_openai(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str) -> Result<AiResponse, String> {
+async fn ask_openai(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str, system_prompt: &str) -> Result<AiResponse, String> {
     let api_key = CredentialManager::global()
         .retrieve(credentials::providers::OPENAI)
         .map_err(|_| "No OpenAI API key configured. Add it in Settings → API Keys.")?;
@@ -280,7 +290,7 @@ async fn ask_openai(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
     let client = build_client()?;
 
     let mut messages = Vec::new();
-    messages.push(json!({ "role": "system", "content": SYSTEM_PROMPT }));
+    messages.push(json!({ "role": "system", "content": system_prompt }));
     
     for msg in history {
         messages.push(json!({ "role": msg.role, "content": msg.content }));
@@ -319,7 +329,7 @@ async fn ask_openai(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
 
 // ── Custom OpenAI-Compatible ───────────────────────────────────────────
 
-async fn ask_custom(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str) -> Result<AiResponse, String> {
+async fn ask_custom(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str, system_prompt: &str) -> Result<AiResponse, String> {
     let api_key = CredentialManager::global()
         .retrieve(credentials::providers::CUSTOM)
         .map_err(|_| "No Custom API key configured. Add it in Settings → API Keys.")?;
@@ -336,7 +346,7 @@ async fn ask_custom(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
     let client = build_client()?;
 
     let mut messages = Vec::new();
-    messages.push(json!({ "role": "system", "content": SYSTEM_PROMPT }));
+    messages.push(json!({ "role": "system", "content": system_prompt }));
     
     for msg in history {
         messages.push(json!({ "role": msg.role, "content": msg.content }));
@@ -375,7 +385,7 @@ async fn ask_custom(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
 
 // ── Anthropic ──────────────────────────────────────────────────────────
 
-async fn ask_anthropic(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str) -> Result<AiResponse, String> {
+async fn ask_anthropic(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str, system_prompt: &str) -> Result<AiResponse, String> {
     let api_key = CredentialManager::global()
         .retrieve(credentials::providers::ANTHROPIC)
         .map_err(|_| "No Anthropic API key configured. Add it in Settings → API Keys.")?;
@@ -397,7 +407,7 @@ async fn ask_anthropic(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>,
     let body = json!({
         "model": model,
         "max_tokens": max_tokens,
-        "system": SYSTEM_PROMPT,
+        "system": system_prompt,
         "messages": messages
     });
 
@@ -441,7 +451,7 @@ async fn ask_anthropic(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>,
 
 // ── Google Gemini ──────────────────────────────────────────────────────
 
-async fn ask_google(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str) -> Result<AiResponse, String> {
+async fn ask_google(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str, system_prompt: &str) -> Result<AiResponse, String> {
     let api_key = CredentialManager::global()
         .retrieve(credentials::providers::GOOGLE)
         .map_err(|_| "No Google API key configured. Add it in Settings → API Keys.")?;
@@ -452,7 +462,7 @@ async fn ask_google(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
     
     // Google Gemini API treats system logic specially or as first user prompt if SystemInstruction is not available directly
     // Using simple format here for backwards compatibility
-    contents.push(json!({ "role": "user", "parts": [{ "text": SYSTEM_PROMPT }] }));
+    contents.push(json!({ "role": "user", "parts": [{ "text": system_prompt }] }));
     contents.push(json!({ "role": "model", "parts": [{ "text": "Understood. I will act as NutriLog and follow these constraints." }] }));
     
     for msg in history {
@@ -787,11 +797,11 @@ pub async fn verify_ai_provider(provider: String) -> Result<Vec<AiModelInfo>, St
     let empty_nlog = "";
 
     let _ = match p {
-        LlmProvider::Ollama => ask_ollama(empty_nlog, test_prompt, empty_history, test_model).await,
-        LlmProvider::OpenAi => ask_openai(empty_nlog, test_prompt, empty_history, test_model).await,
-        LlmProvider::Anthropic => ask_anthropic(empty_nlog, test_prompt, empty_history, test_model).await,
-        LlmProvider::Google => ask_google(empty_nlog, test_prompt, empty_history, test_model).await,
-        LlmProvider::Custom => ask_custom(empty_nlog, test_prompt, empty_history, test_model).await,
+        LlmProvider::Ollama => ask_ollama(empty_nlog, test_prompt, empty_history, test_model, SYSTEM_PROMPT).await,
+        LlmProvider::OpenAi => ask_openai(empty_nlog, test_prompt, empty_history, test_model, SYSTEM_PROMPT).await,
+        LlmProvider::Anthropic => ask_anthropic(empty_nlog, test_prompt, empty_history, test_model, SYSTEM_PROMPT).await,
+        LlmProvider::Google => ask_google(empty_nlog, test_prompt, empty_history, test_model, SYSTEM_PROMPT).await,
+        LlmProvider::Custom => ask_custom(empty_nlog, test_prompt, empty_history, test_model, SYSTEM_PROMPT).await,
     }.map_err(|e| format!("Key is valid but model inference failed: {}", e))?;
 
     // Mark as verified in persistent config

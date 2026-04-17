@@ -10,6 +10,8 @@ import {
   type LlmProviderConfig,
 } from "../hooks/useCredentials";
 import { useAiConfig, type AiModelInfo } from "../hooks/useAiConfig";
+import { getMemories, deleteMemory } from "../generated/commands";
+import type { AiMemory } from "../generated/types";
 import "../styles/credentials.css";
 
 export default function Settings() {
@@ -212,6 +214,34 @@ function ApiKeySection() {
   const [keyInput, setKeyInput] = useState("");
   const [savingKey, setSavingKey] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  // AI Memory Management
+  const [memories, setMemories] = useState<AiMemory[]>([]);
+  const [loadingMemories, setLoadingMemories] = useState(false);
+
+  useEffect(() => {
+    async function fetchMemories() {
+      setLoadingMemories(true);
+      try {
+        const result = await getMemories();
+        setMemories(result || []);
+      } catch (err) {
+        console.error("Failed to fetch AI memories:", err);
+      } finally {
+        setLoadingMemories(false);
+      }
+    }
+    fetchMemories();
+  }, []);
+
+  const handleRemoveMemory = async (id: number) => {
+    try {
+      await deleteMemory({ id });
+      setMemories(prev => prev.filter(m => m.id !== id));
+    } catch (err) {
+      console.error("Failed to delete memory:", err);
+    }
+  };
 
   // Model listing state
   const [providerModels, setProviderModels] = useState<
@@ -606,6 +636,39 @@ function ApiKeySection() {
             </div>
           );
         })}
+      </div>
+
+      {/* AI Context & Memory */}
+      <div className="card pop-in-delay-3" style={{ maxWidth: 720, marginTop: 14 }}>
+        <div className="ai-config-header" style={{ marginBottom: 4 }}>
+          AI Context & Memory
+        </div>
+        <div className="ai-config-subtitle" style={{ marginBottom: 16 }}>
+          The AI automatically learns preferences and facts about you from your conversations to personalize advice. You can review and delete them here.
+        </div>
+        
+        {loadingMemories ? (
+          <div style={{ color: "var(--muted2)", fontSize: 13 }}>Loading your AI memories...</div>
+        ) : memories.length === 0 ? (
+          <div style={{ color: "var(--muted2)", fontSize: 13, fontStyle: "italic", padding: "12px", background: "rgba(255,255,255,0.02)", borderRadius: 8 }}>
+            No saved memories yet. As you chat, useful preferences can appear here.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {memories.map(m => (
+              <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.03)", borderRadius: 8 }}>
+                <span style={{ fontSize: 14, color: "var(--text)" }}>{m.fact}</span>
+                <button 
+                  onClick={() => handleRemoveMemory(m.id)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted2)", padding: 4 }}
+                  title="Delete memory"
+                >
+                  🗑️
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Privacy notice for cloud providers */}

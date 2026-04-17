@@ -83,8 +83,23 @@ async fn get_ai_advice(
         _ => ai_config::AiConfig::model_for_provider(&provider_id)?,
     };
 
+    // Fetch memory context for personalized answers
+    let mut memories_str = String::new();
+    if let Ok(memories) = nutrack_database::ai::get_memories().await {
+        for m in memories {
+            memories_str.push_str(&format!("- {}\n", m.fact));
+        }
+    }
+
     // Send to the selected LLM provider
-    ai::ask_llm(&nlog_data, &question, history.unwrap_or_default(), &llm_provider, &resolved_model).await
+    ai::ask_llm(
+        &nlog_data, 
+        &question, 
+        history.unwrap_or_default(), 
+        &llm_provider, 
+        &resolved_model,
+        &memories_str
+    ).await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -171,6 +186,17 @@ pub fn run() {
             nutrack_database::meal::get_daily_nutrition_totals,
             nutrack_database::meal::get_weekly_nutrition_totals,
             nutrack_database::meal::get_nutrition_trend,
+            // AI Database
+            nutrack_database::ai::create_chat_session,
+            nutrack_database::ai::get_chat_sessions,
+            nutrack_database::ai::delete_chat_session,
+            nutrack_database::ai::update_chat_session_title,
+            nutrack_database::ai::create_chat_message,
+            nutrack_database::ai::get_session_messages,
+            nutrack_database::ai::create_memory,
+            nutrack_database::ai::get_memories,
+            nutrack_database::ai::delete_memory,
+            nutrack_database::ai::prune_old_sessions,
             // User Profile
             nutrack_database::user_profile::create_profile,
             nutrack_database::user_profile::get_profile,
