@@ -144,6 +144,7 @@ pub mod providers {
     pub const GOOGLE: &str = "llm.google";
     pub const OLLAMA_ENDPOINT: &str = "llm.ollama.endpoint";
     pub const USDA_FDC: &str = "nutrition.usda.fdc";
+    pub const CUSTOM: &str = "llm.custom.key";
 }
 
 #[cfg(test)]

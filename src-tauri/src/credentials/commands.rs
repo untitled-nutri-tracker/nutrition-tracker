@@ -4,6 +4,7 @@
 //! plaintext key. Only the Rust backend reads keys when making API calls.
 
 use super::CredentialManager;
+use crate::ai_config::AiConfig;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -19,6 +20,7 @@ const ALLOWED_SERVICES: &[&str] = &[
     crate::credentials::providers::GOOGLE,
     crate::credentials::providers::OLLAMA_ENDPOINT,
     crate::credentials::providers::USDA_FDC,
+    crate::credentials::providers::CUSTOM,
 ];
 
 /// Store a credential (API key) for a given service/provider.
@@ -33,7 +35,15 @@ pub fn store_credential(service: String, key: String) -> Result<(), String> {
     if key.trim().is_empty() {
         return Err("API key cannot be empty".into());
     }
-    CredentialManager::global().store(&service, &key)
+    CredentialManager::global().store(&service, &key)?;
+
+    // Invalidate verification — the user must re-test after changing a key
+    let provider_id = service_to_provider_id(&service);
+    if let Some(pid) = provider_id {
+        let _ = AiConfig::invalidate_provider(pid);
+    }
+
+    Ok(())
 }
 
 /// Delete a stored credential.
@@ -42,7 +52,15 @@ pub fn delete_credential(service: String) -> Result<(), String> {
     if service.trim().is_empty() {
         return Err("Service name cannot be empty".into());
     }
-    CredentialManager::global().delete(&service)
+    CredentialManager::global().delete(&service)?;
+
+    // Invalidate verification when a key is removed
+    let provider_id = service_to_provider_id(&service);
+    if let Some(pid) = provider_id {
+        let _ = AiConfig::invalidate_provider(pid);
+    }
+
+    Ok(())
 }
 
 /// Check whether a credential exists for a given service.
@@ -78,6 +96,18 @@ pub fn list_credentials() -> Result<Vec<CredentialInfo>, String> {
 #[tauri::command]
 pub fn get_credential_preview(service: String) -> Result<String, String> {
     CredentialManager::global().get_preview(&service)
+}
+
+/// Map a credential service key back to a provider id for AiConfig.
+fn service_to_provider_id(service: &str) -> Option<&'static str> {
+    match service {
+        crate::credentials::providers::OPENAI => Some("openai"),
+        crate::credentials::providers::ANTHROPIC => Some("anthropic"),
+        crate::credentials::providers::GOOGLE => Some("google"),
+        crate::credentials::providers::OLLAMA_ENDPOINT => Some("ollama"),
+        crate::credentials::providers::CUSTOM => Some("custom"),
+        _ => None,
+    }
 }
 
 #[cfg(test)]

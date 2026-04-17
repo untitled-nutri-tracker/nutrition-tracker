@@ -75,7 +75,9 @@ Validation errors return clean, user-friendly strings — never raw database or 
 ### 5. Rust Workspace & Modularization
 The Rust backend is intentionally split into separate crates and modules to isolate domains of logic:
 - **`nutrack-model` (Library Crate):** Contains pure Rust structs and Enums (e.g., `Food`, `UserProfile`) with `serde` implementations. No business or database logic. Completely pure, safe to share anywhere.
+- **Shared Analytics DTOs:** `nutrack-model::meal` also defines analytics-facing transport types such as `NutritionTotals`, `NutritionTrendPoint`, `TrendBucket`, and shared time constants so both the database crate and generated frontend bindings use the same shapes.
 - **`nutrack-database` (Library Crate):** Contains the SQLite schema, connection manager, and all database CRUD operations. The CRUD operations are split cleanly into separate files/modules (`food.rs`, `meal.rs`, `user_profile.rs`) to prevent monoliths.
+- **Aggregation Queries:** `src-rust-crates/database/src/meal.rs` now owns not only meal CRUD, but also nutrition aggregation and trend queries built from `meals`, `meal_items`, and `nutrition_facts`. Daily and weekly rollups are timezone-aware via caller-provided `offset_minutes`.
 - **Database Session Layer:** `src-rust-crates/database/src/session.rs` owns database-file session management, last-path persistence, and the app-scoped profile stored inside the selected SQLite file.
 - **`src-tauri` (App Crate):** The Tauri application shell. It imports the database and model crates, acting only as the orchestrator. It handles IPC (commands), external APIs (`openfoodfacts.rs`), and system-level configuration.
 This separation of concerns makes unit testing the database layer extremely fast and decoupled from Tauri infrastructure.
@@ -104,7 +106,11 @@ API Keys and secrets are never stored in plaintext on disk, and the React fronte
 - **Memory Caching:** To prevent aggressive macOS security prompts, the vault is decrypted exactly once via a lazy-loaded `Mutex` and cached in memory for the duration of the session.
 - **Frontend Previews:** The Tauri IPC layer strictly enforces that only masked string previews (e.g., `sk-abc...xyz`) are sent back to the React UI layer.
 
----
-
+### 10. AI Architecture (Bring-Your-Own-Model)
+NutriLog is designed to respect user privacy and avoid vendor lock-in by completely decoupling the AI advisor logic from any single external API.
+- **Provider Agnostic:** Supports OpenAI, Google Gemini, Anthropic, and local inference via Ollama.
+- **Deep Verification:** Provider API keys are not merely stored; they undergo a runtime inference test (`verification` via a `max_tokens: 5` generation call) to guarantee sufficient quota and billing before the UI allows the user to interact with the LLM.
+- **Agentic Frontend Directives:** The AI generates JSON-like `[FRONTEND_ACTION: ...]` payload strings that are intercepted by the `AiAdvisor` React component to automatically perform side effects (e.g., calling `invoke('create_meal', ...)` to auto-log proposed meal plans).
+- **Configuration Storage:** User AI settings (selected provider, specific model string, and custom local endpoints) are preserved in a backend Rust singleton `AiConfigManager` backed by a `nutrition_ai_config.json` file inside the OS app data directory, ensuring settings persist securely between sessions.
 **Note on Changelogs:**
 For a historical record of updates, features, and version bumps, please refer to [`CHANGELOG.md`](./CHANGELOG.md).
