@@ -91,6 +91,19 @@ export interface SearchResult {
   products: SearchProduct[];
 }
 
+export interface PhotoFoodEstimate {
+  foodName: string;
+  estimatedGrams: number;
+  confidence: number;
+  usdaFdcId?: number | null;
+  usdaDescription?: string | null;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  notes: string;
+}
+
 /** Meal type display config. */
 export const MEAL_TYPES = [
   { value: "BREAKFAST", label: "🌅 Breakfast", icon: "🌅", hours: [0, 10] },

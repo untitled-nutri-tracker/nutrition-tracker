@@ -327,7 +327,7 @@ async fn ask_custom(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
     let mut endpoint = AiConfig::current()
         .map(|c| c.custom_endpoint)
         .unwrap_or_else(|_| "https://openrouter.ai/api/v1".to_string());
-    
+
     endpoint = endpoint.trim_end_matches('/').to_string();
     if endpoint.ends_with("/v1") {
         endpoint = endpoint.strip_suffix("/v1").unwrap().to_string();
@@ -337,11 +337,11 @@ async fn ask_custom(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
 
     let mut messages = Vec::new();
     messages.push(json!({ "role": "system", "content": SYSTEM_PROMPT }));
-    
+
     for msg in history {
         messages.push(json!({ "role": msg.role, "content": msg.content }));
     }
-    
+
     messages.push(json!({ "role": "user", "content": prompt }));
 
     let body = json!({
@@ -543,7 +543,7 @@ async fn list_models_ollama() -> Result<Vec<AiModelInfo>, String> {
     if endpoint.ends_with("/v1") {
         endpoint = endpoint.strip_suffix("/v1").unwrap().to_string();
     }
-    
+
     let client = build_client()?;
 
     // Use the universal OpenAI-compatible endpoint instead of proprietary /api/tags
@@ -639,7 +639,7 @@ async fn list_models_custom() -> Result<Vec<AiModelInfo>, String> {
     let mut endpoint = AiConfig::current()
         .map(|c| c.custom_endpoint)
         .unwrap_or_else(|_| "https://openrouter.ai/api/v1".to_string());
-        
+
     endpoint = endpoint.trim_end_matches('/').to_string();
     if endpoint.ends_with("/v1") {
         endpoint = endpoint.strip_suffix("/v1").unwrap().to_string();

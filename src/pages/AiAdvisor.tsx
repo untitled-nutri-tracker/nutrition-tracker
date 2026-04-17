@@ -198,14 +198,14 @@ export default function AiAdvisor() {
 
       e.preventDefault();
       let nextIndex: number;
-      
+
       if (historyIndex === -1) {
         setDraftInput(input);
         nextIndex = userHistory.length - 1;
       } else {
         nextIndex = Math.max(0, historyIndex - 1);
       }
-      
+
       setHistoryIndex(nextIndex);
       setInput(userHistory[nextIndex]);
     } else if (e.key === "ArrowDown") {
@@ -213,7 +213,7 @@ export default function AiAdvisor() {
 
       e.preventDefault();
       const nextIndex = historyIndex + 1;
-      
+
       if (nextIndex >= userHistory.length) {
         setHistoryIndex(-1);
         setInput(draftInput);
@@ -318,8 +318,8 @@ export default function AiAdvisor() {
         </div>
 
         {messages.length > 0 && (
-          <button 
-            className="ai-advisor-toolbar-action" 
+          <button
+            className="ai-advisor-toolbar-action"
             onClick={startNewChat}
             title="New Chat"
           >
@@ -335,7 +335,7 @@ export default function AiAdvisor() {
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>🛒 Smart Grocery List</span>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <button 
+              <button
                 onClick={clearGroceryList}
                 style={{ background: "none", border: "none", color: "var(--muted2)", fontSize: 10, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.05em" }}
               >

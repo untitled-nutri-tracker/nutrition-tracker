@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
     <key>NSCameraUsageDescription</key>
-    <string>NutriLog uses the camera to scan food barcodes for quick logging.</string>
+    <string>NutriLog uses the camera to scan food barcodes and capture food photos for quick logging.</string>
 </dict>
 </plist>

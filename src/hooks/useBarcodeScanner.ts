@@ -137,7 +137,7 @@ export function useBarcodeScanner(
         setCameraPermission(permStatus.state as CameraPermission);
         if (permStatus.state === "denied") {
           setError(
-            "Camera access denied. Please allow camera access in your browser settings."
+            "Camera access denied. Please allow camera access for barcode and food photo scanning."
           );
           return;
         }
@@ -234,7 +234,7 @@ export function useBarcodeScanner(
           msg.includes("Permission denied")
         ) {
           setCameraPermission("denied");
-          setError("Camera access denied. Please grant permission and retry.");
+          setError("Camera access denied. Please grant permission for barcode and food photo scanning, then retry.");
         } else if (msg.includes("NotFoundError") || msg.includes("NotReadableError")) {
           setError(
             "No camera detected or camera is in use. Use manual barcode entry."
