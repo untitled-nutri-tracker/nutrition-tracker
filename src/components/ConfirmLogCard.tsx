@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { createEntry } from '../lib/foodLogStore';
+import type { MealType } from '../types/foodLog';
 
 interface ConfirmLogCardProps {
   foodName: string;
@@ -10,6 +11,15 @@ interface ConfirmLogCardProps {
   mealType: string;
   dateStr: string;
   onSuccess?: () => void;
+}
+
+function isMealType(value: string): value is MealType {
+  return value === "breakfast" || value === "lunch" || value === "dinner" || value === "snack";
+}
+
+function normalizeMealType(value: string): MealType {
+  const normalized = value.trim().toLowerCase();
+  return isMealType(normalized) ? normalized : "snack";
 }
 
 export function ConfirmLogCard({ 
@@ -25,6 +35,7 @@ export function ConfirmLogCard({
   const [loading, setLoading] = useState(false);
   const [logged, setLogged] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const normalizedMealType = normalizeMealType(mealType);
 
   const handleApprove = async () => {
     setLoading(true);
@@ -32,7 +43,7 @@ export function ConfirmLogCard({
     try {
       await createEntry({
         date: dateStr,
-        mealType: mealType as any,
+        mealType: normalizedMealType,
         foodName,
         calories,
         proteinG: protein,
@@ -41,8 +52,9 @@ export function ConfirmLogCard({
       });
       setLogged(true);
       if (onSuccess) onSuccess();
-    } catch (err: any) {
-      setError(err?.toString() || "Failed to log food");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err ?? "");
+      setError(message || "Failed to log food");
     } finally {
       setLoading(false);
     }
@@ -80,7 +92,7 @@ export function ConfirmLogCard({
 
       <div className="ai-widget-footer">
         <div className="ai-widget-context">
-          To be logged for <strong>{mealType}</strong> on {dateStr}
+          To be logged for <strong>{normalizedMealType}</strong> on {dateStr}
         </div>
         
         {error ? (

@@ -1,9 +1,10 @@
 import { useId } from 'react';
 import type { NutritionTrendPoint } from '../generated/types';
+import { getTrendMetricValue, type TrendMetric } from '../lib/nutritionTargets';
 
 interface NutritionChartCardProps {
   data: NutritionTrendPoint[];
-  metric: 'calories' | 'protein' | 'carbs' | 'fat';
+  metric: TrendMetric;
   title: string;
 }
 
@@ -11,17 +12,7 @@ export function NutritionChartCard({ data, metric, title }: NutritionChartCardPr
   if (!data || data.length === 0) return null;
   const id = useId().replace(/:/g, '');
 
-  const getVal = (p: NutritionTrendPoint) => {
-    switch (metric) {
-      case 'calories': return p.totals.caloriesKcal;
-      case 'protein': return p.totals.proteinG;
-      case 'carbs': return p.totals.totalCarbohydrateG;
-      case 'fat': return p.totals.fatG;
-      default: return 0;
-    }
-  };
-
-  const values = data.map(getVal);
+  const values = data.map((point) => getTrendMetricValue(point, metric));
   const maxVal = Math.max(...values, 10); // avoid div by zero
 
   const width = 340;
@@ -41,11 +32,12 @@ export function NutritionChartCard({ data, metric, title }: NutritionChartCardPr
 
   const points = data.map((d, i) => {
     const x = paddingLeft + (i * (chartWidth / (data.length - 1 || 1)));
-    const val = getVal(d);
+    const val = getTrendMetricValue(d, metric);
     // Inverse Y for SVG coordinates
     const y = paddingTop + (1 - val / maxVal) * chartHeight;
-    return `${x},${y}`;
-  }).join(' ');
+    return { x, y };
+  });
+  const pointString = points.map(({ x, y }) => `${x},${y}`).join(' ');
 
   const unit = metric === 'calories' ? 'kcal' : 'g';
   const lineGradId = `lineGrad-${id}`;
@@ -115,7 +107,7 @@ export function NutritionChartCard({ data, metric, title }: NutritionChartCardPr
 
         {/* Area fill */}
         <path
-          d={`M ${paddingLeft},${height - paddingBottom} ${points} L ${width - paddingRight},${height - paddingBottom} Z`}
+          d={`M ${paddingLeft},${height - paddingBottom} ${pointString} L ${width - paddingRight},${height - paddingBottom} Z`}
           fill={`url(#${areaGradId})`}
         />
 
@@ -126,13 +118,12 @@ export function NutritionChartCard({ data, metric, title }: NutritionChartCardPr
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
-          points={points}
+          points={pointString}
           className="ai-widget-chart-line"
         />
 
         {/* Data Points */}
-        {data.map((_, i) => {
-          const [x, y] = points.split(' ')[i].split(',');
+        {points.map(({ x, y }, i) => {
           return (
             <circle
               key={i}

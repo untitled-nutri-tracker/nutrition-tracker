@@ -1,6 +1,9 @@
-import type { AppUserProfile } from "../generated/types";
+import type { AppUserProfile, NutritionTrendPoint } from "../generated/types";
+import { calcBmrMifflinStJeor, calcTdee } from "./bmr";
+import type { ActivityLevel, Sex } from "../types/profile";
 
 export type NutritionGoal = "weight_loss" | "maintenance" | "muscle_gain";
+export type TrendMetric = "calories" | "protein" | "carbs" | "fat";
 
 export interface MacroTargets {
   calories: number;
@@ -18,6 +21,8 @@ const DEFAULT_TARGETS: Omit<MacroTargets, "isPersonalized" | "sourceLabel"> = {
   fat: 65,
 };
 
+const TREND_METRICS: readonly TrendMetric[] = ["calories", "protein", "carbs", "fat"];
+
 function normalizeGoal(goal: string): NutritionGoal {
   if (goal === "weight_loss" || goal === "muscle_gain") {
     return goal;
@@ -29,20 +34,20 @@ function safeNumber(value: number | null | undefined, fallback: number): number 
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function getActivityMultiplier(level: string): number {
-  switch (level) {
+function normalizeSex(value: string): Sex {
+  return value.toLowerCase() === "male" ? "male" : "female";
+}
+
+function normalizeActivityLevel(value: string): ActivityLevel {
+  switch (value) {
     case "sedentary":
-      return 1.2;
     case "light":
-      return 1.375;
     case "moderate":
-      return 1.55;
     case "active":
-      return 1.725;
     case "very_active":
-      return 1.9;
+      return value;
     default:
-      return 1.55;
+      return "moderate";
   }
 }
 
@@ -59,14 +64,16 @@ export function getNutritionTargets(profile: AppUserProfile | null, goal: string
   const heightCm = safeNumber(profile.heightCm, 170);
   const age = safeNumber(profile.age, 30);
   const goalMode = normalizeGoal(goal);
-  const isMale = profile.sex.toLowerCase() === "male";
-  const activityMultiplier = getActivityMultiplier(profile.activityLevel);
-
-  const bmr = isMale
-    ? 10 * bodyWeightKg + 6.25 * heightCm - 5 * age + 5
-    : 10 * bodyWeightKg + 6.25 * heightCm - 5 * age - 161;
-
-  const tdee = bmr * activityMultiplier;
+  const bmr = calcBmrMifflinStJeor({
+    sex: normalizeSex(profile.sex),
+    age,
+    heightCm,
+    weightKg: bodyWeightKg,
+  });
+  const tdee = calcTdee({
+    bmr,
+    activityLevel: normalizeActivityLevel(profile.activityLevel),
+  });
 
   let calories = tdee;
   let protein = bodyWeightKg * 1.2;
@@ -111,4 +118,34 @@ export function getMacroZoneTone(percent: number): string {
 
 export function formatPercent(value: number): string {
   return `${Math.round(value)}%`;
+}
+
+export function isTrendMetric(value: string): value is TrendMetric {
+  return TREND_METRICS.includes(value as TrendMetric);
+}
+
+export function getTrendMetricValue(point: NutritionTrendPoint, metric: TrendMetric): number {
+  switch (metric) {
+    case "calories":
+      return point.totals.caloriesKcal;
+    case "protein":
+      return point.totals.proteinG;
+    case "carbs":
+      return point.totals.totalCarbohydrateG;
+    case "fat":
+      return point.totals.fatG;
+  }
+}
+
+export function getTargetForMetric(targets: MacroTargets, metric: TrendMetric): number {
+  switch (metric) {
+    case "calories":
+      return targets.calories;
+    case "protein":
+      return targets.protein;
+    case "carbs":
+      return targets.carbs;
+    case "fat":
+      return targets.fat;
+  }
 }
