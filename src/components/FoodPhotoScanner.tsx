@@ -25,11 +25,10 @@ export default function FoodPhotoScanner({
   const prefersPickerCapture = useMemo(() => prefersFileCapture(), []);
   const [livePreviewUnavailable, setLivePreviewUnavailable] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<CameraPermissionStatus>("unknown");
-  const [videoAspectRatio, setVideoAspectRatio] = useState(4 / 3);
+  const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9);
   const usePickerCapture = prefersPickerCapture || livePreviewUnavailable;
   const permissionBlocked = permissionStatus === "denied" || permissionStatus === "restricted";
   const frameAspectRatio = displayAspectForVideo(videoAspectRatio);
-  const shouldCropPreview = Math.abs(frameAspectRatio - videoAspectRatio) > 0.01;
   const frameStyle = {
     "--food-photo-aspect": String(frameAspectRatio),
   } as CSSProperties;
@@ -197,89 +196,91 @@ export default function FoodPhotoScanner({
 
   return (
     <div className="scanner-overlay food-photo-overlay" onClick={handleClose}>
-      <div
-        className="scanner-video-wrap food-photo-wrap"
-        onClick={(e) => e.stopPropagation()}
-        style={frameStyle}
-      >
-        {usePickerCapture ? (
-          <div className="food-photo-file-only">
-            <div>
+      <div className="food-photo-widget" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="scanner-video-wrap food-photo-wrap"
+          style={frameStyle}
+        >
+          {usePickerCapture ? (
+            <div className="food-photo-file-only">
               <div>
-                {permissionBlocked
-                  ? "Camera permission is blocked by macOS."
-                  : prefersPickerCapture
-                    ? "Use the camera picker for a single food item, or choose an existing photo."
-                    : "Live camera preview is unavailable here. Choose a food photo from your device."}
-              </div>
-              {permissionBlocked && (
-                <div className="food-photo-permission-help">
-                  Allow NutriLog in System Settings, then retry the live camera.
+                <div>
+                  {permissionBlocked
+                    ? "Camera permission is blocked by macOS."
+                    : prefersPickerCapture
+                      ? "Use the camera picker for a single food item, or choose an existing photo."
+                      : "Live camera preview is unavailable here. Choose a food photo from your device."}
                 </div>
-              )}
+                {permissionBlocked && (
+                  <div className="food-photo-permission-help">
+                    Allow NutriLog in System Settings, then retry the live camera.
+                  </div>
+                )}
+              </div>
             </div>
+          ) : (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              onLoadedMetadata={handleVideoMetadata}
+              onCanPlay={handleVideoMetadata}
+            />
+          )}
+          <div className="food-photo-guide">
+            Place one food item in the frame
           </div>
-        ) : (
-          <video
-            className={shouldCropPreview ? "food-photo-video-crop" : undefined}
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            onLoadedMetadata={handleVideoMetadata}
-            onCanPlay={handleVideoMetadata}
-          />
-        )}
-        <div className="food-photo-guide">
-          Place one food item in the frame
+        </div>
+
+        <div className="food-photo-bottom-bar">
+          <div className="scanner-controls">
+            {!usePickerCapture && (
+              <button
+                className="scanner-close-btn food-photo-capture-btn"
+                onClick={handleCapture}
+                disabled={!cameraReady}
+              >
+                Take Photo
+              </button>
+            )}
+            <button className="scanner-close-btn" onClick={() => fileRef.current?.click()}>
+              {prefersPickerCapture ? "Use Camera" : "Choose Photo"}
+            </button>
+            {permissionBlocked && (
+              <>
+                <button className="scanner-close-btn" onClick={openCameraSettings}>
+                  Open Camera Settings
+                </button>
+                <button className="scanner-close-btn" onClick={retryLivePreview}>
+                  Retry Live Camera
+                </button>
+              </>
+            )}
+            <button className="scanner-close-btn" onClick={handleClose}>
+              Close
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleFileChange}
+              style={{ display: "none" }}
+            />
+          </div>
+
+          <div className="scanner-hint">
+            Photos are analyzed ephemerally and are not stored by NutriLog.
+          </div>
+
+          {error && (
+            <div className="scanner-error">
+              {error}
+            </div>
+          )}
         </div>
       </div>
-
-      <div className="scanner-controls" onClick={(e) => e.stopPropagation()}>
-        {!usePickerCapture && (
-          <button
-            className="scanner-close-btn food-photo-capture-btn"
-            onClick={handleCapture}
-            disabled={!cameraReady}
-          >
-            Take Photo
-          </button>
-        )}
-        <button className="scanner-close-btn" onClick={() => fileRef.current?.click()}>
-          {prefersPickerCapture ? "Use Camera" : "Choose Photo"}
-        </button>
-        {permissionBlocked && (
-          <>
-            <button className="scanner-close-btn" onClick={openCameraSettings}>
-              Open Camera Settings
-            </button>
-            <button className="scanner-close-btn" onClick={retryLivePreview}>
-              Retry Live Camera
-            </button>
-          </>
-        )}
-        <button className="scanner-close-btn" onClick={handleClose}>
-          Close
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleFileChange}
-          style={{ display: "none" }}
-        />
-      </div>
-
-      <div className="scanner-hint">
-        Photos are analyzed ephemerally and are not stored by NutriLog.
-      </div>
-
-      {error && (
-        <div className="scanner-error" onClick={(e) => e.stopPropagation()}>
-          {error}
-        </div>
-      )}
     </div>
   );
 }
@@ -288,13 +289,7 @@ type CameraPermissionStatus = "granted" | "denied" | "restricted" | "unsupported
 
 function displayAspectForVideo(aspectRatio: number) {
   if (!Number.isFinite(aspectRatio) || aspectRatio <= 0) {
-    return 4 / 3;
-  }
-  if (aspectRatio > 2.05) {
-    return 4 / 3;
-  }
-  if (aspectRatio < 0.6) {
-    return 3 / 4;
+    return 16 / 9;
   }
   return aspectRatio;
 }
