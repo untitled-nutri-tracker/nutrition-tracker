@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.10.0] - 2026-04-17
+
+### Added
+- Persistent AI chat storage with session, message, and memory tables (`ai_chat_sessions`, `ai_chat_messages`, `ai_memories`) plus CRUD/cleanup commands exposed through Tauri.
+- In-chat AI Advisor widgets for meal logging, single-macro trend charts, multi-macro comparison charts, and goal-vs-actual adherence views.
+- Goal-aware macro target utilities used to personalize adherence calculations and trend visualizations.
+- Settings UI support for reviewing and deleting saved AI memory facts.
+
+### Changed
+- AI system prompt/tool contract expanded with structured frontend actions for chart rendering and goal tracking.
+- AI advice now includes persisted memory context when generating responses.
+- Database initialization now applies additive schema updates for existing SQLite files.
+
+### Fixed
+- Restored `idx_meal_items_food_id` index creation in schema migrations to prevent meal-item query regression.
+- Tightened frontend type handling for trend widgets, chat-history hydration, and AI meal-log cards.
+
 ## [0.9.0] - 2026-04-16
 
 ### Added

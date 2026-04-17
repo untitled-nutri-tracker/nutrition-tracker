@@ -1,9 +1,9 @@
 import { useId } from 'react';
 import type { NutritionTrendPoint } from '../generated/types';
 import type { MacroTargets } from '../lib/nutritionTargets';
-import { formatPercent, getMacroPercent, getMacroZoneLabel, getMacroZoneTone } from '../lib/nutritionTargets';
+import { formatPercent, getMacroPercent, getMacroZoneLabel, getMacroZoneTone, getTargetForMetric, getTrendMetricValue, type TrendMetric } from '../lib/nutritionTargets';
 
-type SupportedMetric = 'calories' | 'protein' | 'carbs' | 'fat';
+type SupportedMetric = TrendMetric;
 
 interface MultiMacroTrendCardProps {
   data: NutritionTrendPoint[];
@@ -18,36 +18,6 @@ const METRIC_META: Record<SupportedMetric, { label: string; color: string; unit:
   carbs: { label: 'Carbs', color: '#34d399', unit: 'g' },
   fat: { label: 'Fat', color: '#f472b6', unit: 'g' },
 };
-
-function getMetricValue(point: NutritionTrendPoint, metric: SupportedMetric): number {
-  switch (metric) {
-    case 'calories':
-      return point.totals.caloriesKcal;
-    case 'protein':
-      return point.totals.proteinG;
-    case 'carbs':
-      return point.totals.totalCarbohydrateG;
-    case 'fat':
-      return point.totals.fatG;
-    default:
-      return 0;
-  }
-}
-
-function getMetricTarget(targets: MacroTargets, metric: SupportedMetric): number {
-  switch (metric) {
-    case 'protein':
-      return targets.protein;
-    case 'carbs':
-      return targets.carbs;
-    case 'fat':
-      return targets.fat;
-    case 'calories':
-      return targets.calories;
-    default:
-      return 0;
-  }
-}
 
 function buildPoints(percentValues: number[], width: number, height: number, paddingLeft: number, paddingRight: number, paddingTop: number, paddingBottom: number) {
   const chartWidth = width - paddingLeft - paddingRight;
@@ -80,8 +50,8 @@ export function MultiMacroTrendCard({ data, metrics, period, targets }: MultiMac
   }));
 
   const series = metrics.map((metric) => {
-    const target = getMetricTarget(targets, metric);
-    const metricValues = data.map((point) => getMetricValue(point, metric));
+    const target = getTargetForMetric(targets, metric);
+    const metricValues = data.map((point) => getTrendMetricValue(point, metric));
     const percentValues = metricValues.map((value) => getMacroPercent(value, target));
 
     const points = buildPoints(percentValues, width, height, paddingLeft, paddingRight, paddingTop, paddingBottom);
@@ -95,7 +65,6 @@ export function MultiMacroTrendCard({ data, metrics, period, targets }: MultiMac
       latestActual,
       latestPercent,
       averagePercent,
-      target,
       gradientId: `multi-grad-${metric}-${id}`,
     };
   });

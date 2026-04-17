@@ -4,7 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { LLM_PROVIDERS } from "../hooks/useCredentials";
 import { useAiConfig } from "../hooks/useAiConfig";
 import { loadProfile } from "../lib/profileStore";
-import { getNutritionTargets } from "../lib/nutritionTargets";
+import { getNutritionTargets, getTrendMetricValue, isTrendMetric, type TrendMetric } from "../lib/nutritionTargets";
 import {
   getChatSessions,
   getSessionMessages,
@@ -14,7 +14,7 @@ import {
   getNutritionTrend,
   pruneOldSessions,
 } from "../generated/commands";
-import { AiChatSession, NutritionTrendPoint, type AppUserProfile } from "../generated/types";
+import { AiChatSession, type AiChatMessage, NutritionTrendPoint, type AppUserProfile } from "../generated/types";
 import ReactMarkdown from "react-markdown";
 import "../styles/ai-advisor.css";
 
@@ -80,7 +80,6 @@ const ACTION_WIDGET_REGEX = /\[FRONTEND_ACTION:\s*(.*?)\((.*?)\)\]/g;
 const LEGACY_WIDGET_REGEX = /\[FRONTEND_WIDGET:\s*(.*?)\]/g;
 const THIRTY_DAYS_SECONDS = 30 * 86400;
 
-type TrendMetric = "calories" | "protein" | "carbs" | "fat";
 const DEFAULT_MULTI_METRICS: TrendMetric[] = ["protein", "carbs", "fat"];
 
 function clampPeriodToDays(period: string): number | null {
@@ -95,7 +94,7 @@ function parseMultiMetrics(raw: string | undefined): TrendMetric[] {
   const parsed = raw
     .split(",")
     .map((item) => item.trim().toLowerCase())
-    .filter((item): item is TrendMetric => item === "calories" || item === "protein" || item === "carbs" || item === "fat");
+    .filter((item): item is TrendMetric => isTrendMetric(item));
   return parsed.length > 0 ? parsed : DEFAULT_MULTI_METRICS;
 }
 
@@ -109,7 +108,7 @@ function deriveSessionTitle(raw: string): string {
 }
 
 // Helper component for fetching trend data within a chat bubble
-function TrendDataWidget({ metric, period }: { metric: string, period: string }) {
+function TrendDataWidget({ metric, period }: { metric: TrendMetric; period: string }) {
   const [data, setData] = useState<NutritionTrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [widgetError, setWidgetError] = useState<string | null>(null);
@@ -156,7 +155,7 @@ function TrendDataWidget({ metric, period }: { metric: string, period: string })
     <Suspense fallback={<div className="ai-widget-loading">Loading chart...</div>}>
       <NutritionChartCard 
         data={data} 
-        metric={metric as any} 
+        metric={metric}
         title={`Last ${period} ${metric} trend`}
       />
     </Suspense>
@@ -284,10 +283,10 @@ function GoalVsActualWidget({ period, goal }: { period: string; goal: string }) 
   const targets = getNutritionTargets(profile, goal);
   const totalActual = data.reduce(
     (acc, point) => ({
-      calories: acc.calories + point.totals.caloriesKcal,
-      protein: acc.protein + point.totals.proteinG,
-      carbs: acc.carbs + point.totals.totalCarbohydrateG,
-      fat: acc.fat + point.totals.fatG,
+      calories: acc.calories + getTrendMetricValue(point, "calories"),
+      protein: acc.protein + getTrendMetricValue(point, "protein"),
+      carbs: acc.carbs + getTrendMetricValue(point, "carbs"),
+      fat: acc.fat + getTrendMetricValue(point, "fat"),
     }),
     { calories: 0, protein: 0, carbs: 0, fat: 0 },
   );
@@ -366,7 +365,7 @@ export default function AiAdvisor() {
           if (session.title.trim().toLowerCase() !== "new chat") return;
 
           try {
-            const msgs = await getSessionMessages({ sessionId: session.id });
+            const msgs: AiChatMessage[] = await getSessionMessages({ sessionId: session.id });
             const firstUser = msgs.find((m) => m.role === "user" && m.content.trim().length > 0);
             if (firstUser) {
               next[session.id] = deriveSessionTitle(firstUser.content);
@@ -415,12 +414,18 @@ export default function AiAdvisor() {
     async function loadMessages() {
       if (activeSessionId === null) return;
       try {
-        const msgs = await getSessionMessages({ sessionId: activeSessionId });
-        const mapped: ChatMessage[] = msgs.map((m: any) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
-          tokens: m.tokens,
-        }));
+        const msgs: AiChatMessage[] = await getSessionMessages({ sessionId: activeSessionId });
+        const mapped: ChatMessage[] = [];
+        for (const msg of msgs) {
+          if (msg.role !== "user" && msg.role !== "assistant") {
+            continue;
+          }
+          mapped.push({
+            role: msg.role,
+            content: msg.content,
+            tokens: msg.tokens,
+          });
+        }
         setMessages(mapped);
       } catch (err) {
         console.error("Failed to load session messages:", err);
@@ -568,8 +573,8 @@ export default function AiAdvisor() {
           : []),
       ]);
       
-    } catch (e: any) {
-      const errMsg = e?.toString() ?? "Failed to get AI advice";
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : String(e ?? "Failed to get AI advice");
       setError(errMsg);
 
       // Provider-aware error help
@@ -1102,14 +1107,21 @@ export default function AiAdvisor() {
                   );
                 }
               } else if (actionType === 'nutrition_chart') {
-                const [metric, period] = argsString.split('|');
-                if (metric && period) {
+                const [rawMetric, period] = argsString.split('|');
+                const metric = rawMetric?.trim().toLowerCase();
+                if (metric && period && isTrendMetric(metric)) {
                   contentElements.push(
                     <TrendDataWidget 
                       key={`widget-${keyCounter++}`}
-                      metric={metric.trim()}
+                      metric={metric}
                       period={period.trim()}
                     />
+                  );
+                } else {
+                  contentElements.push(
+                    <ReactMarkdown key={`md-${keyCounter++}`}>
+                      {widget.full}
+                    </ReactMarkdown>,
                   );
                 }
               } else if (actionType === 'nutrition_multi_chart') {

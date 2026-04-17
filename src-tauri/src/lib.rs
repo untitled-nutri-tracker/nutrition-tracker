@@ -84,12 +84,16 @@ async fn get_ai_advice(
     };
 
     // Fetch memory context for personalized answers
-    let mut memories_str = String::new();
-    if let Ok(memories) = nutrack_database::ai::get_memories().await {
-        for m in memories {
-            memories_str.push_str(&format!("- {}\n", m.fact));
+    let memories_str = match nutrack_database::ai::get_memories().await {
+        Ok(memories) => memories
+            .into_iter()
+            .map(|memory| format!("- {}\n", memory.fact))
+            .collect::<String>(),
+        Err(err) => {
+            eprintln!("Failed to load AI memories for context: {err}");
+            String::new()
         }
-    }
+    };
 
     // Send to the selected LLM provider
     ai::ask_llm(

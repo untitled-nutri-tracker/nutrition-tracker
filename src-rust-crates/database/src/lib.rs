@@ -259,7 +259,6 @@ pub fn sanitize_db_error(raw: String) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::File;
     use tempfile::tempdir;
 
     #[test]
