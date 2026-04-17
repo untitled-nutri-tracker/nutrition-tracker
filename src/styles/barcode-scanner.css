@@ -281,13 +281,19 @@
   --food-photo-aspect: 1.7778;
   aspect-ratio: var(--food-photo-aspect);
   border-color: rgba(80, 200, 120, 0.45);
-  width: min(98vw, calc((100vh - 96px) * var(--food-photo-aspect)));
-  width: min(98vw, calc((100svh - 96px) * var(--food-photo-aspect)));
+  max-height: calc(100vh - 120px);
+  max-height: calc(100svh - 120px);
+  width: min(92vw, calc((100vh - 120px) * var(--food-photo-aspect)));
+  width: min(92vw, calc((100svh - 120px) * var(--food-photo-aspect)));
 }
 
 .food-photo-wrap video {
   background: #000;
   object-fit: contain;
+}
+
+.food-photo-wrap .food-photo-video-crop {
+  object-fit: cover;
 }
 
 .food-photo-guide {

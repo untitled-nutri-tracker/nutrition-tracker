@@ -25,11 +25,13 @@ export default function FoodPhotoScanner({
   const prefersPickerCapture = useMemo(() => prefersFileCapture(), []);
   const [livePreviewUnavailable, setLivePreviewUnavailable] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<CameraPermissionStatus>("unknown");
-  const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9);
+  const [videoAspectRatio, setVideoAspectRatio] = useState(4 / 3);
   const usePickerCapture = prefersPickerCapture || livePreviewUnavailable;
   const permissionBlocked = permissionStatus === "denied" || permissionStatus === "restricted";
+  const frameAspectRatio = displayAspectForVideo(videoAspectRatio);
+  const shouldCropPreview = Math.abs(frameAspectRatio - videoAspectRatio) > 0.01;
   const frameStyle = {
-    "--food-photo-aspect": String(videoAspectRatio),
+    "--food-photo-aspect": String(frameAspectRatio),
   } as CSSProperties;
 
   function stopCamera() {
@@ -124,17 +126,28 @@ export default function FoodPhotoScanner({
       return;
     }
 
+    const sourceWidth = video.videoWidth || 1024;
+    const sourceHeight = video.videoHeight || 768;
+    const sourceRect = sourceRectForAspect(sourceWidth, sourceHeight, frameAspectRatio);
     const canvas = document.createElement("canvas");
-    const width = video.videoWidth || 1024;
-    const height = video.videoHeight || 768;
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = sourceRect.width;
+    canvas.height = sourceRect.height;
     const ctx = canvas.getContext("2d");
     if (!ctx) {
       setError("Could not capture a frame from the camera.");
       return;
     }
-    ctx.drawImage(video, 0, 0, width, height);
+    ctx.drawImage(
+      video,
+      sourceRect.x,
+      sourceRect.y,
+      sourceRect.width,
+      sourceRect.height,
+      0,
+      0,
+      sourceRect.width,
+      sourceRect.height,
+    );
     const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
     stopCamera();
     onPhotoCaptured({
@@ -145,8 +158,11 @@ export default function FoodPhotoScanner({
 
   function handleVideoMetadata() {
     const video = videoRef.current;
-    if (!video?.videoWidth || !video?.videoHeight) return;
-    setVideoAspectRatio(video.videoWidth / video.videoHeight);
+    const trackSettings = streamRef.current?.getVideoTracks()[0]?.getSettings();
+    const width = video?.videoWidth || trackSettings?.width;
+    const height = video?.videoHeight || trackSettings?.height;
+    if (!width || !height) return;
+    setVideoAspectRatio(width / height);
   }
 
   async function openCameraSettings() {
@@ -205,6 +221,7 @@ export default function FoodPhotoScanner({
           </div>
         ) : (
           <video
+            className={shouldCropPreview ? "food-photo-video-crop" : undefined}
             ref={videoRef}
             autoPlay
             playsInline
@@ -268,6 +285,43 @@ export default function FoodPhotoScanner({
 }
 
 type CameraPermissionStatus = "granted" | "denied" | "restricted" | "unsupported" | "unknown";
+
+function displayAspectForVideo(aspectRatio: number) {
+  if (!Number.isFinite(aspectRatio) || aspectRatio <= 0) {
+    return 4 / 3;
+  }
+  if (aspectRatio > 2.05) {
+    return 4 / 3;
+  }
+  if (aspectRatio < 0.6) {
+    return 3 / 4;
+  }
+  return aspectRatio;
+}
+
+function sourceRectForAspect(width: number, height: number, targetAspect: number) {
+  const sourceAspect = width / height;
+  if (Math.abs(sourceAspect - targetAspect) < 0.01) {
+    return { x: 0, y: 0, width, height };
+  }
+  if (sourceAspect > targetAspect) {
+    const croppedWidth = Math.round(height * targetAspect);
+    return {
+      x: Math.max(0, Math.round((width - croppedWidth) / 2)),
+      y: 0,
+      width: croppedWidth,
+      height,
+    };
+  }
+
+  const croppedHeight = Math.round(width / targetAspect);
+  return {
+    x: 0,
+    y: Math.max(0, Math.round((height - croppedHeight) / 2)),
+    width,
+    height: croppedHeight,
+  };
+}
 
 function stripDataUrl(dataUrl: string): string {
   const comma = dataUrl.indexOf(",");
