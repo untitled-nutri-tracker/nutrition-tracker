@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import "../styles/barcode-scanner.css";
@@ -194,7 +195,7 @@ export default function FoodPhotoScanner({
     reader.readAsDataURL(file);
   }
 
-  return (
+  const overlay = (
     <div className="scanner-overlay food-photo-overlay" onClick={handleClose}>
       <div className="food-photo-widget" onClick={(e) => e.stopPropagation()}>
         <div
@@ -283,6 +284,12 @@ export default function FoodPhotoScanner({
       </div>
     </div>
   );
+
+  if (typeof document === "undefined") {
+    return overlay;
+  }
+
+  return createPortal(overlay, document.body);
 }
 
 type CameraPermissionStatus = "granted" | "denied" | "restricted" | "unsupported" | "unknown";

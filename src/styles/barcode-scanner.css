@@ -262,6 +262,7 @@
 .food-photo-overlay {
   box-sizing: border-box;
   padding: 0;
+  z-index: 2147483000;
 }
 
 .food-photo-widget {
@@ -269,9 +270,15 @@
   display: flex;
   height: 100vh;
   height: 100svh;
+  height: 100dvh;
+  inset: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
   overflow: hidden;
-  position: relative;
+  position: fixed;
   width: 100vw;
+  width: 100dvw;
 }
 
 .food-photo-bottom-bar {
