@@ -283,7 +283,7 @@
 
 .food-photo-bottom-bar {
   align-items: center;
-  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.72) 28%, rgba(0, 0, 0, 0.88));
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.35) 45%, rgba(0, 0, 0, 0.58));
   bottom: 0;
   box-sizing: border-box;
   display: grid;
