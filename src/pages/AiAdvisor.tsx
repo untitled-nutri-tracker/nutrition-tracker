@@ -613,14 +613,14 @@ export default function AiAdvisor() {
 
       e.preventDefault();
       let nextIndex: number;
-      
+
       if (historyIndex === -1) {
         setDraftInput(input);
         nextIndex = userHistory.length - 1;
       } else {
         nextIndex = Math.max(0, historyIndex - 1);
       }
-      
+
       setHistoryIndex(nextIndex);
       setInput(userHistory[nextIndex]);
     } else if (e.key === "ArrowDown") {
@@ -628,7 +628,7 @@ export default function AiAdvisor() {
 
       e.preventDefault();
       const nextIndex = historyIndex + 1;
-      
+
       if (nextIndex >= userHistory.length) {
         setHistoryIndex(-1);
         setInput(draftInput);
@@ -831,17 +831,19 @@ export default function AiAdvisor() {
         </div>
 
         <div className="ai-advisor-toolbar-right">
-          <button 
-            className="ai-advisor-toolbar-action" 
-            onClick={startNewChat}
-            title="New Chat"
-          >
-            <span>+</span>
-            <span style={{ fontSize: 11, fontWeight: "bold", marginLeft: 4 }}>New Chat</span>
-          </button>
+          {messages.length > 0 && (
+            <button
+              className="ai-advisor-toolbar-action"
+              onClick={startNewChat}
+              title="New Chat"
+            >
+              <span>+</span>
+              <span style={{ fontSize: 11, fontWeight: "bold", marginLeft: 4 }}>New Chat</span>
+            </button>
+          )}
 
-          <button 
-            className="ai-advisor-toolbar-action" 
+          <button
+            className="ai-advisor-toolbar-action"
             onClick={() => setIsGroceryOpen(!isGroceryOpen)}
             title="Toggle Grocery List"
             style={{ background: isGroceryOpen ? 'rgba(16, 185, 129, 0.15)' : '', borderColor: isGroceryOpen ? 'rgba(16, 185, 129, 0.4)' : '' }}

@@ -23,6 +23,13 @@ export interface LlmProviderConfig {
   description: string;
 }
 
+export interface ExternalDataProviderConfig {
+  id: string;
+  name: string;
+  service: string;
+  description: string;
+}
+
 /** All supported LLM providers. */
 export const LLM_PROVIDERS: LlmProviderConfig[] = [
   {
@@ -59,6 +66,15 @@ export const LLM_PROVIDERS: LlmProviderConfig[] = [
     service: "llm.custom.key",
     requiresKey: true,
     description: "Connect to OpenRouter, Groq, DeepSeek, Together AI, or any remote OpenAI standard.",
+  },
+];
+
+export const EXTERNAL_DATA_PROVIDERS: ExternalDataProviderConfig[] = [
+  {
+    id: "usda_fdc",
+    name: "USDA FoodData Central",
+    service: "nutrition.usda.fdc",
+    description: "Used to compute calories and macros after local food-photo identification.",
   },
 ];
 

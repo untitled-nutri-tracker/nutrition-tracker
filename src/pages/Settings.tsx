@@ -7,7 +7,9 @@ import { useDatabaseSession } from "../lib/DatabaseSessionContext";
 import {
   useCredentials,
   LLM_PROVIDERS,
+  EXTERNAL_DATA_PROVIDERS,
   type LlmProviderConfig,
+  type ExternalDataProviderConfig,
 } from "../hooks/useCredentials";
 import { useAiConfig, type AiModelInfo } from "../hooks/useAiConfig";
 import { getMemories, deleteMemory } from "../generated/commands";
@@ -205,6 +207,7 @@ export default function Settings() {
  *  API Key Management Section                                         *
  * ================================================================== */
 function ApiKeySection() {
+  type CredentialProvider = LlmProviderConfig | (ExternalDataProviderConfig & { requiresKey: true });
   const cred = useCredentials();
   const aiCfg = useAiConfig();
   const [providerStatus, setProviderStatus] = useState<
@@ -214,6 +217,12 @@ function ApiKeySection() {
   const [keyInput, setKeyInput] = useState("");
   const [savingKey, setSavingKey] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [selectedVisionProvider, setSelectedVisionProvider] = useState(() => {
+    return localStorage.getItem("nutrilog_vision_provider") || "ollama";
+  });
+  const [photoCloudEnabled, setPhotoCloudEnabled] = useState(() => {
+    return localStorage.getItem("nutrilog_photo_scan_cloud_enabled") === "true";
+  });
 
   // AI Memory Management
   const [memories, setMemories] = useState<AiMemory[]>([]);
@@ -277,7 +286,7 @@ function ApiKeySection() {
   // Load provider key status on mount
   const refreshStatus = useCallback(async () => {
     const status: Record<string, { hasKey: boolean; preview: string }> = {};
-    for (const p of LLM_PROVIDERS) {
+    for (const p of [...LLM_PROVIDERS, ...EXTERNAL_DATA_PROVIDERS]) {
       const hasKey = await cred.hasKey(p.service);
       const preview = hasKey ? await cred.getPreview(p.service) : "";
       status[p.id] = { hasKey, preview };
@@ -313,7 +322,7 @@ function ApiKeySection() {
     }
   }, [aiCfg.config]);
 
-  const handleSaveKey = async (provider: LlmProviderConfig) => {
+  const handleSaveKey = async (provider: CredentialProvider) => {
     if (!keyInput.trim()) return;
     setSavingKey(true);
     setSaveMsg(null);
@@ -344,7 +353,7 @@ function ApiKeySection() {
     }
   };
 
-  const handleDeleteKey = async (provider: LlmProviderConfig) => {
+  const handleDeleteKey = async (provider: CredentialProvider) => {
     try {
       await cred.deleteKey(provider.service);
       await refreshStatus();
@@ -363,6 +372,19 @@ function ApiKeySection() {
 
   const handleSelectProvider = async (id: string) => {
     await aiCfg.selectProvider(id);
+  };
+
+  const handleSelectVisionProvider = (id: string) => {
+    setSelectedVisionProvider(id);
+    localStorage.setItem("nutrilog_vision_provider", id);
+  };
+
+  const handlePhotoCloudToggle = (enabled: boolean) => {
+    setPhotoCloudEnabled(enabled);
+    localStorage.setItem("nutrilog_photo_scan_cloud_enabled", String(enabled));
+    if (!enabled && selectedVisionProvider !== "ollama") {
+      handleSelectVisionProvider("ollama");
+    }
   };
 
   const handleVerify = async (providerId: string) => {
@@ -669,6 +691,129 @@ function ApiKeySection() {
             ))}
           </div>
         )}
+      </div>
+
+      <div style={{ marginTop: 18, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 700 }}>Food photo scanning</div>
+        <div style={{ marginTop: 4, fontSize: 12, color: "var(--muted2)" }}>
+          Photo scans default to local Ollama. Cloud vision only runs when explicitly enabled here.
+        </div>
+        <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+          <label className="privacy-consent" style={{ cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <input
+              type="checkbox"
+              checked={photoCloudEnabled}
+              onChange={(e) => handlePhotoCloudToggle(e.target.checked)}
+              style={{ marginTop: 3 }}
+            />
+            <span>
+              <span className="privacy-consent-title" style={{ display: "block" }}>
+                Allow cloud vision for food photos
+              </span>
+              <span className="privacy-consent-text" style={{ display: "block" }}>
+                When enabled and a cloud vision provider is selected, food photos may be sent to that provider. USDA receives only the predicted food name.
+              </span>
+            </span>
+          </label>
+          <div className="provider-select-row" style={{ marginTop: 0 }}>
+            {LLM_PROVIDERS.map((p) => {
+              const disabled = p.id !== "ollama" && !photoCloudEnabled;
+              return (
+                <button
+                  key={p.id}
+                  className={`provider-pill ${selectedVisionProvider === p.id ? "selected" : ""}`}
+                  onClick={() => handleSelectVisionProvider(p.id)}
+                  disabled={disabled}
+                  style={{ opacity: disabled ? 0.45 : 1 }}
+                  title={disabled ? "Enable cloud vision first" : p.description}
+                >
+                  {p.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 18, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 700 }}>Nutrition data providers</div>
+        <div style={{ marginTop: 4, fontSize: 12, color: "var(--muted2)" }}>
+          Photo scans use these keys to compute nutrition from identified foods. Food photos are not sent to nutrition data providers.
+        </div>
+        <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+          {EXTERNAL_DATA_PROVIDERS.map((provider) => {
+            const status = providerStatus[provider.id];
+            const isEditing = editingProvider === provider.id;
+            const credentialProvider = { ...provider, requiresKey: true };
+
+            return (
+              <div key={provider.id} className="provider-card">
+                <div className="provider-card-header">
+                  <div>
+                    <div className="provider-name">{provider.name}</div>
+                    <div className="provider-desc">{provider.description}</div>
+                  </div>
+                  {status?.hasKey ? (
+                    <span className="key-status stored">✅ Key stored</span>
+                  ) : (
+                    <span className="key-status missing">⚠️ No key</span>
+                  )}
+                </div>
+
+                {status?.hasKey && !isEditing && (
+                  <div className="key-preview">
+                    <span>{status.preview}</span>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button
+                        className="key-delete-btn"
+                        onClick={() => setEditingProvider(provider.id)}
+                        style={{
+                          borderColor: "rgba(124,92,255,0.3)",
+                          background: "rgba(124,92,255,0.08)",
+                        }}
+                      >
+                        Change
+                      </button>
+                      <button
+                        className="key-delete-btn"
+                        onClick={() => handleDeleteKey(credentialProvider)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {(!status?.hasKey || isEditing) && (
+                  <div className="key-input-row">
+                    <input
+                      className="key-input"
+                      type="password"
+                      placeholder={`Paste your ${provider.name} API key…`}
+                      value={editingProvider === provider.id ? keyInput : ""}
+                      onFocus={() => {
+                        setEditingProvider(provider.id);
+                        setKeyInput("");
+                      }}
+                      onChange={(e) => setKeyInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSaveKey(credentialProvider);
+                      }}
+                    />
+                    <button
+                      className="key-save-btn"
+                      onClick={() => handleSaveKey(credentialProvider)}
+                      disabled={savingKey || !keyInput.trim()}
+                      style={{ opacity: savingKey || !keyInput.trim() ? 0.6 : 1 }}
+                    >
+                      {savingKey ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Privacy notice for cloud providers */}

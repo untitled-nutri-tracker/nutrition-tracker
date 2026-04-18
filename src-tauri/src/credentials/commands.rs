@@ -19,6 +19,7 @@ const ALLOWED_SERVICES: &[&str] = &[
     crate::credentials::providers::ANTHROPIC,
     crate::credentials::providers::GOOGLE,
     crate::credentials::providers::OLLAMA_ENDPOINT,
+    crate::credentials::providers::USDA_FDC,
     crate::credentials::providers::CUSTOM,
 ];
 
@@ -106,5 +107,15 @@ fn service_to_provider_id(service: &str) -> Option<&'static str> {
         crate::credentials::providers::OLLAMA_ENDPOINT => Some("ollama"),
         crate::credentials::providers::CUSTOM => Some("custom"),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ALLOWED_SERVICES;
+
+    #[test]
+    fn usda_fooddata_central_is_allowed() {
+        assert!(ALLOWED_SERVICES.contains(&crate::credentials::providers::USDA_FDC));
     }
 }
