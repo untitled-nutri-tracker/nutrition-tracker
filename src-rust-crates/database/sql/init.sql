@@ -84,3 +84,30 @@ CREATE INDEX IF NOT EXISTS idx_meals_occurred_at ON meals (occurred_at);
 CREATE INDEX IF NOT EXISTS idx_meal_items_meal_id ON meal_items (meal_id);
 CREATE INDEX IF NOT EXISTS idx_meal_items_food_id ON meal_items (food_id);
 CREATE INDEX IF NOT EXISTS idx_meal_items_serving_id ON meal_items (serving_id);
+
+CREATE TABLE IF NOT EXISTS ai_chat_sessions (
+    id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ai_chat_messages (
+    id INTEGER PRIMARY KEY,
+    session_id INTEGER NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL,
+    tokens INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (session_id) REFERENCES ai_chat_sessions (id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_chat_messages_session_id ON ai_chat_messages (session_id);
+
+CREATE TABLE IF NOT EXISTS ai_memories (
+    id INTEGER PRIMARY KEY,
+    fact TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);

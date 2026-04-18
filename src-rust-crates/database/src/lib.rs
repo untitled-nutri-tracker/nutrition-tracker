@@ -9,6 +9,7 @@ pub mod food;
 pub mod meal;
 pub mod session;
 pub mod user_profile;
+pub mod ai;
 
 use tauri::ipc::Invoke;
 
@@ -65,6 +66,16 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         user_profile::list_profiles,
         user_profile::update_profile,
         user_profile::delete_profile,
+        ai::create_chat_session,
+        ai::get_chat_sessions,
+        ai::delete_chat_session,
+        ai::update_chat_session_title,
+        ai::create_chat_message,
+        ai::get_session_messages,
+        ai::create_memory,
+        ai::get_memories,
+        ai::delete_memory,
+        ai::prune_old_sessions,
     ]
 }
 
@@ -188,13 +199,12 @@ pub fn init_db(db_path: &Path) -> Result<Connection, DatabaseError> {
         }
     }
 
-    let db_exists = db_path.exists();
     let conn = Connection::open(db_path)?;
-    if !db_exists {
-        conn.execute_batch(SCHEMA_SQL)?;
-    } else {
-        validate_db_schema(&conn)?;
-    }
+    
+    // Always execute schema SQL to automatically migrate existing databases (since init.sql uses IF NOT EXISTS)
+    conn.execute_batch(SCHEMA_SQL)?;
+    validate_db_schema(&conn)?;
+    
     Ok(conn)
 }
 
@@ -206,6 +216,9 @@ fn validate_db_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "nutrition_facts",
         "meals",
         "meal_items",
+        "ai_chat_sessions",
+        "ai_chat_messages",
+        "ai_memories",
     ];
 
     let mut stmt = conn
@@ -246,7 +259,6 @@ pub fn sanitize_db_error(raw: String) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::File;
     use tempfile::tempdir;
 
     #[test]
@@ -275,7 +287,10 @@ mod tests {
                      'servings',
                      'nutrition_facts',
                      'meals',
-                     'meal_items'
+                     'meal_items',
+                     'ai_chat_sessions',
+                     'ai_chat_messages',
+                     'ai_memories'
                  )",
             )
             .unwrap();
@@ -284,16 +299,17 @@ mod tests {
             .unwrap()
             .count();
 
-        assert_eq!(table_count, 6, "All expected tables should exist");
+        assert_eq!(table_count, 9, "All expected tables should exist");
     }
 
     #[test]
     fn test_reject_existing_db_file_without_schema() {
         let temp_dir = tempdir().unwrap();
         let db_path = temp_dir.path().join("existing.db");
-        File::create(&db_path).unwrap();
+        // Write garbage so SQLite fails to parse it
+        std::fs::write(&db_path, "not a sqlite database").unwrap();
 
         let err = init_db(&db_path).unwrap_err();
-        assert!(matches!(err, DatabaseError::InvalidDatabase(_)));
+        assert!(matches!(err, DatabaseError::ConnectionError(_)));
     }
 }
