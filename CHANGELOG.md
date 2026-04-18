@@ -9,14 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.10.0] - 2026-04-17
 
 ### Added
-- Persistent AI chat storage with session, message, and memory tables (`ai_chat_sessions`, `ai_chat_messages`, `ai_memories`) plus CRUD/cleanup commands exposed through Tauri.
+- Persistent AI chat storage with session and message tables (`ai_chat_sessions`, `ai_chat_messages`) plus CRUD/cleanup commands exposed through Tauri.
 - In-chat AI Advisor widgets for meal logging, single-macro trend charts, multi-macro comparison charts, and goal-vs-actual adherence views.
 - Goal-aware macro target utilities used to personalize adherence calculations and trend visualizations.
-- Settings UI support for reviewing and deleting saved AI memory facts.
 
 ### Changed
 - AI system prompt/tool contract expanded with structured frontend actions for chart rendering and goal tracking.
-- AI advice now includes persisted memory context when generating responses.
 - Database initialization now applies additive schema updates for existing SQLite files.
 
 ### Fixed
