@@ -76,7 +76,10 @@ fn update_chat_session_title_with_conn(
     candidate.validate()?;
 
     conn.execute(
-        "UPDATE ai_chat_sessions SET title = ?1 WHERE id = ?2",
+        "UPDATE ai_chat_sessions
+         SET title = ?1,
+             updated_at = CAST(strftime('%s', 'now') AS INTEGER)
+         WHERE id = ?2",
         params![trimmed_title, session_id],
     )
     .map_err(|e| crate::sanitize_db_error(e.to_string()))?;

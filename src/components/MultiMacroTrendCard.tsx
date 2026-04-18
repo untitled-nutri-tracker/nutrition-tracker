@@ -31,8 +31,33 @@ function buildPoints(percentValues: number[], width: number, height: number, pad
   }).join(' ');
 }
 
+function hasLoggedNutrition(point: NutritionTrendPoint): boolean {
+  const totals = point.totals;
+  return (
+    totals.itemCount > 0 ||
+    totals.mealCount > 0 ||
+    totals.caloriesKcal > 0 ||
+    totals.proteinG > 0 ||
+    totals.totalCarbohydrateG > 0 ||
+    totals.fatG > 0
+  );
+}
+
+function trimTrailingEmptyBuckets(points: NutritionTrendPoint[]): NutritionTrendPoint[] {
+  let lastLoggedIndex = points.length - 1;
+  while (lastLoggedIndex >= 0 && !hasLoggedNutrition(points[lastLoggedIndex])) {
+    lastLoggedIndex -= 1;
+  }
+
+  if (lastLoggedIndex < 0) return [];
+  return points.slice(0, lastLoggedIndex + 1);
+}
+
 export function MultiMacroTrendCard({ data, metrics, period, targets }: MultiMacroTrendCardProps) {
   if (!data || data.length === 0 || metrics.length === 0) return null;
+
+  const displayData = trimTrailingEmptyBuckets(data);
+  if (displayData.length === 0) return null;
 
   const id = useId().replace(/:/g, '');
   const width = 340;
@@ -51,7 +76,7 @@ export function MultiMacroTrendCard({ data, metrics, period, targets }: MultiMac
 
   const series = metrics.map((metric) => {
     const target = getTargetForMetric(targets, metric);
-    const metricValues = data.map((point) => getTrendMetricValue(point, metric));
+    const metricValues = displayData.map((point) => getTrendMetricValue(point, metric));
     const percentValues = metricValues.map((value) => getMacroPercent(value, target));
 
     const points = buildPoints(percentValues, width, height, paddingLeft, paddingRight, paddingTop, paddingBottom);
@@ -207,7 +232,7 @@ export function MultiMacroTrendCard({ data, metrics, period, targets }: MultiMac
           fontSize="10"
           fill="rgba(235,225,208,0.72)"
         >
-          {new Date(data[Math.floor((data.length - 1) / 2)].periodStart * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+          {new Date(displayData[Math.floor((displayData.length - 1) / 2)].periodStart * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
         </text>
         <text
           x={width - paddingRight}
@@ -216,13 +241,13 @@ export function MultiMacroTrendCard({ data, metrics, period, targets }: MultiMac
           fontSize="10"
           fill="rgba(235,225,208,0.72)"
         >
-          {new Date(data[data.length - 1].periodStart * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+          {new Date(displayData[displayData.length - 1].periodStart * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
         </text>
       </svg>
 
       <div className="ai-widget-chart-footer">
         <span>{targets.isPersonalized ? targets.sourceLabel : 'Using default targets'}</span>
-        <span>{new Date(data[data.length - 1].periodStart * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+        <span>{new Date(displayData[displayData.length - 1].periodStart * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
       </div>
     </div>
   );

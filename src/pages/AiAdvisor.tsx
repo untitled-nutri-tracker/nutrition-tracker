@@ -216,7 +216,7 @@ function MultiMacroTrendWidget({ period, metrics, goal }: { period: string; metr
     return () => {
       cancelled = true;
     };
-  }, [period, metrics, goal]);
+  }, [period, goal]);
 
   if (loading) return <div className="ai-widget-loading">Loading multi-macro trend...</div>;
   if (widgetError) return <div className="ai-widget-state">{widgetError}</div>;
@@ -279,7 +279,7 @@ function GoalVsActualWidget({ period, goal }: { period: string; goal: string }) 
   if (widgetError) return <div className="ai-widget-state">{widgetError}</div>;
   if (!data.length) return <div className="ai-widget-state">No data available for goal comparison yet.</div>;
 
-  const days = clampPeriodToDays(period) || 7;
+  const divisor = Math.max(data.length, 1);
   const targets = getNutritionTargets(profile, goal);
   const totalActual = data.reduce(
     (acc, point) => ({
@@ -292,10 +292,10 @@ function GoalVsActualWidget({ period, goal }: { period: string; goal: string }) 
   );
 
   const avgActual = {
-    calories: totalActual.calories / Math.max(days, 1),
-    protein: totalActual.protein / Math.max(days, 1),
-    carbs: totalActual.carbs / Math.max(days, 1),
-    fat: totalActual.fat / Math.max(days, 1),
+    calories: totalActual.calories / divisor,
+    protein: totalActual.protein / divisor,
+    carbs: totalActual.carbs / divisor,
+    fat: totalActual.fat / divisor,
   };
 
   return (

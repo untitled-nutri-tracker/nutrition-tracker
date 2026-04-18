@@ -17,6 +17,7 @@ src-rust-crates/**/target/
 npm-debug.log*
 .env
 .env.*
+*.db
 
 # Logs
 *.log
