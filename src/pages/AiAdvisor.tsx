@@ -43,6 +43,7 @@ interface ChatMessage {
   content: string;
   nlogData?: string;
   tokens?: number;
+  provider?: string;
 }
 
 interface GoalOption {
@@ -1172,8 +1173,37 @@ export default function AiAdvisor() {
             key={i}
             className={`card ai-chat-bubble ${msg.role === "assistant" ? "ai-chat-assistant" : "ai-chat-user"}`}
           >
-            <div className="ai-chat-role">
-              {msg.role === "user" ? "You" : "NutriLog AI"}
+            <div className="ai-chat-role" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {msg.role === "user" ? "You" : (
+                <>
+                  <span>🤖 NutriLog AI</span>
+                  {msg.provider && (
+                    <span style={{
+                      fontSize: 10,
+                      fontWeight: 600,
+                      padding: "2px 7px",
+                      borderRadius: 6,
+                      background: "rgba(124,92,255,0.15)",
+                      border: "1px solid rgba(124,92,255,0.3)",
+                      color: "rgba(124,92,255,0.9)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}>
+                      {msg.provider}
+                    </span>
+                  )}
+                  <span style={{
+                    fontSize: 10,
+                    padding: "2px 7px",
+                    borderRadius: 6,
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    color: "var(--muted2)",
+                  }}>
+                    AI Generated
+                  </span>
+                </>
+              )}
             </div>
             {msg.role === "assistant" ? (
               <div className="ai-markdown" style={{ fontSize: 14, lineHeight: 1.7 }}>
@@ -1203,8 +1233,11 @@ export default function AiAdvisor() {
             )}
 
             {msg.tokens !== undefined && msg.tokens > 0 && (
-              <div className="ai-chat-tokens">
-                {msg.tokens} tokens used
+              <div className="ai-chat-tokens" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span>⚡ {msg.tokens} tokens</span>
+                {msg.provider && (
+                  <span style={{ color: "var(--muted2)" }}>· via {msg.provider}</span>
+                )}
               </div>
             )}
           </div>
@@ -1238,12 +1271,12 @@ export default function AiAdvisor() {
 
       {/* Sliding Grocery List Panel */}
       {isGroceryOpen && (
-        <div 
-          className="card" 
-          style={{ 
-            width: 280, 
-            borderLeft: "1px solid var(--border)", 
-            background: "rgba(20, 22, 30, 0.95)", 
+        <div
+          className="card"
+          style={{
+            width: 280,
+            borderLeft: "1px solid var(--border)",
+            background: "rgba(20, 22, 30, 0.95)",
             flexShrink: 0,
             animation: "fadeSlideLeft 0.2s ease-out",
             border: "none",
@@ -1256,7 +1289,7 @@ export default function AiAdvisor() {
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, paddingBottom: 10, borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ color: "#10b981" }}>🛒 Smart Grocery List</span>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <button 
+              <button
                 onClick={clearGroceryList}
                 style={{ background: "none", border: "none", color: "var(--muted2)", fontSize: 10, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.05em" }}
               >
