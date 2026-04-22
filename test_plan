@@ -1,0 +1,114 @@
+# Test Strategy & QA Plan
+
+## 1. Testing Scope
+This test plan defines the testing strategy for the NutriLog MVP release. It covers the following components:
+
+- **Frontend (React + TypeScript)**  
+  UI components, rendering, user interactions, and form validation.
+
+- **Backend (Rust + Tauri)**  
+  Business logic, database operations, and Tauri command handlers.
+
+- **Integration**  
+  End‑to‑end data flow between frontend, backend, and the local database.
+
+- **Manual Exploratory Testing**  
+  User flows, edge cases, and unexpected behaviors.
+
+---
+
+## 2. Testing Types
+
+### 2.1 Unit Testing
+- **Frontend:** Jest + React Testing Library  
+- **Backend:** Rust built‑in test framework (`cargo test`)
+
+### 2.2 API / Command Testing
+- Validation of Tauri commands  
+- Database CRUD operations  
+- Error handling and input validation
+
+### 2.3 Integration Testing
+- Frontend → Tauri command → Database  
+- Critical user flows such as login, adding a nutrition record, and viewing the dashboard
+
+### 2.4 Manual Testing
+- UI navigation  
+- Form validation  
+- Error messages  
+- Data consistency across views
+
+---
+
+## 3. Coverage Goals (MVP)
+
+| Component | Coverage Goal | Notes |
+|----------|----------------|-------|
+| Backend (Rust) | ≥ 40% | Focus on database and core logic |
+| Frontend (React) | ≥ 30% | Cover key components and interactions |
+| Critical User Flows | 100% | Login, add record, view dashboard |
+
+> Coverage goals are intentionally moderate for MVP but must include all critical paths.
+
+---
+
+## 4. Test Procedures
+
+### 4.1 Development Workflow
+1. Developer creates a feature branch.  
+2. Developer writes or updates tests for new functionality.  
+3. Developer opens a Pull Request.  
+4. GitHub Actions automatically runs all tests.  
+5. PR can only be merged if all tests pass.
+
+### 4.2 Automated Testing (CI)
+- Frontend tests:  
+  `npm test -- --watchAll=false`
+- Backend tests:  
+  `cargo test --all`
+- CI failure blocks merge.  
+- CI success allows merge.
+
+### 4.3 Manual Testing Workflow
+1. Launch the application.  
+2. Follow the manual testing checklist.  
+3. Document issues in GitHub Issues.  
+4. Assign issues to responsible developers.  
+5. Verify fixes before closing issues.
+
+---
+
+## 5. Tools & Frameworks
+
+| Tool | Purpose |
+|------|---------|
+| **Jest + React Testing Library** | Frontend unit & component testing |
+| **Rust Test Framework** | Backend logic & database testing |
+| **GitHub Actions** | Automated CI testing |
+| **Tauri DevTools** | Debugging frontend–backend interactions |
+| **Manual Testing Checklist** | UI flow validation |
+
+---
+
+## 6. Risks & Mitigation
+
+### 6.1 Insufficient Test Coverage
+- Require at least one test per PR.  
+- Reviewers verify test relevance and coverage.
+
+### 6.2 Backend Changes Breaking Frontend
+- Maintain integration tests for critical commands.  
+- Update mocks and test cases when API changes.
+
+### 6.3 Manual Testing Gaps
+- Maintain a consistent manual testing checklist.  
+- Perform full manual testing at the end of each sprint.
+
+---
+
+## 7. Deliverables
+- `/docs/test_plan.md` (this document)  
+- Frontend Jest baseline tests (minimum 2)  
+- Backend Rust baseline tests (minimum 3)  
+- GitHub Actions workflow for automated testing  
+
