@@ -300,6 +300,12 @@
   color: #ffffff;
 }
 
+.ai-controls-helper {
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(205, 216, 235, 0.78);
+}
+
 .ai-controls-history-section {
   min-height: 0;
   flex: 1;

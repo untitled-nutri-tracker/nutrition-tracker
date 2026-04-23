@@ -1,8 +1,8 @@
 pub mod ai_config;
 pub mod api;
+pub mod camera_permission;
 pub mod credentials;
 pub mod network_config;
-pub mod camera_permission;
 pub mod utils;
 
 use api::ai::{self, AiResponse, ChatMessage};
@@ -66,9 +66,10 @@ async fn get_ai_advice(
     model: Option<String>,
     history: Option<Vec<ChatMessage>>,
     offset_minutes: Option<i64>,
+    profile_context: Option<String>,
 ) -> Result<AiResponse, String> {
-    // Build .nlog from database (via database crate)
-    let nlog_data = nutrack_database::meal::build_nlog(days, offset_minutes.unwrap_or(0)).await?;
+    let offset_minutes = offset_minutes.unwrap_or(0);
+    let ai_context = nutrack_database::meal::build_ai_context(&question, days, offset_minutes)?;
 
     // Resolve provider — fall back to AiConfig.selected_provider
     let provider_id = match &provider {
@@ -97,15 +98,28 @@ async fn get_ai_advice(
         }
     };
 
+    let contextual_question = if let Some(profile_context) =
+        profile_context.as_deref().filter(|value| !value.trim().is_empty())
+    {
+        format!(
+            "(System Context: {})\n{}\n\n{}",
+            ai_context.scope_description, profile_context, question
+        )
+    } else {
+        format!("(System Context: {})\n\n{}", ai_context.scope_description, question)
+    };
+
     // Send to the selected LLM provider
     ai::ask_llm(
-        &nlog_data, 
-        &question, 
-        history.unwrap_or_default(), 
-        &llm_provider, 
+        &ai_context.nlog_data,
+        &contextual_question,
+        history.unwrap_or_default(),
+        &llm_provider,
         &resolved_model,
-        &memories_str
-    ).await
+        &memories_str,
+        offset_minutes,
+    )
+    .await
 }
 
 /// Analyze a single food photo with a vision model, then enrich with USDA nutrition.
