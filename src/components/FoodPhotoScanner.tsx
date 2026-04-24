@@ -226,6 +226,7 @@ export default function FoodPhotoScanner({
               muted
               onLoadedMetadata={handleVideoMetadata}
               onCanPlay={handleVideoMetadata}
+              className="absolute inset-0 h-full w-full object-cover"
             />
           )}
           <div className="absolute top-[18px] left-1/2 -translate-x-1/2 w-max max-w-[min(520px,calc(100vw-32px))] rounded-lg px-2.5 py-2 bg-black/55 text-white/90 text-xs text-center">
@@ -233,8 +234,8 @@ export default function FoodPhotoScanner({
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 z-[2] bg-gradient-to-b from-transparent via-black/35 to-black/58 pt-16 px-4 pb-[18px] grid gap-2.5 justify-items-center pointer-events-none">
-          <div className="flex items-center gap-3 mt-4">
+        <div className="absolute bottom-0 left-0 right-0 z-[2] bg-gradient-to-b from-transparent via-black/35 to-black/58 pt-16 px-4 pb-[18px] grid gap-2.5 justify-items-center">
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
             {!usePickerCapture && (
               <button
                 className="px-5 py-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/16 text-white font-semibold text-sm transition-colors cursor-pointer disabled:opacity-55 disabled:cursor-not-allowed"
@@ -244,15 +245,15 @@ export default function FoodPhotoScanner({
                 Take Photo
               </button>
             )}
-            <button className="px-5 py-2.5 rounded-xl border border-red-500/35 bg-red-500/12 text-white font-semibold text-sm hover:bg-red-500/22 transition-colors cursor-pointer" onClick={() => fileRef.current?.click()}>
+            <button className="px-5 py-2.5 rounded-xl border border-sky-500/35 bg-sky-500/16 text-white font-semibold text-sm hover:bg-sky-500/24 transition-colors cursor-pointer" onClick={() => fileRef.current?.click()}>
               {prefersPickerCapture ? "Use Camera" : "Choose Photo"}
             </button>
             {permissionBlocked && (
               <>
-                <button className="px-5 py-2.5 rounded-xl border border-red-500/35 bg-red-500/12 text-white font-semibold text-sm hover:bg-red-500/22 transition-colors cursor-pointer" onClick={openCameraSettings}>
+                <button className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 text-white font-semibold text-sm hover:bg-white/16 transition-colors cursor-pointer" onClick={openCameraSettings}>
                   Open Camera Settings
                 </button>
-                <button className="px-5 py-2.5 rounded-xl border border-red-500/35 bg-red-500/12 text-white font-semibold text-sm hover:bg-red-500/22 transition-colors cursor-pointer" onClick={retryLivePreview}>
+                <button className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 text-white font-semibold text-sm hover:bg-white/16 transition-colors cursor-pointer" onClick={retryLivePreview}>
                   Retry Live Camera
                 </button>
               </>
