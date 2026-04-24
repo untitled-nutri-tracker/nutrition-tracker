@@ -84,7 +84,7 @@ function BarChart({ data, dataKey, targetValue, color, label, unit }: {
   const maxVal = Math.max(...data.map(d => d[dataKey] as number), targetValue) * 1.15;
 
   return (
-    <div style={chartCardStyle}>
+    <div className="liquid-glass p-6">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ fontSize: 14, fontWeight: 700 }}>{label}</span>
         <span style={{ fontSize: 11, color: 'var(--muted2)' }}>Target: {targetValue}{unit}</span>
@@ -141,7 +141,7 @@ function MacroPieChart({ data }: { data: DayData[] }) {
   const fOff = -(pLen + cLen);
 
   return (
-    <div style={chartCardStyle}>
+    <div className="liquid-glass p-6">
       <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Macro Distribution (Weekly Avg)</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
         <svg viewBox="0 0 160 160" style={{ width: 120, height: 120 }}>
@@ -182,7 +182,7 @@ function BMICard() {
   const profile = getProfile();
   if (!profile || !profile.weightKg || !profile.heightCm) {
     return (
-      <div style={chartCardStyle}>
+      <div className="liquid-glass p-6">
         <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Body Metrics</div>
         <div style={{ fontSize: 12, color: 'var(--muted2)' }}>Set up your profile to see BMI calculations.</div>
       </div>
@@ -200,7 +200,7 @@ function BMICard() {
   const pct = ((bmi - scaleMin) / (scaleMax - scaleMin)) * 100;
 
   return (
-    <div style={chartCardStyle}>
+    <div className="liquid-glass p-6">
       <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Body Metrics</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
         <div style={metricBoxStyle}>
@@ -247,7 +247,7 @@ function ConsistencyCard({ data }: { data: DayData[] }) {
   }
 
   return (
-    <div style={chartCardStyle}>
+    <div className="liquid-glass p-6">
       <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Consistency & Trends</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
         <div style={metricBoxStyle}>
@@ -459,7 +459,7 @@ export default function Insights() {
       </div>
 
       {loading ? (
-        <div style={chartCardStyle}>
+        <div className="liquid-glass p-6">
           <div style={{ color: 'var(--muted)', fontSize: 13 }}>Loading insights…</div>
         </div>
       ) : (
@@ -493,10 +493,7 @@ export default function Insights() {
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const chartCardStyle: React.CSSProperties = {
-  border: '1px solid var(--border, rgba(255,255,255,0.08))',
-  background: 'rgba(255,255,255,0.04)',
-  borderRadius: 14,
-  padding: '16px 18px',
+  // Now using .liquid-glass utility class instead
 };
 
 const metricBoxStyle: React.CSSProperties = {

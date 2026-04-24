@@ -790,7 +790,7 @@ export default function AiAdvisor() {
     <div className="page-enter pop-in ai-advisor-shell">
       {(!isOnline && selectedProvider !== "ollama") && (
         <div
-          className="card"
+          className="liquid-glass"
           style={{
             border: "1px solid rgba(255, 180, 0, 0.3)",
             background: "rgba(255, 180, 0, 0.06)",
@@ -864,7 +864,7 @@ export default function AiAdvisor() {
           role="presentation"
         >
           <div
-            className="ai-controls-panel card"
+            className="ai-controls-panel liquid-glass"
             role="dialog"
             aria-label="Chat controls"
             aria-modal="true"
@@ -1171,7 +1171,7 @@ export default function AiAdvisor() {
           return (
           <div
             key={i}
-            className={`card ai-chat-bubble ${msg.role === "assistant" ? "ai-chat-assistant" : "ai-chat-user"}`}
+            className={`liquid-glass ai-chat-bubble ${msg.role === "assistant" ? "ai-chat-assistant" : "ai-chat-user"}`}
           >
             <div className="ai-chat-role" style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {msg.role === "user" ? "You" : (
@@ -1246,7 +1246,7 @@ export default function AiAdvisor() {
 
         {/* Loading indicator */}
         {loading && (
-            <div className="card ai-chat-bubble ai-chat-assistant">
+            <div className="liquid-glass ai-chat-bubble ai-chat-assistant">
               <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "var(--text)" }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ai-loading-spinner">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
@@ -1260,7 +1260,7 @@ export default function AiAdvisor() {
 
         {/* Error */}
         {error && !loading && (
-          <div className="card" style={{ border: "1px solid rgba(255,80,80,0.35)", background: "rgba(255,80,80,0.08)" }}>
+          <div className="liquid-glass" style={{ border: "1px solid rgba(255,80,80,0.35)", background: "rgba(255,80,80,0.08)" }}>
             <div style={{ fontSize: 13 }}>{error}</div>
           </div>
         )}
@@ -1272,7 +1272,7 @@ export default function AiAdvisor() {
       {/* Sliding Grocery List Panel */}
       {isGroceryOpen && (
         <div
-          className="card"
+          className="liquid-glass"
           style={{
             width: 280,
             borderLeft: "1px solid var(--border)",
