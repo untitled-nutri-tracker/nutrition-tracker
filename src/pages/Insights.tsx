@@ -430,7 +430,7 @@ export default function Insights() {
   const targets = getTargets();
 
   return (
-    <div className="page-enter" style={{ display: "grid", gap: 14, maxWidth: 900 }}>
+    <div className="page-enter p-4 pb-28 md:p-8 md:pb-8" style={{ display: "grid", gap: 14, maxWidth: 900 }}>
       <div className="pop-in">
         <ProfileSummaryCard />
       </div>
@@ -491,10 +491,6 @@ export default function Insights() {
 }
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
-
-const chartCardStyle: React.CSSProperties = {
-  // Now using .liquid-glass utility class instead
-};
 
 const metricBoxStyle: React.CSSProperties = {
   background: 'rgba(0,0,0,0.2)',

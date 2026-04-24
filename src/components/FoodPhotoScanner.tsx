@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import "../styles/barcode-scanner.css";
 
 interface FoodPhotoPayload {
   imageBase64: string;
@@ -196,14 +195,14 @@ export default function FoodPhotoScanner({
   }
 
   const overlay = (
-    <div className="scanner-overlay food-photo-overlay" onClick={handleClose}>
-      <div className="food-photo-widget" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 box-border p-0 z-[2147483000] flex flex-col items-center justify-center [animation:scanner-fade-in_0.2s_ease-out]" onClick={handleClose}>
+      <div className="bg-black flex h-[100dvh] w-[100dvw] fixed inset-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div
-          className="scanner-video-wrap food-photo-wrap"
+          className="relative flex-1 h-full w-full overflow-hidden border-[border-color:rgba(80,200,120,0.45)]"
           style={frameStyle}
         >
           {usePickerCapture ? (
-            <div className="food-photo-file-only">
+            <div className="flex items-center justify-center w-full h-full bg-black/72 text-white text-base leading-relaxed text-center p-6">
               <div>
                 <div>
                   {permissionBlocked
@@ -213,7 +212,7 @@ export default function FoodPhotoScanner({
                       : "Live camera preview is unavailable here. Choose a food photo from your device."}
                 </div>
                 {permissionBlocked && (
-                  <div className="food-photo-permission-help">
+                  <div className="text-white/74 text-[0.9rem] mt-2">
                     Allow NutriLog in System Settings, then retry the live camera.
                   </div>
                 )}
@@ -229,36 +228,36 @@ export default function FoodPhotoScanner({
               onCanPlay={handleVideoMetadata}
             />
           )}
-          <div className="food-photo-guide">
+          <div className="absolute top-[18px] left-1/2 -translate-x-1/2 w-max max-w-[min(520px,calc(100vw-32px))] rounded-lg px-2.5 py-2 bg-black/55 text-white/90 text-xs text-center">
             Place one food item in the frame
           </div>
         </div>
 
-        <div className="food-photo-bottom-bar">
-          <div className="scanner-controls">
+        <div className="absolute bottom-0 left-0 right-0 z-[2] bg-gradient-to-b from-transparent via-black/35 to-black/58 pt-16 px-4 pb-[18px] grid gap-2.5 justify-items-center pointer-events-none">
+          <div className="flex items-center gap-3 mt-4">
             {!usePickerCapture && (
               <button
-                className="scanner-close-btn food-photo-capture-btn"
+                className="px-5 py-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/16 text-white font-semibold text-sm transition-colors cursor-pointer disabled:opacity-55 disabled:cursor-not-allowed"
                 onClick={handleCapture}
                 disabled={!cameraReady}
               >
                 Take Photo
               </button>
             )}
-            <button className="scanner-close-btn" onClick={() => fileRef.current?.click()}>
+            <button className="px-5 py-2.5 rounded-xl border border-red-500/35 bg-red-500/12 text-white font-semibold text-sm hover:bg-red-500/22 transition-colors cursor-pointer" onClick={() => fileRef.current?.click()}>
               {prefersPickerCapture ? "Use Camera" : "Choose Photo"}
             </button>
             {permissionBlocked && (
               <>
-                <button className="scanner-close-btn" onClick={openCameraSettings}>
+                <button className="px-5 py-2.5 rounded-xl border border-red-500/35 bg-red-500/12 text-white font-semibold text-sm hover:bg-red-500/22 transition-colors cursor-pointer" onClick={openCameraSettings}>
                   Open Camera Settings
                 </button>
-                <button className="scanner-close-btn" onClick={retryLivePreview}>
+                <button className="px-5 py-2.5 rounded-xl border border-red-500/35 bg-red-500/12 text-white font-semibold text-sm hover:bg-red-500/22 transition-colors cursor-pointer" onClick={retryLivePreview}>
                   Retry Live Camera
                 </button>
               </>
             )}
-            <button className="scanner-close-btn" onClick={handleClose}>
+            <button className="px-5 py-2.5 rounded-xl border border-red-500/35 bg-red-500/12 text-white font-semibold text-sm hover:bg-red-500/22 transition-colors cursor-pointer" onClick={handleClose}>
               Close
             </button>
             <input
@@ -271,12 +270,12 @@ export default function FoodPhotoScanner({
             />
           </div>
 
-          <div className="scanner-hint">
+          <div className="mt-3 text-xs text-white/50 text-center">
             Photos are analyzed ephemerally and are not stored by NutriLog.
           </div>
 
           {error && (
-            <div className="scanner-error">
+            <div className="mt-2 px-3.5 py-2.5 rounded-[10px] border border-red-500/35 bg-red-500/10 text-sm text-white/90">
               {error}
             </div>
           )}

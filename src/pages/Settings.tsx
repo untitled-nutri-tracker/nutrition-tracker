@@ -14,7 +14,6 @@ import {
 import { useAiConfig, type AiModelInfo } from "../hooks/useAiConfig";
 import { getMemories, deleteMemory } from "../generated/commands";
 import type { AiMemory } from "../generated/types";
-import "../styles/credentials.css";
 
 export default function Settings() {
   const { session } = useDatabaseSession();
@@ -453,20 +452,20 @@ function ApiKeySection() {
 
   return (
     <div className="card pop-in-delay-2" style={{ maxWidth: 720 }}>
-      <div className="ai-config-header">
+      <div className="text-base font-bold leading-snug">
         AI Provider Configuration
       </div>
-      <div className="ai-config-subtitle">
+      <div className="text-xs text-white/40 mt-1 leading-relaxed">
         Select your preferred AI provider and manage API keys. Keys are
         stored securely in your OS keychain.
       </div>
 
       {/* Provider selector pills */}
-      <div className="provider-select-row">
+      <div className="flex gap-1.5 flex-wrap mt-3.5 max-sm:gap-1">
         {LLM_PROVIDERS.map((p) => (
           <button
             key={p.id}
-            className={`provider-pill ${selectedProvider === p.id ? "selected" : ""}`}
+            className={`px-3.5 py-1.5 rounded-[10px] border cursor-pointer text-xs font-semibold transition-all whitespace-nowrap flex-1 max-sm:text-center max-sm:px-2 max-sm:py-2 ${selectedProvider === p.id ? "border-indigo-500/50 bg-gradient-to-br from-indigo-500/20 to-cyan-500/10 text-white/90 shadow-[0_0_12px_rgba(124,92,255,0.15)]" : "border-white/5 bg-white/5 text-white/60 hover:border-indigo-500/35 hover:text-white/90 hover:bg-indigo-500/10"}`}
             onClick={() => handleSelectProvider(p.id)}
           >
             {p.name}
@@ -476,13 +475,13 @@ function ApiKeySection() {
 
       {/* Status message banner */}
       {saveMsg && (
-        <div className="provider-status-msg">
+        <div className="mt-3 px-3.5 py-2 rounded-[10px] text-xs bg-white/5 border border-white/5 leading-relaxed">
           {saveMsg}
         </div>
       )}
 
       {/* Provider cards */}
-      <div className="provider-cards-grid">
+      <div className="mt-3.5 grid gap-2.5">
         {LLM_PROVIDERS.map((provider) => {
           const status = providerStatus[provider.id];
           const isSelected = selectedProvider === provider.id;
@@ -496,44 +495,44 @@ function ApiKeySection() {
           return (
             <div
               key={provider.id}
-              className={`provider-card ${isSelected ? "active" : ""}`}
+              className={`p-4 rounded-[14px] border transition-all ${isSelected ? "border-indigo-500/35 bg-indigo-500/5 shadow-[0_4px_20px_rgba(124,92,255,0.06)]" : "border-white/5 bg-white/[0.02]"}`}
             >
               {/* Header: name + status badge */}
-              <div className="provider-card-header">
+              <div className="flex items-start justify-between gap-3 max-sm:flex-col max-sm:items-start max-sm:gap-1.5">
                 <div>
-                  <div className="provider-name">{provider.name}</div>
-                  <div className="provider-desc">{provider.description}</div>
+                  <div className="font-bold text-sm leading-tight">{provider.name}</div>
+                  <div className="text-[11px] text-white/40 mt-0.5 leading-snug">{provider.description}</div>
                 </div>
 
                 {/* Status badge */}
                 {!provider.requiresKey ? (
                   verified ? (
-                    <span className="key-status stored">✅ Verified</span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap shrink-0 max-sm:self-start bg-emerald-500/10 border border-emerald-500/30 text-emerald-500/90">✅ Verified</span>
                   ) : (
-                    <span className="key-status local">🟢 Local</span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap shrink-0 max-sm:self-start bg-blue-500/10 border border-blue-500/30 text-blue-500/90">🟢 Local</span>
                   )
                 ) : !status?.hasKey ? (
-                  <span className="key-status missing">⚠️ No key</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap shrink-0 max-sm:self-start bg-orange-500/10 border border-orange-500/30 text-orange-500/90">⚠️ No key</span>
                 ) : verified ? (
-                  <span className="key-status stored">✅ Verified</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap shrink-0 max-sm:self-start bg-emerald-500/10 border border-emerald-500/30 text-emerald-500/90">✅ Verified</span>
                 ) : (
-                  <span className="key-status unverified">🔑 Key saved · Not verified</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap shrink-0 max-sm:self-start text-white/60">🔑 Key saved · Not verified</span>
                 )}
               </div>
 
               {/* Key preview + change/remove actions */}
               {provider.requiresKey && status?.hasKey && !isEditing && (
-                <div className="key-preview">
+                <div className="mt-2.5 font-mono text-xs text-white/60 px-3 py-2 rounded-[10px] bg-white/5 border border-white/5 flex items-center justify-between gap-2 max-sm:flex-col max-sm:items-start">
                   <span>{status.preview}</span>
-                  <div className="key-preview-actions">
+                  <div className="flex gap-1.5 shrink-0 max-sm:w-full max-sm:*:flex-1">
                     <button
-                      className="key-change-btn"
+                      className="px-3 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-white/60 text-[11px] hover:bg-indigo-500/20 transition-all cursor-pointer"
                       onClick={() => setEditingProvider(provider.id)}
                     >
                       Change
                     </button>
                     <button
-                      className="key-delete-btn"
+                      className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-white/60 text-[11px] hover:bg-red-500/20 transition-all cursor-pointer"
                       onClick={() => handleDeleteKey(provider)}
                     >
                       Remove
@@ -545,9 +544,9 @@ function ApiKeySection() {
               {/* Key input (for adding or changing) */}
               {provider.requiresKey &&
                 (!status?.hasKey || isEditing) && (
-                  <div className="key-input-row">
+                  <div className="flex gap-2 mt-2.5 max-sm:flex-col">
                     <input
-                      className="key-input"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-[13px] font-mono transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40 placeholder:font-sans"
                       type="password"
                       placeholder={`Paste your ${provider.name} API key…`}
                       value={editingProvider === provider.id ? keyInput : ""}
@@ -561,7 +560,7 @@ function ApiKeySection() {
                       }}
                     />
                     <button
-                      className="key-save-btn"
+                      className="px-4 py-2 rounded-[10px] border border-emerald-500/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 text-white/90 font-semibold text-[13px] whitespace-nowrap hover:from-emerald-500/30 hover:to-emerald-500/15 transition-all max-sm:w-full"
                       onClick={() => handleSaveKey(provider)}
                       disabled={savingKey || !keyInput.trim()}
                       style={{
@@ -576,13 +575,13 @@ function ApiKeySection() {
 
               {/* Ollama endpoint config */}
               {!provider.requiresKey && provider.id === "ollama" && (
-                <div className="endpoint-section">
-                  <div className="endpoint-label">
+                <div className="mt-3">
+                  <div className="text-[11px] text-white/40 mb-1.5 font-semibold tracking-wide">
                     Endpoint URL
                   </div>
-                  <div className="endpoint-input-row">
+                  <div className="flex gap-1.5">
                     <input
-                      className="endpoint-input"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-xs font-mono transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40 placeholder:font-sans"
                       type="text"
                       value={ollamaInput}
                       onChange={(e) => setOllamaInput(e.target.value)}
@@ -598,13 +597,13 @@ function ApiKeySection() {
 
               {/* Custom OpenAI-compatible endpoint config */}
               {provider.requiresKey && provider.id === "custom" && (
-                <div className="endpoint-section">
-                  <div className="endpoint-label">
+                <div className="mt-3">
+                  <div className="text-[11px] text-white/40 mb-1.5 font-semibold tracking-wide">
                     Endpoint URL
                   </div>
-                  <div className="endpoint-input-row">
+                  <div className="flex gap-1.5">
                     <input
-                      className="endpoint-input"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-xs font-mono transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40 placeholder:font-sans"
                       type="text"
                       value={customEndpointInput}
                       onChange={(e) => setCustomEndpointInput(e.target.value)}
@@ -620,16 +619,16 @@ function ApiKeySection() {
 
               {/* Test Connection button */}
               {(provider.requiresKey ? status?.hasKey : true) && (
-                <div className="verify-row">
+                <div className="mt-3 flex gap-2.5 items-center flex-wrap max-sm:flex-col max-sm:items-stretch">
                   <button
-                    className="verify-btn"
+                    className="px-4 py-1.5 rounded-[10px] border border-indigo-500/35 bg-gradient-to-br from-indigo-500/20 to-cyan-500/10 text-white/90 text-xs font-semibold whitespace-nowrap hover:from-indigo-500/30 hover:to-cyan-500/15 disabled:opacity-60 disabled:cursor-wait transition-all max-sm:w-full"
                     onClick={() => handleVerify(provider.id)}
                     disabled={isVerifyingThis}
                   >
                     {isVerifyingThis ? "Verifying…" : "Test Connection"}
                   </button>
                   {vError && (
-                    <span className="verify-error">
+                    <span className="text-[11px] text-red-400 leading-snug break-words max-sm:text-center">
                       ❌ {vError.length > 80 ? vError.slice(0, 80) + "…" : vError}
                     </span>
                   )}
@@ -638,12 +637,12 @@ function ApiKeySection() {
 
               {/* Model selector (visible after verification) */}
               {models.length > 0 && (
-                <div className="model-section">
-                  <div className="model-label">
+                <div className="mt-3">
+                  <div className="text-[11px] text-white/40 mb-1.5 font-semibold tracking-wide">
                     Model
                   </div>
                   <select
-                    className="model-select"
+                    className="w-full px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-xs cursor-pointer transition-colors focus:border-indigo-500/40 focus:outline-none appearance-none pr-8 bg-no-repeat bg-[right_12px_center]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(255,255,255,0.5)' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E\")" }}
                     value={currentModel ?? models[0]?.id ?? ""}
                     onChange={(e) => handleModelSelect(provider.id, e.target.value)}
                   >
@@ -662,10 +661,10 @@ function ApiKeySection() {
 
       {/* AI Context & Memory */}
       <div className="card pop-in-delay-3" style={{ maxWidth: 720, marginTop: 14 }}>
-        <div className="ai-config-header" style={{ marginBottom: 4 }}>
+        <div className="text-base font-bold leading-snug" style={{ marginBottom: 4 }}>
           AI Context & Memory
         </div>
-        <div className="ai-config-subtitle" style={{ marginBottom: 16 }}>
+        <div className="text-xs text-white/40 mt-1 leading-relaxed" style={{ marginBottom: 16 }}>
           The AI automatically learns preferences and facts about you from your conversations to personalize advice. You can review and delete them here.
         </div>
         
@@ -699,7 +698,7 @@ function ApiKeySection() {
           Photo scans default to local Ollama. Cloud vision only runs when explicitly enabled here.
         </div>
         <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-          <label className="privacy-consent" style={{ cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 10 }}>
+          <label className="p-3.5 rounded-[14px] border border-orange-500/25 bg-orange-500/5 mt-3.5" style={{ cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 10 }}>
             <input
               type="checkbox"
               checked={photoCloudEnabled}
@@ -707,21 +706,21 @@ function ApiKeySection() {
               style={{ marginTop: 3 }}
             />
             <span>
-              <span className="privacy-consent-title" style={{ display: "block" }}>
+              <span className="font-bold text-[13px] mb-1.5" style={{ display: "block" }}>
                 Allow cloud vision for food photos
               </span>
-              <span className="privacy-consent-text" style={{ display: "block" }}>
+              <span className="text-xs text-white/60 leading-relaxed" style={{ display: "block" }}>
                 When enabled and a cloud vision provider is selected, food photos may be sent to that provider. USDA receives only the predicted food name.
               </span>
             </span>
           </label>
-          <div className="provider-select-row" style={{ marginTop: 0 }}>
+          <div className="flex gap-1.5 flex-wrap mt-3.5 max-sm:gap-1" style={{ marginTop: 0 }}>
             {LLM_PROVIDERS.map((p) => {
               const disabled = p.id !== "ollama" && !photoCloudEnabled;
               return (
                 <button
                   key={p.id}
-                  className={`provider-pill ${selectedVisionProvider === p.id ? "selected" : ""}`}
+                  className={`px-3.5 py-1.5 rounded-[10px] border cursor-pointer text-xs font-semibold transition-all whitespace-nowrap flex-1 max-sm:text-center max-sm:px-2 max-sm:py-2 ${selectedVisionProvider === p.id ? "border-indigo-500/50 bg-gradient-to-br from-indigo-500/20 to-cyan-500/10 text-white/90 shadow-[0_0_12px_rgba(124,92,255,0.15)]" : "border-white/5 bg-white/5 text-white/60 hover:border-indigo-500/35 hover:text-white/90 hover:bg-indigo-500/10"}`}
                   onClick={() => handleSelectVisionProvider(p.id)}
                   disabled={disabled}
                   style={{ opacity: disabled ? 0.45 : 1 }}
@@ -747,25 +746,25 @@ function ApiKeySection() {
             const credentialProvider = { ...provider, requiresKey: true };
 
             return (
-              <div key={provider.id} className="provider-card">
-                <div className="provider-card-header">
+              <div key={provider.id} className="p-4 rounded-[14px] border border-white/5 bg-white/[0.02] transition-all">
+                <div className="flex items-start justify-between gap-3 max-sm:flex-col max-sm:items-start max-sm:gap-1.5">
                   <div>
-                    <div className="provider-name">{provider.name}</div>
-                    <div className="provider-desc">{provider.description}</div>
+                    <div className="font-bold text-sm leading-tight">{provider.name}</div>
+                    <div className="text-[11px] text-white/40 mt-0.5 leading-snug">{provider.description}</div>
                   </div>
                   {status?.hasKey ? (
-                    <span className="key-status stored">✅ Key stored</span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap shrink-0 max-sm:self-start bg-emerald-500/10 border border-emerald-500/30 text-emerald-500/90">✅ Key stored</span>
                   ) : (
-                    <span className="key-status missing">⚠️ No key</span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap shrink-0 max-sm:self-start bg-orange-500/10 border border-orange-500/30 text-orange-500/90">⚠️ No key</span>
                   )}
                 </div>
 
                 {status?.hasKey && !isEditing && (
-                  <div className="key-preview">
+                  <div className="mt-2.5 font-mono text-xs text-white/60 px-3 py-2 rounded-[10px] bg-white/5 border border-white/5 flex items-center justify-between gap-2 max-sm:flex-col max-sm:items-start">
                     <span>{status.preview}</span>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button
-                        className="key-delete-btn"
+                        className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-white/60 text-[11px] hover:bg-red-500/20 transition-all cursor-pointer"
                         onClick={() => setEditingProvider(provider.id)}
                         style={{
                           borderColor: "rgba(124,92,255,0.3)",
@@ -775,7 +774,7 @@ function ApiKeySection() {
                         Change
                       </button>
                       <button
-                        className="key-delete-btn"
+                        className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-white/60 text-[11px] hover:bg-red-500/20 transition-all cursor-pointer"
                         onClick={() => handleDeleteKey(credentialProvider)}
                       >
                         Remove
@@ -785,9 +784,9 @@ function ApiKeySection() {
                 )}
 
                 {(!status?.hasKey || isEditing) && (
-                  <div className="key-input-row">
+                  <div className="flex gap-2 mt-2.5 max-sm:flex-col">
                     <input
-                      className="key-input"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-[13px] font-mono transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40 placeholder:font-sans"
                       type="password"
                       placeholder={`Paste your ${provider.name} API key…`}
                       value={editingProvider === provider.id ? keyInput : ""}
@@ -801,7 +800,7 @@ function ApiKeySection() {
                       }}
                     />
                     <button
-                      className="key-save-btn"
+                      className="px-4 py-2 rounded-[10px] border border-emerald-500/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 text-white/90 font-semibold text-[13px] whitespace-nowrap hover:from-emerald-500/30 hover:to-emerald-500/15 transition-all max-sm:w-full"
                       onClick={() => handleSaveKey(credentialProvider)}
                       disabled={savingKey || !keyInput.trim()}
                       style={{ opacity: savingKey || !keyInput.trim() ? 0.6 : 1 }}
@@ -818,9 +817,9 @@ function ApiKeySection() {
 
       {/* Privacy notice for cloud providers */}
       {selectedProvider !== "ollama" && (
-        <div className="privacy-consent">
-          <div className="privacy-consent-title">⚠️ Privacy Notice</div>
-          <div className="privacy-consent-text">
+        <div className="p-3.5 rounded-[14px] border border-orange-500/25 bg-orange-500/5 mt-3.5">
+          <div className="font-bold text-[13px] mb-1.5">⚠️ Privacy Notice</div>
+          <div className="text-xs text-white/60 leading-relaxed">
             When using cloud AI providers (OpenAI, Anthropic, Google, Custom),
             your meal data will be sent to their servers for analysis.
             No personal information beyond food logs is shared. Your

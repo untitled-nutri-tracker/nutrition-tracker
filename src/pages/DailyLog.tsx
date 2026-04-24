@@ -246,7 +246,7 @@ export default function DailyLog() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="page-enter" style={{ display: "grid", gap: 14 }}>
+    <div className="page-enter p-4 pb-28 md:p-8 md:pb-8" style={{ display: "grid", gap: 14 }}>
       {showConfetti && <Confetti recycle={false} numberOfPieces={300} style={{ position: 'fixed', left: 0, top: 0, zIndex: 9999, pointerEvents: 'none' }} />}
 
       {/* Profile summary */}

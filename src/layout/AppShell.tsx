@@ -49,12 +49,16 @@ function DesktopNavItem({
         }`
       }
     >
-      <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl border ${
-        isActive ? "border-indigo-500/30 bg-indigo-500/10" : "border-white/5 bg-white/5"
-      }`}>
-        {icon}
-      </div>
-      <div className="font-medium text-sm tracking-wide">{label}</div>
+      {({ isActive }) => (
+        <>
+          <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl border ${
+            isActive ? "border-indigo-500/30 bg-indigo-500/10" : "border-white/5 bg-white/5"
+          }`}>
+            {icon}
+          </div>
+          <div className="font-medium text-sm tracking-wide">{label}</div>
+        </>
+      )}
     </NavLink>
   );
 }
@@ -155,8 +159,8 @@ export default function AppShell() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
-          <div className="max-w-7xl mx-auto w-full p-4 pb-28 md:p-8 md:pb-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth flex flex-col">
+          <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col min-h-0">
             <AnimatePresence mode="wait">
               <motion.div
                 key={pathname}
@@ -164,6 +168,7 @@ export default function AppShell() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2, ease: "easeInOut" }}
+                className="flex-1 flex flex-col min-h-0"
               >
                 <Outlet />
               </motion.div>

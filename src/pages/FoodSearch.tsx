@@ -11,7 +11,6 @@ import {
 } from "../types";
 import BarcodeScanner from "../components/BarcodeScanner";
 import FoodPhotoScanner from "../components/FoodPhotoScanner";
-import "../styles/barcode-scanner.css";
 
 /* ------------------------------------------------------------------ */
 /*  Barcode validation helpers                                         */
@@ -95,9 +94,11 @@ export default function LogFood() {
     notes: "",
   });
   const [photoLogged, setPhotoLogged] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   async function handleTextSearch() {
     if (!query.trim()) return;
+    setHasSearched(true);
     setLoading(true);
     setError(null);
     setConfirmProduct(null); // clear confirmation card on new search
@@ -131,6 +132,7 @@ export default function LogFood() {
 
   /** Shared barcode lookup — used by both manual entry and scanner. */
   async function lookupBarcode(code: string) {
+    setHasSearched(true);
     setLoading(true);
     setError(null);
     setBarcodeError(null);
@@ -399,7 +401,7 @@ export default function LogFood() {
   }
 
   return (
-    <div className="page-enter" style={{ display: "grid", gap: 14 }}>
+    <div className="page-enter p-4 pb-28 md:p-8 md:pb-8" style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: "1000px", margin: "0 auto", width: "100%" }}>
       {/* Meal type + date selector */}
       <div className="card pop-in" style={{ maxWidth: 900 }}>
         <div style={{ fontSize: 16, fontWeight: 600 }}>Log Food</div>
@@ -448,7 +450,7 @@ export default function LogFood() {
           <input
             id="food-search-input"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); setHasSearched(false); }}
             onKeyDown={(e) => handleKeyDown(e, handleTextSearch)}
             placeholder="Search food (e.g. banana, pizza, chicken breast)…"
             style={inputStyle}
@@ -471,7 +473,7 @@ export default function LogFood() {
                 id="barcode-input"
                 value={barcode}
                 onChange={(e) => {
-                  setBarcode(formatBarcodeInput(e.target.value));
+                  setBarcode(formatBarcodeInput(e.target.value)); setHasSearched(false);
                   setBarcodeError(null);
                   setBarcodeNotFound(null);
                 }}
@@ -600,7 +602,7 @@ export default function LogFood() {
       )}
 
       {photoEstimate && (
-        <div className="card confirm-card" style={{ maxWidth: 900 }}>
+        <div className="card border-emerald-500/40 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.1)] [animation:confirm-slide-up_0.3s_ease-out]" style={{ maxWidth: 900 }}>
           <div style={{ fontSize: 11, color: "var(--muted2)", fontWeight: 600, marginBottom: 10 }}>
             Food photo estimate · Source: USDA + vision estimate · Confidence {Math.round((photoEstimate.confidence || 0) * 100)}%
           </div>
@@ -665,16 +667,16 @@ export default function LogFood() {
             </label>
           </div>
 
-          <div className="confirm-card-actions">
+          <div className="flex items-center gap-2.5 mt-3.5 flex-wrap">
             <button
-              className="confirm-add-btn"
+              className="px-4 py-2 rounded-[10px] border border-emerald-500/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 text-white font-semibold text-sm hover:from-emerald-500/30 hover:to-emerald-500/15 disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer"
               onClick={handlePhotoLog}
               disabled={photoLogged}
             >
               {photoLogged ? "✓ Logged" : "📝 Add to Log"}
             </button>
             <button
-              className="confirm-cancel-btn"
+              className="px-3.5 py-2 rounded-[10px] border border-white/10 bg-white/5 text-white/60 text-sm cursor-pointer"
               onClick={() => {
                 setPhotoEstimate(null);
                 setPhotoLogged(false);
@@ -688,29 +690,29 @@ export default function LogFood() {
 
       {/* Confirmation card (after barcode scan/lookup) */}
       {confirmProduct && (
-        <div className="card confirm-card" style={{ maxWidth: 900 }}>
+        <div className="card border-emerald-500/40 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.1)] [animation:confirm-slide-up_0.3s_ease-out]" style={{ maxWidth: 900 }}>
           <div style={{ fontSize: 11, color: "var(--muted2)", fontWeight: 600, marginBottom: 10 }}>
             {scannedBarcode ? `Barcode: ${scannedBarcode}` : "Product Found"}
           </div>
 
-          <div className="confirm-card-header">
+          <div className="flex items-start gap-3.5">
             {confirmProduct.image_url && (
               <img
                 src={confirmProduct.image_url}
                 alt={confirmProduct.product_name}
-                className="confirm-card-img"
+                className="w-16 h-16 object-cover rounded-xl border border-white/10 shrink-0"
               />
             )}
-            <div className="confirm-card-info">
-              <div className="confirm-card-name">{confirmProduct.product_name}</div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-[15px]">{confirmProduct.product_name}</div>
               {confirmProduct.brands && (
-                <div className="confirm-card-brand">
+                <div className="text-xs text-white/40 mt-0.5">
                   {confirmProduct.brands}
                   {confirmProduct.categories ? ` · ${confirmProduct.categories}` : ""}
                 </div>
               )}
 
-              <div className="confirm-card-macros">
+              <div className="flex flex-wrap gap-1.5 mt-2.5">
                 <MacroBadge label="Cal" value={r(confirmProduct.calories_kcal)} unit="kcal" color="rgba(255,170,50,0.18)" />
                 <MacroBadge label="Protein" value={r(confirmProduct.protein_g)} unit="g" color="rgba(80,200,120,0.18)" />
                 <MacroBadge label="Carbs" value={r(confirmProduct.total_carbohydrate_g)} unit="g" color="rgba(100,149,237,0.18)" />
@@ -719,7 +721,7 @@ export default function LogFood() {
             </div>
           </div>
 
-          <div className="confirm-card-actions">
+          <div className="flex items-center gap-2.5 mt-3.5 flex-wrap">
             <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
               <label style={{ fontSize: 11, color: "var(--muted2)" }}>Qty:</label>
               <input
@@ -737,7 +739,7 @@ export default function LogFood() {
             </div>
 
             <button
-              className="confirm-add-btn"
+              className="px-4 py-2 rounded-[10px] border border-emerald-500/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 text-white font-semibold text-sm hover:from-emerald-500/30 hover:to-emerald-500/15 disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer"
               onClick={handleConfirmLog}
               disabled={confirmLogged || confirmLoading}
             >
@@ -745,13 +747,13 @@ export default function LogFood() {
             </button>
 
             <button
-              className="confirm-cancel-btn"
+              className="px-3.5 py-2 rounded-[10px] border border-white/10 bg-white/5 text-white/60 text-sm cursor-pointer"
               onClick={() => setConfirmProduct(null)}
             >
               Cancel
             </button>
 
-            <label className="confirm-save-label">
+            <label className="flex items-center gap-1.5 text-xs text-white/40 ml-auto cursor-pointer">
               <input
                 type="checkbox"
                 checked={confirmSaveToFoods}
@@ -792,7 +794,7 @@ export default function LogFood() {
             <button
               onClick={() => {
                 setBarcodeNotFound(null);
-                setBarcode("");
+                setBarcode(""); setHasSearched(false);
                 // Focus the search input
                 document.getElementById("food-search-input")?.focus();
               }}
@@ -826,7 +828,7 @@ export default function LogFood() {
 
       {/* Results */}
       {results.length > 0 && (
-        <div style={{ maxWidth: 900 }}>
+        <div className="w-full">
           <div style={{ fontSize: 13, color: "var(--muted2)", marginBottom: 10 }}>
             Top {results.length} results for "{query}"
           </div>
@@ -840,19 +842,21 @@ export default function LogFood() {
               return (
                 <div
                   key={`${product.barcode}-${i}`}
-                  className="card"
+                  className="card hover:border-white/20 transition-colors"
                   style={{
                     display: "grid",
-                    gridTemplateColumns: product.image_url ? "56px 1fr auto" : "1fr auto",
-                    gap: 14,
-                    alignItems: "start",
+                    gridTemplateColumns: product.image_url ? "64px 1fr auto" : "1fr auto",
+                    gap: 16,
+                    alignItems: "center",
+                    padding: "16px",
+                    marginBottom: "4px"
                   }}
                 >
                   {product.image_url && (
                     <img
                       src={product.image_url}
                       alt={product.product_name}
-                      style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 10, border: "1px solid var(--border)" }}
+                      style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 10, border: "1px solid var(--border)" }}
                     />
                   )}
 
@@ -905,7 +909,7 @@ export default function LogFood() {
         </div>
       )}
 
-      {!loading && results.length === 0 && !confirmProduct && (query || barcode) && !error && (
+      {!loading && hasSearched && results.length === 0 && !confirmProduct && !error && (
         <div className="card" style={{ maxWidth: 900 }}>
           <div style={{ color: "var(--muted2)", fontSize: 13 }}>
             No results found. Try a different search term or barcode.
@@ -918,7 +922,7 @@ export default function LogFood() {
 
 function MacroBadge({ label, value, unit, color }: { label: string; value: number; unit: string; color: string }) {
   return (
-    <span style={{ display: "inline-flex", alignItems: "baseline", gap: 4, padding: "4px 10px", borderRadius: 10, background: color, border: "1px solid rgba(255,255,255,0.08)", fontSize: 12 }}>
+    <span style={{ display: "inline-flex", alignItems: "baseline", gap: 4, padding: "6px 12px", borderRadius: 12, background: color, border: "1px solid rgba(255,255,255,0.12)", fontSize: 13, minWidth: "75px", justifyContent: "center" }}>
       <span style={{ color: "var(--muted2)" }}>{label}</span>
       <span style={{ fontWeight: 700 }}>{value}<span style={{ fontWeight: 400, fontSize: 10, marginLeft: 1 }}>{unit}</span></span>
     </span>
