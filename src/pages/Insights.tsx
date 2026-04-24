@@ -1,13 +1,20 @@
-// src/pages/Insights.tsx
-// Full analytics dashboard with charts, BMI, and health trajectory
-
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Barbell,
+  CalendarCheck,
+  ChartLineUp,
+  Flame,
+  Heart,
+  ShieldCheck,
+  TrendUp,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import ProfileSummaryCard from "../components/ProfileSummaryCard";
-import { loadEntriesRange, localDateString, loadEntriesByDate } from "../lib/foodLogStore";
+import { PremiumAreaChart } from "../components/charts/PremiumAreaChart";
+import { PremiumDonutChart } from "../components/charts/PremiumDonutChart";
+import { StackedProgressBar } from "../components/charts/StackedProgressBar";
+import { loadEntriesRange, localDateString } from "../lib/foodLogStore";
 import type { FoodEntry } from "../types/foodLog";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface DayData {
   date: string;
@@ -26,36 +33,65 @@ interface Targets {
   fatG: number;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 function getTargets(): Targets {
-  const goal = localStorage.getItem('nutrilog_goal') || 'maintenance';
-  let cal = 2000, pro = 75, carb = 250, fat = 65;
+  const goal = localStorage.getItem("nutrilog_goal") || "maintenance";
+  let cal = 2000;
+  let pro = 75;
+  let carb = 250;
+  let fat = 65;
+
   try {
-    const raw = localStorage.getItem('nutrilog.userProfile.v1');
+    const raw = localStorage.getItem("nutrilog.userProfile.v1");
     if (raw) {
       const p = JSON.parse(raw);
       const w = p.weightKg || 70;
-      const actMult: Record<string, number> = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9 };
+      const actMult: Record<string, number> = {
+        sedentary: 1.2,
+        light: 1.375,
+        moderate: 1.55,
+        active: 1.725,
+        very_active: 1.9,
+      };
       const mult = actMult[p.activityLevel] || 1.55;
-      const bmr = p.sex === 'male'
-        ? 10 * w + 6.25 * (p.heightCm || 170) - 5 * (p.age || 30) + 5
-        : 10 * w + 6.25 * (p.heightCm || 160) - 5 * (p.age || 30) - 161;
+      const bmr =
+        p.sex === "male"
+          ? 10 * w + 6.25 * (p.heightCm || 170) - 5 * (p.age || 30) + 5
+          : 10 * w + 6.25 * (p.heightCm || 160) - 5 * (p.age || 30) - 161;
       const tdee = bmr * mult;
-      if (goal === 'weight_loss') { cal = tdee - 400; pro = w * 1.4; }
-      else if (goal === 'muscle_gain') { cal = tdee + 300; pro = w * 1.8; }
-      else { cal = tdee; pro = w * 1.2; }
-      carb = (cal * 0.45) / 4; fat = (cal * 0.25) / 9;
+
+      if (goal === "weight_loss") {
+        cal = tdee - 400;
+        pro = w * 1.4;
+      } else if (goal === "muscle_gain") {
+        cal = tdee + 300;
+        pro = w * 1.8;
+      } else {
+        cal = tdee;
+        pro = w * 1.2;
+      }
+
+      carb = (cal * 0.45) / 4;
+      fat = (cal * 0.25) / 9;
     }
-  } catch { /* defaults */ }
-  return { calories: Math.round(cal), proteinG: Math.round(pro), carbsG: Math.round(carb), fatG: Math.round(fat) };
+  } catch {
+    // Keep defaults when local profile is unavailable.
+  }
+
+  return {
+    calories: Math.round(cal),
+    proteinG: Math.round(pro),
+    carbsG: Math.round(carb),
+    fatG: Math.round(fat),
+  };
 }
 
 function getProfile() {
   try {
-    const raw = localStorage.getItem('nutrilog.userProfile.v1');
+    const raw = localStorage.getItem("nutrilog.userProfile.v1");
     if (raw) return JSON.parse(raw);
-  } catch { /* */ }
+  } catch {
+    // noop
+  }
   return null;
 }
 
@@ -64,393 +100,207 @@ function computeBMI(weightKg: number, heightCm: number): number {
   return weightKg / (heightM * heightM);
 }
 
-function bmiCategory(bmi: number): { label: string; color: string } {
-  if (bmi < 18.5) return { label: 'Underweight', color: '#60a5fa' };
-  if (bmi < 25) return { label: 'Normal', color: '#10b981' };
-  if (bmi < 30) return { label: 'Overweight', color: '#fbbf24' };
-  return { label: 'Obese', color: '#ef4444' };
+function bmiCategory(bmi: number): { label: string; colorClass: string } {
+  if (bmi < 18.5) return { label: "Underweight", colorClass: "text-sky-300" };
+  if (bmi < 25) return { label: "Normal", colorClass: "text-emerald-300" };
+  if (bmi < 30) return { label: "Overweight", colorClass: "text-amber-300" };
+  return { label: "Obese", colorClass: "text-rose-300" };
 }
 
-// ── Chart Components ──────────────────────────────────────────────────────────
-
-function BarChart({ data, dataKey, targetValue, color, label, unit }: {
-  data: DayData[];
-  dataKey: keyof DayData;
-  targetValue: number;
-  color: string;
-  label: string;
-  unit: string;
-}) {
-  const maxVal = Math.max(...data.map(d => d[dataKey] as number), targetValue) * 1.15;
-
-  return (
-    <div className="card pop-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontSize: 14, fontWeight: 700 }}>{label}</span>
-        <span style={{ fontSize: 11, color: 'var(--muted2)' }}>Target: {targetValue}{unit}</span>
-      </div>
-      <svg viewBox="0 0 400 160" style={{ width: '100%', height: 160 }}>
-        {/* Target line */}
-        <line
-          x1="0" y1={140 - (targetValue / maxVal) * 130}
-          x2="400" y2={140 - (targetValue / maxVal) * 130}
-          stroke={color} strokeWidth="1" strokeDasharray="6,4" opacity="0.5"
-        />
-        {/* Bars */}
-        {data.map((d, i) => {
-          const val = d[dataKey] as number;
-          const h = (val / maxVal) * 130;
-          const x = i * (400 / data.length) + 8;
-          const w = (400 / data.length) - 16;
-          const overTarget = val > targetValue * 1.1;
-          const barColor = overTarget ? '#f97316' : color;
-          return (
-            <g key={i}>
-              <rect x={x} y={140 - h} width={w} height={h} rx="4" fill={barColor} opacity="0.75" />
-              <text x={x + w / 2} y={155} textAnchor="middle" fill="var(--muted2,#888)" fontSize="9">{d.label}</text>
-              {val > 0 && <text x={x + w / 2} y={140 - h - 4} textAnchor="middle" fill="var(--muted2,#888)" fontSize="8">{Math.round(val)}</text>}
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
-function MacroPieChart({ data }: { data: DayData[] }) {
-  const totP = data.reduce((s, d) => s + d.proteinG, 0);
-  const totC = data.reduce((s, d) => s + d.carbsG, 0);
-  const totF = data.reduce((s, d) => s + d.fatG, 0);
-  const total = totP + totC + totF;
-  if (total === 0) return null;
-
-  const pPct = totP / total;
-  const cPct = totC / total;
-  const fPct = totF / total;
-
-  // SVG donut
-  const r = 60, cx = 80, cy = 80;
-  const circumference = 2 * Math.PI * r;
-
-  const pLen = pPct * circumference;
-  const cLen = cPct * circumference;
-  const fLen = fPct * circumference;
-
-  const pOff = 0;
-  const cOff = -pLen;
-  const fOff = -(pLen + cLen);
-
-  return (
-    <div className="card pop-in">
-      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Macro Distribution (Weekly Avg)</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-        <svg viewBox="0 0 160 160" style={{ width: 120, height: 120 }}>
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="18" />
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#8b5cf6" strokeWidth="18"
-            strokeDasharray={`${pLen} ${circumference - pLen}`} strokeDashoffset={pOff}
-            transform={`rotate(-90 ${cx} ${cy})`} />
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#06b6d4" strokeWidth="18"
-            strokeDasharray={`${cLen} ${circumference - cLen}`} strokeDashoffset={cOff}
-            transform={`rotate(-90 ${cx} ${cy})`} />
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f59e0b" strokeWidth="18"
-            strokeDasharray={`${fLen} ${circumference - fLen}`} strokeDashoffset={fOff}
-            transform={`rotate(-90 ${cx} ${cy})`} />
-        </svg>
-        <div style={{ display: 'grid', gap: 8 }}>
-          <LegendItem color="#8b5cf6" label="Protein" value={`${Math.round(pPct * 100)}%`} sub={`${Math.round(totP / data.length)}g/day`} />
-          <LegendItem color="#06b6d4" label="Carbs" value={`${Math.round(cPct * 100)}%`} sub={`${Math.round(totC / data.length)}g/day`} />
-          <LegendItem color="#f59e0b" label="Fat" value={`${Math.round(fPct * 100)}%`} sub={`${Math.round(totF / data.length)}g/day`} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LegendItem({ color, label, value, sub }: { color: string; label: string; value: string; sub: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ width: 10, height: 10, borderRadius: '50%', background: color }} />
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 600 }}>{label}: {value}</div>
-        <div style={{ fontSize: 10, color: 'var(--muted2)' }}>{sub}</div>
-      </div>
-    </div>
-  );
-}
-
-function BMICard() {
-  const profile = getProfile();
-  if (!profile || !profile.weightKg || !profile.heightCm) {
-    return (
-      <div className="card pop-in">
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Body Metrics</div>
-        <div style={{ fontSize: 12, color: 'var(--muted2)' }}>Set up your profile to see BMI calculations.</div>
-      </div>
-    );
-  }
-
-  const bmi = computeBMI(profile.weightKg, profile.heightCm);
-  const cat = bmiCategory(bmi);
-  const heightM = profile.heightCm / 100;
-  const idealMin = 18.5 * heightM * heightM;
-  const idealMax = 24.9 * heightM * heightM;
-
-  // BMI scale visualization (15 to 40)
-  const scaleMin = 15, scaleMax = 40;
-  const pct = ((bmi - scaleMin) / (scaleMax - scaleMin)) * 100;
-
-  return (
-    <div className="card pop-in">
-      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Body Metrics</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-        <div style={metricBoxStyle}>
-          <div style={{ fontSize: 24, fontWeight: 800, color: cat.color }}>{bmi.toFixed(1)}</div>
-          <div style={{ fontSize: 10, color: 'var(--muted2)' }}>BMI</div>
-          <div style={{ fontSize: 11, color: cat.color, fontWeight: 600, marginTop: 2 }}>{cat.label}</div>
-        </div>
-        <div style={metricBoxStyle}>
-          <div style={{ fontSize: 16, fontWeight: 700 }}>{profile.weightKg}<span style={{ fontSize: 11, color: 'var(--muted2)' }}> kg</span></div>
-          <div style={{ fontSize: 10, color: 'var(--muted2)', marginTop: 2 }}>Current Weight</div>
-          <div style={{ fontSize: 10, color: 'var(--muted2)', marginTop: 4 }}>Ideal: {idealMin.toFixed(0)}–{idealMax.toFixed(0)} kg</div>
-        </div>
-      </div>
-      {/* BMI Scale Bar */}
-      <div style={{ fontSize: 10, color: 'var(--muted2)', marginBottom: 4 }}>BMI Scale</div>
-      <div style={{ position: 'relative', height: 18, borderRadius: 9, overflow: 'hidden', background: 'linear-gradient(90deg, #60a5fa 0%, #10b981 28%, #10b981 40%, #fbbf24 60%, #ef4444 100%)' }}>
-        <div style={{
-          position: 'absolute',
-          left: `calc(${Math.min(Math.max(pct, 2), 98)}% - 6px)`,
-          top: 1, width: 12, height: 16, borderRadius: 4,
-          background: '#fff', border: '2px solid #111',
-          transition: 'left 0.5s ease',
-        }} />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--muted2)', marginTop: 2 }}>
-        <span>15</span><span>18.5</span><span>25</span><span>30</span><span>40</span>
-      </div>
-    </div>
-  );
-}
-
-function ConsistencyCard({ data }: { data: DayData[] }) {
-  const daysWithFood = data.filter(d => d.entryCount > 0).length;
-  const totalDays = data.length;
-  const pct = totalDays > 0 ? (daysWithFood / totalDays) * 100 : 0;
-  const avgCal = totalDays > 0 ? data.reduce((s, d) => s + d.calories, 0) / totalDays : 0;
-  const targets = getTargets();
-
-  // Streak (from most recent day backwards)
-  let streak = 0;
-  for (let i = data.length - 1; i >= 0; i--) {
-    if (data[i].entryCount > 0) streak++;
-    else break;
-  }
-
-  return (
-    <div className="card pop-in">
-      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Consistency & Trends</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-        <div style={metricBoxStyle}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: pct >= 80 ? '#10b981' : pct >= 50 ? '#fbbf24' : '#ef4444' }}>{Math.round(pct)}%</div>
-          <div style={{ fontSize: 10, color: 'var(--muted2)' }}>Days Logged</div>
-        </div>
-        <div style={metricBoxStyle}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: 'rgba(124,92,255,0.9)' }}>{streak}</div>
-          <div style={{ fontSize: 10, color: 'var(--muted2)' }}>Current Streak</div>
-        </div>
-        <div style={metricBoxStyle}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: avgCal <= targets.calories * 1.1 ? '#10b981' : '#f97316' }}>{Math.round(avgCal)}</div>
-          <div style={{ fontSize: 10, color: 'var(--muted2)' }}>Avg Cal/Day</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Proactive Health Nudge ────────────────────────────────────────────────────
-
-interface NudgeAlert {
-  type: 'warning' | 'danger';
-  emoji: string;
+function BentoCard({
+  title,
+  subtitle,
+  icon,
+  children,
+}: {
   title: string;
-  message: string;
-}
-
-function HealthNudge() {
-  const [alerts, setAlerts] = useState<NudgeAlert[]>([]);
-  const [dismissed, setDismissed] = useState(() => {
-    return !!sessionStorage.getItem(`nutrilog_nudge_${localDateString()}`);
-  });
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (dismissed) return;
-
-    async function analyze() {
-      const targets = getTargets();
-      const nudges: NudgeAlert[] = [];
-      const recentDays: { date: string; calories: number; proteinG: number; logged: boolean }[] = [];
-
-      for (let i = 1; i <= 3; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = localDateString(d);
-        const entries = await loadEntriesByDate(dateStr);
-        const cals = entries.reduce((s, e) => s + e.calories, 0);
-        const pro = entries.reduce((s, e) => s + e.proteinG, 0);
-        recentDays.push({ date: dateStr, calories: cals, proteinG: pro, logged: entries.length > 0 });
-      }
-
-      const overCalDays = recentDays.filter(d => d.logged && d.calories > targets.calories * 1.15);
-      if (overCalDays.length >= 2) {
-        nudges.push({
-          type: 'danger', emoji: '⚠️', title: 'Calorie Trend Alert',
-          message: `You've exceeded your calorie target by 15%+ for ${overCalDays.length} of the last 3 days. Consider lighter meals today.`,
-        });
-      }
-
-      const lowProDays = recentDays.filter(d => d.logged && d.proteinG < targets.proteinG * 0.5);
-      if (lowProDays.length >= 2) {
-        nudges.push({
-          type: 'warning', emoji: '🥩', title: 'Low Protein Alert',
-          message: `Protein has been below 50% of target for ${lowProDays.length} days. Add eggs, chicken, or Greek yogurt.`,
-        });
-      }
-
-      const unloggedDays = recentDays.filter(d => !d.logged);
-      if (unloggedDays.length >= 2) {
-        nudges.push({
-          type: 'warning', emoji: '📝', title: 'Logging Gap Detected',
-          message: `You haven't logged meals for ${unloggedDays.length} of the last 3 days. Consistent tracking is key!`,
-        });
-      }
-
-      const underEatDays = recentDays.filter(d => d.logged && d.calories > 0 && d.calories < targets.calories * 0.4);
-      if (underEatDays.length >= 2) {
-        nudges.push({
-          type: 'danger', emoji: '🔻', title: 'Under-Eating Alert',
-          message: `Intake below 40% of target for ${underEatDays.length} days. Severe restriction can harm metabolism.`,
-        });
-      }
-
-      setAlerts(nudges);
-    }
-    analyze();
-  }, [dismissed]);
-
-  function handleDismiss() {
-    setDismissed(true);
-    sessionStorage.setItem(`nutrilog_nudge_${localDateString()}`, '1');
-  }
-
-  if (dismissed || alerts.length === 0) return null;
-
+  subtitle?: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <div style={{
-      border: alerts[0].type === 'danger' ? '1px solid rgba(239,68,68,0.35)' : '1px solid rgba(251,191,36,0.35)',
-      background: alerts[0].type === 'danger' ? 'rgba(239,68,68,0.06)' : 'rgba(251,191,36,0.06)',
-      borderRadius: 14, padding: '14px 16px',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 20 }}>🤖</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: alerts[0].type === 'danger' ? '#ef4444' : '#fbbf24' }}>AI Health Nudge</span>
+    <section className="rounded-3xl border border-white/5 bg-zinc-900/90 p-5 md:p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <header className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.16em] text-white/45">Insights</div>
+          <h3 className="mt-1 text-base font-semibold tracking-tight text-white">{title}</h3>
+          {subtitle ? <p className="mt-1 text-xs text-white/50">{subtitle}</p> : null}
         </div>
-        <button onClick={handleDismiss} style={{ background: 'none', border: 'none', color: 'var(--muted2)', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}>✕</button>
-      </div>
-      <div style={{ display: 'grid', gap: 10 }}>
-        {alerts.map((a, i) => (
-          <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-            <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{a.emoji}</span>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 2 }}>{a.title}</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>{a.message}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-      <button onClick={() => navigate('/ai')} style={{
-        marginTop: 10, width: '100%', padding: '8px 12px', borderRadius: 8,
-        border: '1px solid rgba(124,92,255,0.3)', background: 'rgba(124,92,255,0.12)',
-        color: 'rgba(124,92,255,0.95)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-      }}>
-        💬 Get AI Advice →
-      </button>
-    </div>
+        {icon ? <div className="rounded-2xl border border-white/10 bg-white/5 p-2.5 text-white/75">{icon}</div> : null}
+      </header>
+      {children}
+    </section>
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+function HealthNudgeCard({ data, targets }: { data: DayData[]; targets: Targets }) {
+  const recent = data.slice(-3);
+  const overCalorieDays = recent.filter((day) => day.entryCount > 0 && day.calories > targets.calories * 1.15).length;
+  const lowProteinDays = recent.filter((day) => day.entryCount > 0 && day.proteinG < targets.proteinG * 0.5).length;
+  const missingLogDays = recent.filter((day) => day.entryCount === 0).length;
+
+  const alertMessage =
+    overCalorieDays >= 2
+      ? "Calorie intake has been above target for most of the last 3 days."
+      : lowProteinDays >= 2
+        ? "Protein has been too low recently. Add one high-protein meal tomorrow."
+        : missingLogDays >= 2
+          ? "Logging consistency dropped over the last 3 days."
+          : "You are maintaining steady nutrition patterns this week.";
+
+  const toneClass =
+    overCalorieDays >= 2
+      ? "border-rose-300/25 bg-rose-300/8"
+      : lowProteinDays >= 2 || missingLogDays >= 2
+        ? "border-amber-300/25 bg-amber-300/8"
+        : "border-emerald-300/25 bg-emerald-300/8";
+
+  return (
+    <div className={`rounded-2xl border px-4 py-3 ${toneClass}`}>
+      <div className="flex items-start gap-2.5">
+        <WarningCircle size={18} weight="duotone" className="mt-0.5 text-white/80" />
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-white/65">Health Nudge</div>
+          <p className="mt-1 text-sm text-white/85">{alertMessage}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Insights() {
-  const [range, setRange] = useState<7 | 14 | 30>(7);
+  const [range, setRange] = useState<7 | 14 | 30>(30);
   const [dayData, setDayData] = useState<DayData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
+
       const endStr = localDateString();
       const startD = new Date();
       startD.setDate(startD.getDate() - (range - 1));
       const startStr = localDateString(startD);
-
       const rangeData = await loadEntriesRange(startStr, endStr);
-      console.log('[Insights] Range:', startStr, '→', endStr, 'Keys:', Object.keys(rangeData));
-      const days: DayData[] = [];
 
-      // Iterate using local-midnight dates to avoid timezone drift
-      const cur = new Date(startStr + "T12:00:00"); // noon to avoid DST edge
-      const endD = new Date(endStr + "T12:00:00");
+      const days: DayData[] = [];
+      const cur = new Date(`${startStr}T12:00:00`);
+      const endD = new Date(`${endStr}T12:00:00`);
+
       while (cur <= endD) {
         const dateStr = localDateString(cur);
-        const entries = rangeData[dateStr] || [];
-        if (entries.length > 0) {
-          console.log(`[Insights] ${dateStr}: ${entries.length} entries, cals:`, entries.reduce((s: number, e: FoodEntry) => s + e.calories, 0));
-        }
+        const entries: FoodEntry[] = rangeData[dateStr] || [];
         days.push({
           date: dateStr,
-          label: cur.toLocaleDateString('en-US', { weekday: 'narrow', day: 'numeric' }),
-          calories: entries.reduce((s: number, e: FoodEntry) => s + e.calories, 0),
-          proteinG: entries.reduce((s: number, e: FoodEntry) => s + e.proteinG, 0),
-          carbsG: entries.reduce((s: number, e: FoodEntry) => s + e.carbsG, 0),
-          fatG: entries.reduce((s: number, e: FoodEntry) => s + e.fatG, 0),
+          label: cur.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          calories: entries.reduce((sum, e) => sum + e.calories, 0),
+          proteinG: entries.reduce((sum, e) => sum + e.proteinG, 0),
+          carbsG: entries.reduce((sum, e) => sum + e.carbsG, 0),
+          fatG: entries.reduce((sum, e) => sum + e.fatG, 0),
           entryCount: entries.length,
         });
         cur.setDate(cur.getDate() + 1);
       }
 
-      console.log('[Insights] Final day data:', days.filter(d => d.entryCount > 0));
       setDayData(days);
       setLoading(false);
     }
+
     load();
   }, [range]);
 
-  const targets = getTargets();
+  const targets = useMemo(() => getTargets(), []);
+
+  const stats = useMemo(() => {
+    const totalDays = dayData.length || 1;
+    const loggedDays = dayData.filter((d) => d.entryCount > 0).length;
+    const avgCalories = dayData.reduce((sum, d) => sum + d.calories, 0) / totalDays;
+    const avgProtein = dayData.reduce((sum, d) => sum + d.proteinG, 0) / totalDays;
+    const avgCarbs = dayData.reduce((sum, d) => sum + d.carbsG, 0) / totalDays;
+    const avgFat = dayData.reduce((sum, d) => sum + d.fatG, 0) / totalDays;
+
+    let streak = 0;
+    for (let i = dayData.length - 1; i >= 0; i -= 1) {
+      if (dayData[i].entryCount > 0) streak += 1;
+      else break;
+    }
+
+    return {
+      loggedPct: Math.round((loggedDays / totalDays) * 100),
+      streak,
+      avgCalories,
+      avgProtein,
+      avgCarbs,
+      avgFat,
+    };
+  }, [dayData]);
+
+  const calorieAreaData = useMemo(
+    () => dayData.map((d) => ({ date: d.label, value: Math.round(d.calories) })),
+    [dayData],
+  );
+
+  const donutData = useMemo(
+    () => [
+      { name: "Protein", value: stats.avgProtein, color: "#8b5cf6" },
+      { name: "Carbs", value: stats.avgCarbs, color: "#60a5fa" },
+      { name: "Fat", value: stats.avgFat, color: "#f59e0b" },
+    ],
+    [stats.avgProtein, stats.avgCarbs, stats.avgFat],
+  );
+
+  const progressData = useMemo(
+    () => [
+      { name: "Calories", actual: stats.avgCalories, target: targets.calories, color: "#fb7185", unit: "kcal" },
+      { name: "Protein", actual: stats.avgProtein, target: targets.proteinG, color: "#8b5cf6", unit: "g" },
+      { name: "Carbs", actual: stats.avgCarbs, target: targets.carbsG, color: "#60a5fa", unit: "g" },
+      { name: "Fat", actual: stats.avgFat, target: targets.fatG, color: "#f59e0b", unit: "g" },
+    ],
+    [stats.avgCalories, stats.avgProtein, stats.avgCarbs, stats.avgFat, targets],
+  );
+
+  const bmiMeta = useMemo(() => {
+    const profile = getProfile();
+    if (!profile?.weightKg || !profile?.heightCm) return null;
+    const bmi = computeBMI(profile.weightKg, profile.heightCm);
+    return {
+      bmi,
+      category: bmiCategory(bmi),
+      weightKg: profile.weightKg,
+      heightCm: profile.heightCm,
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="page-enter flex h-full items-center justify-center px-4 pb-28 pt-5 md:px-8 md:pb-8">
+        <div className="rounded-3xl border border-white/5 bg-zinc-900/80 px-6 py-5 text-sm text-white/60">Loading insights dashboard...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="page-enter p-4 pb-28 md:p-8 md:pb-8" style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: "1000px", margin: "0 auto", width: "100%" }}>
+    <div className="page-enter mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-28 pt-5 md:gap-5 md:px-8 md:pb-8 md:pt-6">
       <div className="pop-in">
         <ProfileSummaryCard />
       </div>
 
-      <HealthNudge />
-
-      {/* Header with range selector */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontWeight: 700, fontSize: 18 }}>📈 Nutrition Insights</div>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {([7, 14, 30] as const).map(r => (
+      <div className="pop-in flex items-center justify-between gap-3 rounded-3xl border border-white/5 bg-zinc-900/85 px-4 py-3.5 md:px-5 md:py-4">
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.16em] text-white/45">Nutrition Cockpit</div>
+          <h2 className="mt-1 text-xl font-semibold tracking-tight text-white">Performance Overview</h2>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 p-1">
+          {([7, 14, 30] as const).map((r) => (
             <button
               key={r}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                range === r
+                  ? "bg-white text-zinc-900"
+                  : "text-white/65 hover:bg-white/10 hover:text-white"
+              }`}
               onClick={() => setRange(r)}
-              style={{
-                padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                border: range === r ? '1px solid rgba(124,92,255,0.5)' : '1px solid var(--border,rgba(255,255,255,0.08))',
-                background: range === r ? 'rgba(124,92,255,0.2)' : 'rgba(255,255,255,0.04)',
-                color: range === r ? 'rgba(124,92,255,0.95)' : 'var(--muted2,#888)',
-              }}
+              type="button"
             >
               {r}d
             </button>
@@ -458,43 +308,92 @@ export default function Insights() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="card pop-in">
-          <div style={{ color: 'var(--muted)', fontSize: 13 }}>Loading insights…</div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <div className="rounded-3xl border border-white/5 bg-zinc-900/88 p-4">
+          <div className="flex items-center gap-2 text-white/55"><CalendarCheck size={16} weight="duotone" /> Consistency</div>
+          <div className="mt-2 font-mono text-3xl font-semibold text-white">{stats.loggedPct}%</div>
+          <div className="mt-1 text-xs text-white/45">days logged</div>
         </div>
-      ) : (
-        <>
-          {/* BMI & Body Metrics */}
-          <BMICard />
+        <div className="rounded-3xl border border-white/5 bg-zinc-900/88 p-4">
+          <div className="flex items-center gap-2 text-white/55"><Flame size={16} weight="duotone" /> Active Streak</div>
+          <div className="mt-2 font-mono text-3xl font-semibold text-white">{stats.streak}</div>
+          <div className="mt-1 text-xs text-white/45">consecutive days</div>
+        </div>
+        <div className="rounded-3xl border border-white/5 bg-zinc-900/88 p-4">
+          <div className="flex items-center gap-2 text-white/55"><TrendUp size={16} weight="duotone" /> Avg Calories</div>
+          <div className="mt-2 font-mono text-3xl font-semibold text-white">{Math.round(stats.avgCalories)}</div>
+          <div className="mt-1 text-xs text-white/45">kcal / day</div>
+        </div>
+        <div className="rounded-3xl border border-white/5 bg-zinc-900/88 p-4">
+          <div className="flex items-center gap-2 text-white/55"><ChartLineUp size={16} weight="duotone" /> Target Match</div>
+          <div className="mt-2 font-mono text-3xl font-semibold text-white">
+            {Math.round((Math.min(stats.avgCalories / Math.max(targets.calories, 1), 1.25) / 1.25) * 100)}%
+          </div>
+          <div className="mt-1 text-xs text-white/45">calorie alignment</div>
+        </div>
+      </div>
 
-          {/* Consistency */}
-          <ConsistencyCard data={dayData} />
+      <BentoCard
+        title="Calorie Trend"
+        subtitle={`Rolling ${range}-day view mapped to your daily intake`}
+        icon={<TrendUp size={18} weight="duotone" />}
+      >
+        <PremiumAreaChart
+          data={calorieAreaData}
+          color="#f472b6"
+          gradientColor="#fb7185"
+          height={220}
+          valueFormatter={(v) => `${Math.round(v)} kcal`}
+        />
+      </BentoCard>
 
-          {/* Calorie Chart */}
-          <BarChart data={dayData} dataKey="calories" targetValue={targets.calories} color="#8b5cf6" label="Daily Calories" unit=" kcal" />
+      <div className="grid gap-4 md:grid-cols-2 md:gap-5">
+        <BentoCard
+          title="Macro Distribution"
+          subtitle="Average macro split during selected window"
+          icon={<Barbell size={18} weight="duotone" />}
+        >
+          <div className="h-[250px]">
+            <PremiumDonutChart data={donutData} />
+          </div>
+        </BentoCard>
 
-          {/* Protein Chart */}
-          <BarChart data={dayData} dataKey="proteinG" targetValue={targets.proteinG} color="#10b981" label="Daily Protein" unit="g" />
+        <BentoCard
+          title="Goal Fulfillment"
+          subtitle="Average intake vs personalized targets"
+          icon={<ShieldCheck size={18} weight="duotone" />}
+        >
+          <div className="h-[250px]">
+            <StackedProgressBar data={progressData} />
+          </div>
+        </BentoCard>
+      </div>
 
-          {/* Macro Distribution Pie */}
-          <MacroPieChart data={dayData} />
+      {bmiMeta ? (
+        <BentoCard title="Body Metrics" subtitle="Profile-based baseline checks" icon={<Heart size={18} weight="duotone" />}>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/8 bg-white/5 p-3.5">
+              <div className="text-[11px] uppercase tracking-[0.14em] text-white/45">BMI</div>
+              <div className="mt-1.5 font-mono text-3xl text-white">{bmiMeta.bmi.toFixed(1)}</div>
+              <div className={`mt-1 text-sm font-semibold ${bmiMeta.category.colorClass}`}>{bmiMeta.category.label}</div>
+            </div>
+            <div className="rounded-2xl border border-white/8 bg-white/5 p-3.5">
+              <div className="text-[11px] uppercase tracking-[0.14em] text-white/45">Weight</div>
+              <div className="mt-1.5 font-mono text-3xl text-white">{bmiMeta.weightKg.toFixed(1)}</div>
+              <div className="mt-1 text-sm text-white/55">kg</div>
+            </div>
+            <div className="rounded-2xl border border-white/8 bg-white/5 p-3.5">
+              <div className="text-[11px] uppercase tracking-[0.14em] text-white/45">Height</div>
+              <div className="mt-1.5 font-mono text-3xl text-white">{Math.round(bmiMeta.heightCm)}</div>
+              <div className="mt-1 text-sm text-white/55">cm</div>
+            </div>
+          </div>
+        </BentoCard>
+      ) : null}
 
-          {/* Carbs Chart */}
-          <BarChart data={dayData} dataKey="carbsG" targetValue={targets.carbsG} color="#06b6d4" label="Daily Carbs" unit="g" />
+      <HealthNudgeCard data={dayData} targets={targets} />
 
-          {/* Fat Chart */}
-          <BarChart data={dayData} dataKey="fatG" targetValue={targets.fatG} color="#f59e0b" label="Daily Fat" unit="g" />
-        </>
-      )}
+      <div className="h-4" />
     </div>
   );
 }
-
-// ── Styles ─────────────────────────────────────────────────────────────────────
-
-const metricBoxStyle: React.CSSProperties = {
-  background: 'rgba(0,0,0,0.2)',
-  borderRadius: 10,
-  padding: '10px 12px',
-  textAlign: 'center',
-};
