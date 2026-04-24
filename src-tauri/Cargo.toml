@@ -44,3 +44,6 @@ machine-uid = "0.5"
 block2 = "0.6"
 objc2 = "0.6"
 objc2-av-foundation = { version = "0.3.2", features = ["AVCaptureDevice", "AVMediaFormat", "block2"] }
+
+[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
+tauri-plugin-barcode-scanner = "2"

@@ -1,13 +1,12 @@
 #[cfg(target_os = "macos")]
 pub fn ensure_camera_permission() -> Result<String, String> {
-    use objc2_av_foundation::{
-        AVCaptureDevice, AVAuthorizationStatus, AVMediaTypeVideo,
-    };
+    use objc2_av_foundation::{AVAuthorizationStatus, AVCaptureDevice, AVMediaTypeVideo};
     use std::sync::mpsc;
     use std::time::Duration;
 
     let media_type = unsafe {
-        AVMediaTypeVideo.ok_or_else(|| "Camera media type is unavailable on this macOS runtime.".to_string())?
+        AVMediaTypeVideo
+            .ok_or_else(|| "Camera media type is unavailable on this macOS runtime.".to_string())?
     };
 
     let status = unsafe { AVCaptureDevice::authorizationStatusForMediaType(media_type) };

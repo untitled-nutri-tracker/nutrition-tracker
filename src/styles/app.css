@@ -634,9 +634,10 @@ a{ color: inherit; }
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 6px 4px;
-    gap: 2px;
+    padding: 8px 4px;
+    gap: 4px;
     border-radius: 10px;
+    min-height: 48px;
   }
 
   .navLabel {

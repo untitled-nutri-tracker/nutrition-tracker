@@ -1109,7 +1109,7 @@
 
   .ai-history-action-btn {
     flex: 1 1 auto;
-    min-height: 30px;
+    min-height: 44px;
   }
 
   .ai-history-rename-row {
@@ -1139,12 +1139,14 @@
   .ai-advisor-quick-btn {
     flex: 1 1 auto;
     font-size: 11px;
-    padding: 8px 10px;
+    padding: 12px 10px;
     text-align: center;
+    min-height: 44px;
   }
 
   .ai-advisor-send-btn {
-    padding: 10px 14px;
+    padding: 12px 16px;
+    min-height: 44px;
   }
 
   .ai-widget-chart-title {

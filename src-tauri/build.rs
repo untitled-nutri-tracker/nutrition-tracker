@@ -1,11 +1,11 @@
-use tauri_typegen::{GenerateConfig, generate_from_config};
+use tauri_typegen::{generate_from_config, GenerateConfig};
 
 fn generate_bindings() {
     let config = GenerateConfig {
         project_path: Vec::from([
             ".".to_string(),
             "../src-rust-crates/database".to_string(),
-            "../src-rust-crates/model".to_string()
+            "../src-rust-crates/model".to_string(),
         ]),
         output_path: "../src/generated/".to_string(),
         validation_library: "none".to_string(),
@@ -20,8 +20,7 @@ fn generate_bindings() {
         force: None,
     };
 
-    let _files = generate_from_config(&config)
-        .expect("failed to generate bindings");
+    let _files = generate_from_config(&config).expect("failed to generate bindings");
 }
 
 fn main() {

@@ -54,7 +54,9 @@ pub async fn analyze(
 ) -> Result<PhotoFoodEstimate, String> {
     validate_image_input(&image_base64, &mime_type)?;
 
-    let provider = vision_provider.unwrap_or_else(|| "ollama".to_string()).to_lowercase();
+    let provider = vision_provider
+        .unwrap_or_else(|| "ollama".to_string())
+        .to_lowercase();
     if provider != "ollama" && !allow_cloud {
         return Err(
             "Cloud photo analysis is disabled. Enable photo-scan cloud opt-in before sending images to a cloud provider."
@@ -85,7 +87,9 @@ pub async fn analyze(
     };
 
     if result.food_name.is_empty() {
-        return Err("The food photo could not be identified. Try a clearer single-item photo.".into());
+        return Err(
+            "The food photo could not be identified. Try a clearer single-item photo.".into(),
+        );
     }
 
     match lookup_usda_macros(&client, &result.food_name).await {
@@ -98,7 +102,8 @@ pub async fn analyze(
             result.carbs_g = round1(macros.carbs_per_100g * factor);
             result.fat_g = round1(macros.fat_per_100g * factor);
             if result.notes.is_empty() {
-                result.notes = "Estimated from photo; nutrition matched through USDA FoodData Central.".into();
+                result.notes =
+                    "Estimated from photo; nutrition matched through USDA FoodData Central.".into();
             }
         }
         Ok(None) => {
@@ -136,7 +141,10 @@ fn validate_image_input(image_base64: &str, mime_type: &str) -> Result<(), Strin
     Ok(())
 }
 
-async fn analyze_with_ollama(client: &Client, image_base64: &str) -> Result<VisionEstimate, String> {
+async fn analyze_with_ollama(
+    client: &Client,
+    image_base64: &str,
+) -> Result<VisionEstimate, String> {
     let endpoint = CredentialManager::global()
         .retrieve(credentials::providers::OLLAMA_ENDPOINT)
         .unwrap_or_else(|_| "http://localhost:11434".to_string());
@@ -319,16 +327,14 @@ async fn post_json(
     if let Some((header, value)) = auth_header {
         req = req.header(header, value);
     }
-    let res = req
-        .send()
-        .await
-        .map_err(|e| {
-            if provider_name == "Google Gemini" {
-                "Google Gemini photo analysis failed. Check your network connection and API key.".to_string()
-            } else {
-                format!("{provider_name} photo analysis failed: {e}")
-            }
-        })?;
+    let res = req.send().await.map_err(|e| {
+        if provider_name == "Google Gemini" {
+            "Google Gemini photo analysis failed. Check your network connection and API key."
+                .to_string()
+        } else {
+            format!("{provider_name} photo analysis failed: {e}")
+        }
+    })?;
     let status = res.status();
     let json: Value = res
         .json()
@@ -340,9 +346,7 @@ async fn post_json(
             .or_else(|| json["error"].as_str())
             .or_else(|| json["message"].as_str())
             .unwrap_or("Unknown error");
-        return Err(format!(
-            "{provider_name} error ({status}): {err_msg}"
-        ));
+        return Err(format!("{provider_name} error ({status}): {err_msg}"));
     }
     Ok(json)
 }
@@ -440,7 +444,10 @@ fn macros_from_usda_food(food: &Value) -> Option<UsdaMacros> {
 
     Some(UsdaMacros {
         fdc_id: food["fdcId"].as_i64().unwrap_or(0),
-        description: food["description"].as_str().unwrap_or("USDA food").to_string(),
+        description: food["description"]
+            .as_str()
+            .unwrap_or("USDA food")
+            .to_string(),
         calories_per_100g: calories,
         protein_per_100g: protein,
         carbs_per_100g: carbs,
@@ -451,7 +458,10 @@ fn macros_from_usda_food(food: &Value) -> Option<UsdaMacros> {
 fn find_nutrient(nutrients: &[Value], names: &[&str]) -> Option<f32> {
     for nutrient in nutrients {
         let name = nutrient["nutrientName"].as_str().unwrap_or("");
-        if names.iter().any(|candidate| name.eq_ignore_ascii_case(candidate)) {
+        if names
+            .iter()
+            .any(|candidate| name.eq_ignore_ascii_case(candidate))
+        {
             return nutrient["value"].as_f64().map(|v| v as f32);
         }
     }

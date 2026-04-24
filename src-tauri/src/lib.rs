@@ -1,8 +1,8 @@
 pub mod ai_config;
 pub mod api;
+pub mod camera_permission;
 pub mod credentials;
 pub mod network_config;
-pub mod camera_permission;
 pub mod utils;
 
 use api::ai::{self, AiResponse, ChatMessage};
@@ -99,13 +99,14 @@ async fn get_ai_advice(
 
     // Send to the selected LLM provider
     ai::ask_llm(
-        &nlog_data, 
-        &question, 
-        history.unwrap_or_default(), 
-        &llm_provider, 
+        &nlog_data,
+        &question,
+        history.unwrap_or_default(),
+        &llm_provider,
         &resolved_model,
-        &memories_str
-    ).await
+        &memories_str,
+    )
+    .await
 }
 
 /// Analyze a single food photo with a vision model, then enrich with USDA nutrition.
@@ -128,6 +129,7 @@ fn ensure_camera_permission() -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_barcode_scanner::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {

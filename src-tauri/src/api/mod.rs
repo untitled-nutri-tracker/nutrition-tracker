@@ -1,3 +1,4 @@
+pub mod ai;
 /// The `api` module contains all external HTTP client logic.
 ///
 /// ## Adding a new external API
@@ -8,5 +9,4 @@
 ///
 /// See [`openfoodfacts`] for a reference implementation.
 pub mod openfoodfacts;
-pub mod ai;
 pub mod photo_food;

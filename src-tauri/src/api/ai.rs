@@ -142,7 +142,7 @@ pub async fn ask_llm(
     // Pre-compute totals from .nlog data so the LLM doesn't hallucinate math
     let summary = compute_summary(nlog_data);
     let markdown_data = format_nlog_to_markdown(nlog_data);
-    
+
     let mut system_prompt = SYSTEM_PROMPT.to_string();
     if !memories_context.trim().is_empty() {
         system_prompt.push_str("\n\n=== USER STATUS CONTEXT & KEY MEMORIES ===\n");
@@ -175,11 +175,56 @@ pub async fn ask_llm(
         };
 
         let response = match provider {
-            LlmProvider::Ollama => ask_ollama(&markdown_data, &prompt, current_history.clone(), model, &system_prompt).await,
-            LlmProvider::OpenAi => ask_openai(&markdown_data, &prompt, current_history.clone(), model, &system_prompt).await,
-            LlmProvider::Anthropic => ask_anthropic(&markdown_data, &prompt, current_history.clone(), model, &system_prompt).await,
-            LlmProvider::Google => ask_google(&markdown_data, &prompt, current_history.clone(), model, &system_prompt).await,
-            LlmProvider::Custom => ask_custom(&markdown_data, &prompt, current_history.clone(), model, &system_prompt).await,
+            LlmProvider::Ollama => {
+                ask_ollama(
+                    &markdown_data,
+                    &prompt,
+                    current_history.clone(),
+                    model,
+                    &system_prompt,
+                )
+                .await
+            }
+            LlmProvider::OpenAi => {
+                ask_openai(
+                    &markdown_data,
+                    &prompt,
+                    current_history.clone(),
+                    model,
+                    &system_prompt,
+                )
+                .await
+            }
+            LlmProvider::Anthropic => {
+                ask_anthropic(
+                    &markdown_data,
+                    &prompt,
+                    current_history.clone(),
+                    model,
+                    &system_prompt,
+                )
+                .await
+            }
+            LlmProvider::Google => {
+                ask_google(
+                    &markdown_data,
+                    &prompt,
+                    current_history.clone(),
+                    model,
+                    &system_prompt,
+                )
+                .await
+            }
+            LlmProvider::Custom => {
+                ask_custom(
+                    &markdown_data,
+                    &prompt,
+                    current_history.clone(),
+                    model,
+                    &system_prompt,
+                )
+                .await
+            }
         }?;
 
         // Universal Interceptor: If the AI requested a Tool, perform it and loop!
@@ -187,24 +232,30 @@ pub async fn ask_llm(
             let remainder = &response.advice[start + 24..];
             if let Some(end) = remainder.find(")]") {
                 let query = &remainder[..end];
-                
+
                 // Execute the tool
                 let search_result = crate::api::openfoodfacts::search(query, 1).await;
                 let tool_response = match search_result {
                     Ok(res) => {
                         if res.products.is_empty() {
-                            format!("Tool [search_food] Output: No products found for '{}'.", query)
+                            format!(
+                                "Tool [search_food] Output: No products found for '{}'.",
+                                query
+                            )
                         } else {
                             let p = &res.products[0];
                             format!("Tool [search_food] Output:\nName: {}\nCalories: {}kcal\nProtein: {}g\nCarbs: {}g\nFat: {}g\nSodium: {}mg\n\nUse this data to answer the user.", 
                                 p.product_name, p.calories_kcal, p.protein_g, p.total_carbohydrate_g, p.fat_g, p.sodium_mg)
                         }
-                    },
+                    }
                     Err(e) => format!("Tool [search_food] Failed: {}", e),
                 };
 
                 // Append AI's internal thought/tool request and the hidden tool system output to history, then reprompt
-                current_history.push(ChatMessage { role: "assistant".into(), content: response.advice.clone() });
+                current_history.push(ChatMessage {
+                    role: "assistant".into(),
+                    content: response.advice.clone(),
+                });
                 current_user_query = tool_response;
                 continue;
             }
@@ -213,7 +264,7 @@ pub async fn ask_llm(
         // If no tool was called, return the final response
         return Ok(response);
     }
-    
+
     Err("AI Agent loop exceeded maximum tool iterations (3).".into())
 }
 
@@ -231,7 +282,13 @@ fn resolve_ollama_endpoint() -> String {
         .unwrap_or_else(|_| "http://localhost:11434".to_string())
 }
 
-async fn ask_ollama(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str, system_prompt: &str) -> Result<AiResponse, String> {
+async fn ask_ollama(
+    nlog_data: &str,
+    prompt: &str,
+    history: Vec<ChatMessage>,
+    model: &str,
+    system_prompt: &str,
+) -> Result<AiResponse, String> {
     let mut endpoint = resolve_ollama_endpoint();
     endpoint = endpoint.trim_end_matches('/').to_string();
     if endpoint.ends_with("/v1") {
@@ -241,11 +298,11 @@ async fn ask_ollama(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
 
     let mut messages = Vec::new();
     messages.push(json!({ "role": "system", "content": system_prompt }));
-    
+
     for msg in history {
         messages.push(json!({ "role": msg.role, "content": msg.content }));
     }
-    
+
     messages.push(json!({ "role": "user", "content": prompt }));
 
     let body = json!({
@@ -255,7 +312,10 @@ async fn ask_ollama(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
     });
 
     let res = client
-        .post(format!("{}/v1/chat/completions", endpoint.trim_end_matches('/')))
+        .post(format!(
+            "{}/v1/chat/completions",
+            endpoint.trim_end_matches('/')
+        ))
         .json(&body)
         .send()
         .await
@@ -282,7 +342,13 @@ async fn ask_ollama(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
 
 // ── OpenAI ─────────────────────────────────────────────────────────────
 
-async fn ask_openai(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str, system_prompt: &str) -> Result<AiResponse, String> {
+async fn ask_openai(
+    nlog_data: &str,
+    prompt: &str,
+    history: Vec<ChatMessage>,
+    model: &str,
+    system_prompt: &str,
+) -> Result<AiResponse, String> {
     let api_key = CredentialManager::global()
         .retrieve(credentials::providers::OPENAI)
         .map_err(|_| "No OpenAI API key configured. Add it in Settings → API Keys.")?;
@@ -291,11 +357,11 @@ async fn ask_openai(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
 
     let mut messages = Vec::new();
     messages.push(json!({ "role": "system", "content": system_prompt }));
-    
+
     for msg in history {
         messages.push(json!({ "role": msg.role, "content": msg.content }));
     }
-    
+
     messages.push(json!({ "role": "user", "content": prompt }));
 
     let body = json!({
@@ -318,9 +384,7 @@ async fn ask_openai(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
         .map_err(|e| format!("Invalid response: {}", e))?;
 
     if !status.is_success() {
-        let err_msg = json["error"]["message"]
-            .as_str()
-            .unwrap_or("Unknown error");
+        let err_msg = json["error"]["message"].as_str().unwrap_or("Unknown error");
         return Err(format!("OpenAI error ({}): {}", status, err_msg));
     }
 
@@ -329,7 +393,13 @@ async fn ask_openai(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
 
 // ── Custom OpenAI-Compatible ───────────────────────────────────────────
 
-async fn ask_custom(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str, system_prompt: &str) -> Result<AiResponse, String> {
+async fn ask_custom(
+    nlog_data: &str,
+    prompt: &str,
+    history: Vec<ChatMessage>,
+    model: &str,
+    system_prompt: &str,
+) -> Result<AiResponse, String> {
     let api_key = CredentialManager::global()
         .retrieve(credentials::providers::CUSTOM)
         .map_err(|_| "No Custom API key configured. Add it in Settings → API Keys.")?;
@@ -373,9 +443,7 @@ async fn ask_custom(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
         .map_err(|e| format!("Invalid response: {}", e))?;
 
     if !status.is_success() {
-        let err_msg = json["error"]["message"]
-            .as_str()
-            .unwrap_or("Unknown error");
+        let err_msg = json["error"]["message"].as_str().unwrap_or("Unknown error");
         return Err(format!("Custom API error ({}): {}", status, err_msg));
     }
 
@@ -384,7 +452,13 @@ async fn ask_custom(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
 
 // ── Anthropic ──────────────────────────────────────────────────────────
 
-async fn ask_anthropic(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str, system_prompt: &str) -> Result<AiResponse, String> {
+async fn ask_anthropic(
+    nlog_data: &str,
+    prompt: &str,
+    history: Vec<ChatMessage>,
+    model: &str,
+    system_prompt: &str,
+) -> Result<AiResponse, String> {
     let api_key = CredentialManager::global()
         .retrieve(credentials::providers::ANTHROPIC)
         .map_err(|_| "No Anthropic API key configured. Add it in Settings → API Keys.")?;
@@ -397,7 +471,10 @@ async fn ask_anthropic(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>,
     }
     messages.push(json!({ "role": "user", "content": prompt }));
 
-    let max_tokens = if model.contains("3-5-sonnet") || model.contains("sonnet-4") || model.contains("3-5-haiku") {
+    let max_tokens = if model.contains("3-5-sonnet")
+        || model.contains("sonnet-4")
+        || model.contains("3-5-haiku")
+    {
         8192
     } else {
         4096
@@ -426,9 +503,7 @@ async fn ask_anthropic(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>,
         .map_err(|e| format!("Invalid response: {}", e))?;
 
     if !status.is_success() {
-        let err_msg = json["error"]["message"]
-            .as_str()
-            .unwrap_or("Unknown error");
+        let err_msg = json["error"]["message"].as_str().unwrap_or("Unknown error");
         return Err(format!("Anthropic error ({}): {}", status, err_msg));
     }
 
@@ -450,7 +525,13 @@ async fn ask_anthropic(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>,
 
 // ── Google Gemini ──────────────────────────────────────────────────────
 
-async fn ask_google(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, model: &str, system_prompt: &str) -> Result<AiResponse, String> {
+async fn ask_google(
+    nlog_data: &str,
+    prompt: &str,
+    history: Vec<ChatMessage>,
+    model: &str,
+    system_prompt: &str,
+) -> Result<AiResponse, String> {
     let api_key = CredentialManager::global()
         .retrieve(credentials::providers::GOOGLE)
         .map_err(|_| "No Google API key configured. Add it in Settings → API Keys.")?;
@@ -458,18 +539,22 @@ async fn ask_google(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
     let client = build_client()?;
 
     let mut contents = Vec::new();
-    
+
     // Google Gemini API treats system logic specially or as first user prompt if SystemInstruction is not available directly
     // Using simple format here for backwards compatibility
     contents.push(json!({ "role": "user", "parts": [{ "text": system_prompt }] }));
     contents.push(json!({ "role": "model", "parts": [{ "text": "Understood. I will act as NutriLog and follow these constraints." }] }));
-    
+
     for msg in history {
         // Map "assistant" to "model" for Gemini
-        let gemini_role = if msg.role == "assistant" { "model" } else { "user" };
+        let gemini_role = if msg.role == "assistant" {
+            "model"
+        } else {
+            "user"
+        };
         contents.push(json!({ "role": gemini_role, "parts": [{ "text": msg.content }] }));
     }
-    
+
     contents.push(json!({ "role": "user", "parts": [{ "text": prompt }] }));
 
     let body = json!({
@@ -481,12 +566,12 @@ async fn ask_google(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
         model, api_key
     );
 
-    let res = client
-        .post(&url)
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| format!("Google Gemini request failed: {}", e.to_string().replace(&api_key, "***")))?;
+    let res = client.post(&url).json(&body).send().await.map_err(|e| {
+        format!(
+            "Google Gemini request failed: {}",
+            e.to_string().replace(&api_key, "***")
+        )
+    })?;
 
     let status = res.status();
     let json: serde_json::Value = res
@@ -495,9 +580,7 @@ async fn ask_google(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
         .map_err(|e| format!("Invalid response: {}", e))?;
 
     if !status.is_success() {
-        let err_msg = json["error"]["message"]
-            .as_str()
-            .unwrap_or("Unknown error");
+        let err_msg = json["error"]["message"].as_str().unwrap_or("Unknown error");
         return Err(format!("Google Gemini error ({}): {}", status, err_msg));
     }
 
@@ -507,9 +590,7 @@ async fn ask_google(nlog_data: &str, prompt: &str, history: Vec<ChatMessage>, mo
         .to_string();
 
     // Detect truncation — Gemini sets finishReason to "MAX_TOKENS" when output is cut short
-    let finish_reason = json["candidates"][0]["finishReason"]
-        .as_str()
-        .unwrap_or("");
+    let finish_reason = json["candidates"][0]["finishReason"].as_str().unwrap_or("");
     if finish_reason == "MAX_TOKENS" {
         advice.push_str("\n\n---\n*⚠️ Response was truncated due to length limits. Ask a more specific question or reduce the context window for a complete answer.*");
     }
@@ -560,7 +641,12 @@ async fn list_models_ollama() -> Result<Vec<AiModelInfo>, String> {
         .get(format!("{}/v1/models", endpoint))
         .send()
         .await
-        .map_err(|e| format!("Failed to reach Local LLM at {}. Is it running? Error: {}", endpoint, e))?;
+        .map_err(|e| {
+            format!(
+                "Failed to reach Local LLM at {}. Is it running? Error: {}",
+                endpoint, e
+            )
+        })?;
 
     if !res.status().is_success() {
         return Err(format!("Local LLM returned status {}", res.status()));
@@ -622,7 +708,11 @@ async fn list_models_openai() -> Result<Vec<AiModelInfo>, String> {
                 .filter_map(|m| {
                     let id = m["id"].as_str()?;
                     // Filter to chat-capable models (gpt-* and o1/o3/o4 reasoning models)
-                    if id.starts_with("gpt-") || id.starts_with("o1") || id.starts_with("o3") || id.starts_with("o4") {
+                    if id.starts_with("gpt-")
+                        || id.starts_with("o1")
+                        || id.starts_with("o3")
+                        || id.starts_with("o4")
+                    {
                         Some(AiModelInfo {
                             id: id.to_string(),
                             name: id.to_string(),
@@ -723,11 +813,12 @@ async fn list_models_google() -> Result<Vec<AiModelInfo>, String> {
         api_key
     );
 
-    let res = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| format!("Google Gemini request failed: {}", e.to_string().replace(&api_key, "***")))?;
+    let res = client.get(&url).send().await.map_err(|e| {
+        format!(
+            "Google Gemini request failed: {}",
+            e.to_string().replace(&api_key, "***")
+        )
+    })?;
 
     let status = res.status();
     let json: serde_json::Value = res
@@ -796,12 +887,58 @@ pub async fn verify_ai_provider(provider: String) -> Result<Vec<AiModelInfo>, St
     let empty_nlog = "";
 
     let _ = match p {
-        LlmProvider::Ollama => ask_ollama(empty_nlog, test_prompt, empty_history, test_model, SYSTEM_PROMPT).await,
-        LlmProvider::OpenAi => ask_openai(empty_nlog, test_prompt, empty_history, test_model, SYSTEM_PROMPT).await,
-        LlmProvider::Anthropic => ask_anthropic(empty_nlog, test_prompt, empty_history, test_model, SYSTEM_PROMPT).await,
-        LlmProvider::Google => ask_google(empty_nlog, test_prompt, empty_history, test_model, SYSTEM_PROMPT).await,
-        LlmProvider::Custom => ask_custom(empty_nlog, test_prompt, empty_history, test_model, SYSTEM_PROMPT).await,
-    }.map_err(|e| format!("Key is valid but model inference failed: {}", e))?;
+        LlmProvider::Ollama => {
+            ask_ollama(
+                empty_nlog,
+                test_prompt,
+                empty_history,
+                test_model,
+                SYSTEM_PROMPT,
+            )
+            .await
+        }
+        LlmProvider::OpenAi => {
+            ask_openai(
+                empty_nlog,
+                test_prompt,
+                empty_history,
+                test_model,
+                SYSTEM_PROMPT,
+            )
+            .await
+        }
+        LlmProvider::Anthropic => {
+            ask_anthropic(
+                empty_nlog,
+                test_prompt,
+                empty_history,
+                test_model,
+                SYSTEM_PROMPT,
+            )
+            .await
+        }
+        LlmProvider::Google => {
+            ask_google(
+                empty_nlog,
+                test_prompt,
+                empty_history,
+                test_model,
+                SYSTEM_PROMPT,
+            )
+            .await
+        }
+        LlmProvider::Custom => {
+            ask_custom(
+                empty_nlog,
+                test_prompt,
+                empty_history,
+                test_model,
+                SYSTEM_PROMPT,
+            )
+            .await
+        }
+    }
+    .map_err(|e| format!("Key is valid but model inference failed: {}", e))?;
 
     // Mark as verified in persistent config
     AiConfig::mark_verified(&provider)?;
@@ -825,20 +962,29 @@ fn format_epoch_to_iso(ts: i64) -> String {
     let mut y: i64 = 1970;
     let mut remaining = days;
     loop {
-        let diy = if y % 4 == 0 && (y % 100 != 0 || y % 400 == 0) { 366 } else { 365 };
-        if remaining < diy { break; }
+        let diy = if y % 4 == 0 && (y % 100 != 0 || y % 400 == 0) {
+            366
+        } else {
+            365
+        };
+        if remaining < diy {
+            break;
+        }
         remaining -= diy;
         y += 1;
     }
     let leap = y % 4 == 0 && (y % 100 != 0 || y % 400 == 0);
     let md: [i64; 12] = if leap {
-        [31,29,31,30,31,30,31,31,30,31,30,31]
+        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     } else {
-        [31,28,31,30,31,30,31,31,30,31,30,31]
+        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     };
     let mut m = 12;
     for (i, &d) in md.iter().enumerate() {
-        if remaining < d { m = i + 1; break; }
+        if remaining < d {
+            m = i + 1;
+            break;
+        }
         remaining -= d;
     }
     format!("{:04}-{:02}-{:02}", y, m, remaining + 1)
@@ -907,20 +1053,27 @@ fn format_nlog_to_markdown(nlog_data: &str) -> String {
     if nlog_data.contains("No meals logged") {
         return nlog_data.to_string();
     }
-    
+
     let mut table = String::from("| Date | Food | Calories | Protein (g) | Carbs (g) | Fat (g) | Sat Fat (g) | Sugar (g) | Fiber (g) | Sodium (mg) | Chol (mg) | Meal |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n");
     for line in nlog_data.lines() {
-        if line.trim().is_empty() { continue; }
+        if line.trim().is_empty() {
+            continue;
+        }
         let cells: Vec<&str> = line.split('|').collect();
         if cells.len() >= 11 {
             // Reformat the YYMMDD date to YYYY-MM-DD for the LLM
             let raw_date = cells[0];
             let formatted_date = if raw_date.len() == 6 {
-                format!("20{}-{}-{}", &raw_date[0..2], &raw_date[2..4], &raw_date[4..6])
+                format!(
+                    "20{}-{}-{}",
+                    &raw_date[0..2],
+                    &raw_date[2..4],
+                    &raw_date[4..6]
+                )
             } else {
                 raw_date.to_string()
             };
-            
+
             let mut row = String::from("| ");
             row.push_str(&formatted_date);
             row.push_str(" | ");
