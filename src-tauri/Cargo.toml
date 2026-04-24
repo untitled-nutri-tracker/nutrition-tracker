@@ -35,9 +35,12 @@ aes-gcm = "0.10"
 pbkdf2 = { version = "0.12", features = ["simple"] }
 sha2 = "0.10"
 rand = "0.8"
+# machine-uid only works on desktop (reads /etc/machine-id or IOPlatformUUID)
+# On iOS, the SecureFileStore fallback is skipped entirely — keyring (iOS Keychain) is always used.
+[target.'cfg(not(target_os = "ios"))'.dependencies]
 machine-uid = "0.5"
 
-[target.'cfg(target_os = "macos")'.dependencies]
+[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 block2 = "0.6"
 objc2 = "0.6"
 objc2-av-foundation = { version = "0.3.2", features = ["AVCaptureDevice", "AVMediaFormat", "block2"] }

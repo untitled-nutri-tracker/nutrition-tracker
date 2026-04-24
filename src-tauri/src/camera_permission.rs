@@ -37,7 +37,14 @@ pub fn ensure_camera_permission() -> Result<String, String> {
     Ok(if granted { "granted" } else { "denied" }.into())
 }
 
-#[cfg(not(target_os = "macos"))]
+/// On iOS, WKWebView handles camera permissions natively via Info.plist keys.
+/// No Rust-side permission prompting is needed — the OS shows its own dialog.
+#[cfg(target_os = "ios")]
+pub fn ensure_camera_permission() -> Result<String, String> {
+    Ok("granted".into())
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "ios")))]
 pub fn ensure_camera_permission() -> Result<String, String> {
     Ok("unsupported".into())
 }
