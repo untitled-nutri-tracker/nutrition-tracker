@@ -68,19 +68,70 @@ export async function deleteCredential(params: types.DeleteCredentialParams): Pr
 }
 
 
-export async function hasCredential(params: types.HasCredentialParams): Promise<boolean> {
-  return invoke('has_credential', params);
+
+export async function listFoods(): Promise<types.Food[]> {
+  return invoke('list_foods');
+}
+
+
+export async function updateFood(params: types.UpdateFoodParams): Promise<types.Food> {
+  return invoke('update_food', params);
+}
+
+
+export async function deleteFood(params: types.DeleteFoodParams): Promise<boolean> {
+  return invoke('delete_food', params);
+}
+
+
+export async function createServing(params: types.CreateServingParams): Promise<types.Serving> {
+  return invoke('create_serving', params);
+}
+
+
+export async function getServing(params: types.GetServingParams): Promise<types.Serving | null> {
+  return invoke('get_serving', params);
+}
+
+
+export async function listServingsByFood(params: types.ListServingsByFoodParams): Promise<types.Serving[]> {
+  return invoke('list_servings_by_food', params);
+}
+
+
+export async function updateServing(params: types.UpdateServingParams): Promise<types.Serving> {
+  return invoke('update_serving', params);
+}
+
+
+export async function deleteServing(params: types.DeleteServingParams): Promise<boolean> {
+  return invoke('delete_serving', params);
+}
+
+
+export async function createNutritionFacts(params: types.CreateNutritionFactsParams): Promise<types.NutritionFacts> {
+  return invoke('create_nutrition_facts', params);
+}
+
+
+export async function getNutritionFacts(params: types.GetNutritionFactsParams): Promise<types.NutritionFacts | null> {
+  return invoke('get_nutrition_facts', params);
 }
 
 
 
-export async function listCredentials(): Promise<types.CredentialInfo[]> {
-  return invoke('list_credentials');
+export async function listNutritionFacts(): Promise<types.NutritionFacts[]> {
+  return invoke('list_nutrition_facts');
 }
 
 
-export async function getCredentialPreview(params: types.GetCredentialPreviewParams): Promise<string> {
-  return invoke('get_credential_preview', params);
+export async function updateNutritionFacts(params: types.UpdateNutritionFactsParams): Promise<types.NutritionFacts> {
+  return invoke('update_nutrition_facts', params);
+}
+
+
+export async function deleteNutritionFacts(params: types.DeleteNutritionFactsParams): Promise<boolean> {
+  return invoke('delete_nutrition_facts', params);
 }
 
 

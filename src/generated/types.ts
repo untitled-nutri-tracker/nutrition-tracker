@@ -89,9 +89,16 @@ export interface XlsxSheetSchema {
   columns: XlsxColumnSchema[];
 }
 
-export interface XlsxExportPayload {
-  schema: XlsxExportSchema;
-  sheets: XlsxSheetRows[];
+export interface AppUserProfile {
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  name?: string | null;
+  sex: string;
+  age: number;
+  heightCm: number;
+  weightKg: number;
+  activityLevel: string;
 }
 
 export interface SearchProduct {
@@ -318,21 +325,122 @@ export interface StoreCredentialParams {
 }
 
 
-export interface DeleteCredentialParams {
-  service: string;
+export interface GreetParams {
+  name: string;
   [key: string]: unknown;
 }
 
 
-export interface HasCredentialParams {
-  service: string;
+export interface SearchFoodOnlineParams {
+  query: string;
+  page: number;
+  [key: string]: unknown;
+}
+
+
+export interface FetchFoodByBarcodeParams {
+  barcode: string;
+  [key: string]: unknown;
+}
+
+
+export interface GetAiAdviceParams {
+  question: string;
+  days: number;
+  provider?: string | null;
+  model?: string | null;
+  history?: ChatMessage[] | null;
+  offsetMinutes?: number | null;
+  [key: string]: unknown;
+}
+
+
+export interface AnalyzeFoodPhotoParams {
+  imageBase64: string;
+  mimeType: string;
+  visionProvider?: string | null;
+  allowCloud: boolean;
   [key: string]: unknown;
 }
 
 
 
-export interface GetCredentialPreviewParams {
-  service: string;
+export interface CreateFoodParams {
+  food: Food;
+  [key: string]: unknown;
+}
+
+
+export interface GetFoodParams {
+  id: number;
+  [key: string]: unknown;
+}
+
+
+
+export interface UpdateFoodParams {
+  food: Food;
+  [key: string]: unknown;
+}
+
+
+export interface DeleteFoodParams {
+  id: number;
+  [key: string]: unknown;
+}
+
+
+export interface CreateServingParams {
+  serving: Serving;
+  [key: string]: unknown;
+}
+
+
+export interface GetServingParams {
+  id: number;
+  [key: string]: unknown;
+}
+
+
+export interface ListServingsByFoodParams {
+  foodId: number;
+  [key: string]: unknown;
+}
+
+
+export interface UpdateServingParams {
+  serving: Serving;
+  [key: string]: unknown;
+}
+
+
+export interface DeleteServingParams {
+  id: number;
+  [key: string]: unknown;
+}
+
+
+export interface CreateNutritionFactsParams {
+  nutritionFacts: NutritionFacts;
+  [key: string]: unknown;
+}
+
+
+export interface GetNutritionFactsParams {
+  servingId: number;
+  [key: string]: unknown;
+}
+
+
+
+export interface UpdateNutritionFactsParams {
+  nutritionFacts: NutritionFacts;
+  [key: string]: unknown;
+}
+
+
+export interface DeleteNutritionFactsParams {
+  servingId: number;
   [key: string]: unknown;
 }
 

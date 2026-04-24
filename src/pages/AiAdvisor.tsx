@@ -325,6 +325,7 @@ export default function AiAdvisor() {
     return () => { document.body.style.overflow = ""; };
   }, [isControlsOpen]);
   const [startInNewSession, setStartInNewSession] = useState(false);
+  const [sessionLoading, setSessionLoading] = useState(false);
 
   // Phase 3 Session State
   const [sessions, setSessions] = useState<AiChatSession[]>([]);
@@ -365,26 +366,23 @@ export default function AiAdvisor() {
     let cancelled = false;
 
     async function hydrateLegacySessionTitles() {
-      const next: Record<number, string> = {};
+      for (const session of sessions) {
+        if (cancelled) break;
+        if (session.title.trim().toLowerCase() !== "new chat") continue;
 
-      await Promise.all(
-        sessions.map(async (session) => {
-          if (session.title.trim().toLowerCase() !== "new chat") return;
-
-          try {
-            const msgs: AiChatMessage[] = await getSessionMessages({ sessionId: session.id });
-            const firstUser = msgs.find((m) => m.role === "user" && m.content.trim().length > 0);
-            if (firstUser) {
-              next[session.id] = deriveSessionTitle(firstUser.content);
-            }
-          } catch (err) {
-            console.error(`Failed to hydrate session title preview for ${session.id}:`, err);
+        try {
+          const msgs: AiChatMessage[] = await getSessionMessages({ sessionId: session.id });
+          const firstUser = msgs.find((m) => m.role === "user" && m.content.trim().length > 0);
+          if (firstUser && !cancelled) {
+            const derived = deriveSessionTitle(firstUser.content);
+            setSessionTitlePreview((prev) => ({ ...prev, [session.id]: derived }));
           }
-        }),
-      );
+        } catch (err) {
+          console.error(`Failed to hydrate session title preview for ${session.id}:`, err);
+        }
 
-      if (!cancelled) {
-        setSessionTitlePreview(next);
+        // Yield to the main thread to prevent UI freezing
+        await new Promise((resolve) => setTimeout(resolve, 30));
       }
     }
 
@@ -421,6 +419,7 @@ export default function AiAdvisor() {
     async function loadMessages() {
       if (activeSessionId === null) return;
       try {
+        setSessionLoading(true);
         const msgs: AiChatMessage[] = await getSessionMessages({ sessionId: activeSessionId });
         const mapped: ChatMessage[] = [];
         for (const msg of msgs) {
@@ -436,6 +435,8 @@ export default function AiAdvisor() {
         setMessages(mapped);
       } catch (err) {
         console.error("Failed to load session messages:", err);
+      } finally {
+        setSessionLoading(false);
       }
     }
     loadMessages();
@@ -978,6 +979,7 @@ export default function AiAdvisor() {
                               className="text-left border-0 bg-transparent text-[inherit] cursor-pointer p-0 w-full disabled:opacity-70 disabled:cursor-wait"
                               onClick={() => {
                                 setStartInNewSession(false);
+                                setMessages([]); // Clear messages immediately for snappier UI
                                 setActiveSessionId(session.id);
                                 setIsControlsOpen(false);
                               }}
@@ -1051,6 +1053,18 @@ export default function AiAdvisor() {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Loading session history */}
+        {sessionLoading && (
+          <div className="ai-advisor-empty" style={{ marginTop: 40 }}>
+             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, color: "var(--muted2)", fontSize: 13 }}>
+               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ai-loading-spinner">
+                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+               </svg>
+               <span>Loading chat history...</span>
+             </div>
           </div>
         )}
 
