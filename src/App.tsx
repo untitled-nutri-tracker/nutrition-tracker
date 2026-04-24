@@ -6,6 +6,8 @@ import Insights from "./pages/Insights";
 import AiAdvisor from "./pages/AiAdvisor";
 import Settings from "./pages/Settings";
 import { NetworkProvider } from "./lib/NetworkContext";
+import { ThemeProvider } from "./lib/ThemeContext";
+import { ToastProvider } from "./lib/ToastContext";
 import {
   DatabaseSessionProvider,
   useDatabaseSession,
@@ -44,11 +46,15 @@ function RoutedApp() {
 
 function App() {
   return (
-    <NetworkProvider>
-      <DatabaseSessionProvider>
-        <RoutedApp />
-      </DatabaseSessionProvider>
-    </NetworkProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <NetworkProvider>
+          <DatabaseSessionProvider>
+            <RoutedApp />
+          </DatabaseSessionProvider>
+        </NetworkProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
 

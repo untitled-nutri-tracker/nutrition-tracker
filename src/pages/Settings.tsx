@@ -3,6 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import ProfileForm from "../components/ProfileForm";
 import { useUserProfile } from "../hooks/useUserProfile";
+import { useTheme } from "../lib/ThemeContext";
+import { useToast } from "../lib/ToastContext";
 import { useDatabaseSession } from "../lib/DatabaseSessionContext";
 import {
   useCredentials,
@@ -17,17 +19,16 @@ import type { AiMemory } from "../generated/types";
 
 export default function Settings() {
   const { session } = useDatabaseSession();
+  const { theme, setTheme } = useTheme();
   const { profile, loading, saving, error, computed, persist, reset } =
     useUserProfile();
   const [exporting, setExporting] = useState(false);
-  const [exportMessage, setExportMessage] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   async function handleExportXlsx() {
-    setExportMessage(null);
-
     const connectedPath = session.connectedPath?.trim();
     if (!connectedPath) {
-      setExportMessage("No database is currently connected.");
+      showToast("No database is currently connected.", "error");
       return;
     }
 
@@ -46,10 +47,11 @@ export default function Settings() {
       const writtenPath = await invoke<string>("export_xlsx_to_path", {
         path: selectedPath,
       });
-      setExportMessage(`Exported database to ${writtenPath}`);
+      showToast(`Exported to ${writtenPath}`, "success");
     } catch (err) {
-      setExportMessage(
+      showToast(
         err instanceof Error ? err.message : "Failed to export database",
+        "error"
       );
     } finally {
       setExporting(false);
@@ -139,6 +141,52 @@ export default function Settings() {
           </div>
         )}
       </div>
+      <div className="card pop-in-delay-1" style={{ maxWidth: 720 }}>
+        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Appearance</div>
+        <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 14 }}>
+          Choose your preferred color theme.
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={() => setTheme("dark")}
+            style={{
+              flex: 1,
+              padding: "10px 14px",
+              borderRadius: 12,
+              border: `1px solid ${theme === "dark" ? "rgba(124,92,255,0.5)" : "var(--border)"}`,
+              background: theme === "dark"
+                ? "linear-gradient(135deg, rgba(124,92,255,0.2), rgba(0,209,255,0.08))"
+                : "rgba(255,255,255,0.04)",
+              color: "var(--text)",
+              cursor: "pointer",
+              fontWeight: theme === "dark" ? 700 : 400,
+              fontSize: 13,
+              fontFamily: "inherit",
+            }}
+          >
+            🌙 Dark
+          </button>
+          <button
+            onClick={() => setTheme("light")}
+            style={{
+              flex: 1,
+              padding: "10px 14px",
+              borderRadius: 12,
+              border: `1px solid ${theme === "light" ? "rgba(124,92,255,0.5)" : "var(--border)"}`,
+              background: theme === "light"
+                ? "linear-gradient(135deg, rgba(124,92,255,0.2), rgba(0,209,255,0.08))"
+                : "rgba(255,255,255,0.04)",
+              color: "var(--text)",
+              cursor: "pointer",
+              fontWeight: theme === "light" ? 700 : 400,
+              fontSize: 13,
+              fontFamily: "inherit",
+            }}
+          >
+            ☀️ Light
+          </button>
+        </div>
+      </div>
 
       <div className="card pop-in-delay-1" style={{ maxWidth: 720 }}>
         <div style={{ fontSize: 16, fontWeight: 600 }}>Database export</div>
@@ -181,19 +229,8 @@ export default function Settings() {
           </button>
         </div>
 
-        {exportMessage && (
-          <div
-            style={{
-              marginTop: 12,
-              fontSize: 12,
-              color: exportMessage.startsWith("Exported")
-                ? "var(--muted)"
-                : "#ff9a9a",
-            }}
-          >
-            {exportMessage}
-          </div>
-        )}
+
+
       </div>
 
       {/* ── AI Provider Configuration ── */}
@@ -667,7 +704,7 @@ function ApiKeySection() {
         <div className="text-xs text-white/40 mt-1 leading-relaxed" style={{ marginBottom: 16 }}>
           The AI automatically learns preferences and facts about you from your conversations to personalize advice. You can review and delete them here.
         </div>
-        
+
         {loadingMemories ? (
           <div style={{ color: "var(--muted2)", fontSize: 13 }}>Loading your AI memories...</div>
         ) : memories.length === 0 ? (
@@ -679,7 +716,7 @@ function ApiKeySection() {
             {memories.map(m => (
               <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.03)", borderRadius: 8 }}>
                 <span style={{ fontSize: 14, color: "var(--text)" }}>{m.fact}</span>
-                <button 
+                <button
                   onClick={() => handleRemoveMemory(m.id)}
                   style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted2)", padding: 4 }}
                   title="Delete memory"

@@ -3,6 +3,8 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+const USDA_DEMO_KEY: &str = "DEMO_KEY";
+
 const VISION_PROMPT: &str = r#"You are NutriLog's private food-photo estimator.
 Identify the single most likely food item in this image. If the image contains a plate with multiple foods, choose the dominant item only.
 Return only valid JSON with these fields:
@@ -13,6 +15,19 @@ Return only valid JSON with these fields:
   "notes": "brief uncertainty note"
 }
 Do not include markdown, code fences, or any extra text."#;
+
+fn vision_estimate_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "food_name": { "type": "string" },
+            "estimated_grams": { "type": "number" },
+            "confidence": { "type": "number" },
+            "notes": { "type": "string" }
+        },
+        "required": ["food_name", "estimated_grams", "confidence", "notes"]
+    })
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -92,8 +107,9 @@ pub async fn analyze(
         );
     }
 
-    match lookup_usda_macros(&client, &result.food_name).await {
-        Ok(Some(macros)) => {
+    let lookup_query = normalize_food_lookup_query(&result.food_name);
+    match lookup_usda_macros(&client, &lookup_query).await {
+        Ok((Some(macros), used_demo_key)) => {
             let factor = result.estimated_grams / 100.0;
             result.usda_fdc_id = Some(macros.fdc_id);
             result.usda_description = Some(macros.description);
@@ -105,11 +121,21 @@ pub async fn analyze(
                 result.notes =
                     "Estimated from photo; nutrition matched through USDA FoodData Central.".into();
             }
+            if used_demo_key {
+                result.notes = append_note(
+                    &result.notes,
+                    "Using USDA demo access. Add your own FoodData Central key in Settings for higher rate limits.",
+                );
+            }
         }
-        Ok(None) => {
+        Ok((None, used_demo_key)) => {
             result.notes = append_note(
                 &result.notes,
-                "USDA did not return a usable match. Please edit macros before logging.",
+                if used_demo_key {
+                    "USDA demo access did not return a usable match. Add your own FoodData Central key in Settings or edit macros before logging."
+                } else {
+                    "USDA did not return a usable match. Please edit macros before logging."
+                },
             );
         }
         Err(err) => {
@@ -157,7 +183,11 @@ async fn analyze_with_ollama(
             "content": VISION_PROMPT,
             "images": [image_base64]
         }],
-        "stream": false
+        "stream": false,
+        "format": vision_estimate_schema(),
+        "options": {
+            "temperature": 0
+        }
     });
 
     let json = post_json(
@@ -174,7 +204,7 @@ async fn analyze_with_ollama(
         .as_str()
         .unwrap_or_default()
         .to_string();
-    parse_vision_estimate(&text)
+    parse_vision_estimate_with_context(&text, "Ollama")
 }
 
 fn normalize_ollama_endpoint(endpoint: &str) -> String {
@@ -223,7 +253,7 @@ async fn analyze_with_openai(
         .as_str()
         .unwrap_or_default()
         .to_string();
-    parse_vision_estimate(&text)
+    parse_vision_estimate_with_context(&text, "OpenAI")
 }
 
 async fn analyze_with_anthropic(
@@ -278,7 +308,7 @@ async fn analyze_with_anthropic(
         .as_str()
         .unwrap_or_default()
         .to_string();
-    parse_vision_estimate(&text)
+    parse_vision_estimate_with_context(&text, "Anthropic")
 }
 
 async fn analyze_with_google(
@@ -313,7 +343,7 @@ async fn analyze_with_google(
         .as_str()
         .unwrap_or_default()
         .to_string();
-    parse_vision_estimate(&text)
+    parse_vision_estimate_with_context(&text, "Google Gemini")
 }
 
 async fn post_json(
@@ -356,21 +386,26 @@ fn parse_vision_estimate(text: &str) -> Result<VisionEstimate, String> {
         "The vision model did not return valid JSON. Try again with a clearer single food item."
             .to_string()
     })?;
-    let json: Value = serde_json::from_str(raw)
+    let normalized = normalize_vision_json(raw);
+    let json: Value = serde_json::from_str(&normalized)
         .map_err(|_| "The vision model returned malformed JSON. Try the scan again.".to_string())?;
 
     let food_name = json["food_name"]
         .as_str()
         .or_else(|| json["foodName"].as_str())
+        .or_else(|| json["name"].as_str())
         .unwrap_or("")
         .trim()
         .to_string();
-    let estimated_grams = json["estimated_grams"]
-        .as_f64()
-        .or_else(|| json["estimatedGrams"].as_f64())
-        .unwrap_or(100.0) as f32;
-    let confidence = json["confidence"].as_f64().unwrap_or(0.5) as f32;
-    let notes = json["notes"].as_str().unwrap_or("").trim().to_string();
+    let estimated_grams =
+        read_f32_field(&json, &["estimated_grams", "estimatedGrams", "grams"]).unwrap_or(100.0);
+    let confidence = read_f32_field(&json, &["confidence", "score"]).unwrap_or(0.5);
+    let notes = json["notes"]
+        .as_str()
+        .or_else(|| json["uncertainty"].as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
 
     if food_name.is_empty() {
         return Err("The vision model could not identify a food name.".into());
@@ -384,19 +419,152 @@ fn parse_vision_estimate(text: &str) -> Result<VisionEstimate, String> {
     })
 }
 
-fn extract_json_object(text: &str) -> Option<&str> {
-    let start = text.find('{')?;
-    let end = text.rfind('}')?;
-    if end <= start {
-        return None;
-    }
-    Some(&text[start..=end])
+fn parse_vision_estimate_with_context(
+    text: &str,
+    provider: &str,
+) -> Result<VisionEstimate, String> {
+    parse_vision_estimate(text).map_err(|err| {
+        let snippet = summarize_model_output(text);
+        if snippet.is_empty() {
+            err
+        } else {
+            format!("{err}\n\n{provider} output snippet: {snippet}")
+        }
+    })
 }
 
-async fn lookup_usda_macros(client: &Client, query: &str) -> Result<Option<UsdaMacros>, String> {
-    let api_key = CredentialManager::global()
-        .retrieve(credentials::providers::USDA_FDC)
-        .map_err(|_| "USDA FoodData Central key missing. Add it in Settings to compute nutrition from photo scans.")?;
+fn extract_json_object(text: &str) -> Option<&str> {
+    let start = text.find('{')?;
+    let mut depth = 0usize;
+    let mut in_string = false;
+    let mut escaped = false;
+
+    for (offset, ch) in text[start..].char_indices() {
+        if in_string {
+            if escaped {
+                escaped = false;
+                continue;
+            }
+            match ch {
+                '\\' => escaped = true,
+                '"' => in_string = false,
+                _ => {}
+            }
+            continue;
+        }
+
+        match ch {
+            '"' => in_string = true,
+            '{' => depth += 1,
+            '}' => {
+                if depth == 0 {
+                    return None;
+                }
+                depth -= 1;
+                if depth == 0 {
+                    let end = start + offset;
+                    return Some(&text[start..=end]);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    None
+}
+
+fn normalize_vision_json(raw: &str) -> String {
+    let mut normalized = raw.trim().replace(['“', '”'], "\"");
+    normalized = normalized.replace(['‘', '’'], "'");
+    normalized = strip_trailing_commas(&normalized);
+    normalized
+}
+
+fn strip_trailing_commas(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let chars: Vec<char> = input.chars().collect();
+    let mut i = 0usize;
+    let mut in_string = false;
+    let mut escaped = false;
+
+    while i < chars.len() {
+        let ch = chars[i];
+        if in_string {
+            out.push(ch);
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
+            i += 1;
+            continue;
+        }
+
+        if ch == '"' {
+            in_string = true;
+            out.push(ch);
+            i += 1;
+            continue;
+        }
+
+        if ch == ',' {
+            let mut j = i + 1;
+            while j < chars.len() && chars[j].is_whitespace() {
+                j += 1;
+            }
+            if j < chars.len() && matches!(chars[j], '}' | ']') {
+                i += 1;
+                continue;
+            }
+        }
+
+        out.push(ch);
+        i += 1;
+    }
+
+    out
+}
+
+fn summarize_model_output(text: &str) -> String {
+    let compact = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let trimmed = compact.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+
+    const MAX_CHARS: usize = 240;
+    let mut snippet = String::new();
+    for ch in trimmed.chars().take(MAX_CHARS) {
+        snippet.push(ch);
+    }
+    if trimmed.chars().count() > MAX_CHARS {
+        snippet.push_str("...");
+    }
+    snippet
+}
+
+fn read_f32_field(json: &Value, keys: &[&str]) -> Option<f32> {
+    for key in keys {
+        let value = &json[*key];
+        if let Some(n) = value.as_f64() {
+            return Some(n as f32);
+        }
+        if let Some(s) = value.as_str() {
+            if let Ok(parsed) = s.trim().parse::<f32>() {
+                return Some(parsed);
+            }
+        }
+    }
+    None
+}
+
+async fn lookup_usda_macros(
+    client: &Client,
+    query: &str,
+) -> Result<(Option<UsdaMacros>, bool), String> {
+    let (api_key, used_demo_key) = usda_api_key();
 
     let url = format!("https://api.nal.usda.gov/fdc/v1/foods/search?api_key={api_key}");
     let body = json!({
@@ -417,18 +585,64 @@ async fn lookup_usda_macros(client: &Client, query: &str) -> Result<Option<UsdaM
         .map_err(|e| format!("Invalid USDA response: {e}"))?;
     if !status.is_success() {
         return Err(format!(
-            "USDA lookup failed ({}). Check your FoodData Central API key in Settings.",
-            status
+            "USDA lookup failed ({}). {}",
+            status,
+            if used_demo_key {
+                "USDA demo access may be rate-limited. Add your own FoodData Central key in Settings."
+            } else {
+                "Check your FoodData Central API key in Settings."
+            }
         ));
     }
 
     let foods = json["foods"].as_array().cloned().unwrap_or_default();
     for food in foods {
         if let Some(macros) = macros_from_usda_food(&food) {
-            return Ok(Some(macros));
+            return Ok((Some(macros), used_demo_key));
         }
     }
-    Ok(None)
+    Ok((None, used_demo_key))
+}
+
+fn usda_api_key() -> (String, bool) {
+    match CredentialManager::global().retrieve(credentials::providers::USDA_FDC) {
+        Ok(key) if !key.trim().is_empty() => (key, false),
+        _ => (USDA_DEMO_KEY.to_string(), true),
+    }
+}
+
+fn normalize_food_lookup_query(food_name: &str) -> String {
+    let trimmed = food_name.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+
+    let lowered = trimmed.to_lowercase();
+    let lowered = lowered
+        .strip_prefix("a ")
+        .or_else(|| lowered.strip_prefix("an "))
+        .or_else(|| lowered.strip_prefix("the "))
+        .unwrap_or(&lowered)
+        .to_string();
+
+    for prefix in [
+        "bottle of ",
+        "glass of ",
+        "cup of ",
+        "bowl of ",
+        "plate of ",
+        "piece of ",
+        "slice of ",
+        "container of ",
+        "jar of ",
+        "can of ",
+    ] {
+        if let Some(rest) = lowered.strip_prefix(prefix) {
+            return rest.trim().to_string();
+        }
+    }
+
+    lowered
 }
 
 fn macros_from_usda_food(food: &Value) -> Option<UsdaMacros> {
@@ -518,6 +732,43 @@ mod tests {
         assert_eq!(parsed.food_name, "banana");
         assert_eq!(parsed.estimated_grams, 118.0);
         assert_eq!(parsed.confidence, 0.8);
+    }
+
+    #[test]
+    fn parse_vision_estimate_accepts_json_with_extra_text() {
+        let parsed = parse_vision_estimate(
+            "I think this is:\n{\"food_name\":\"banana\",\"estimated_grams\":118,\"confidence\":0.8,\"notes\":\"peeled\"}\nHope that helps.",
+        )
+        .unwrap();
+        assert_eq!(parsed.food_name, "banana");
+    }
+
+    #[test]
+    fn parse_vision_estimate_repairs_trailing_commas() {
+        let parsed = parse_vision_estimate(
+            "{\"food_name\":\"banana\",\"estimated_grams\":118,\"confidence\":0.8,\"notes\":\"peeled\",}",
+        )
+        .unwrap();
+        assert_eq!(parsed.food_name, "banana");
+        assert_eq!(parsed.estimated_grams, 118.0);
+    }
+
+    #[test]
+    fn parse_vision_estimate_accepts_string_numbers() {
+        let parsed = parse_vision_estimate(
+            "{\"food_name\":\"banana\",\"estimated_grams\":\"118\",\"confidence\":\"0.8\",\"notes\":\"peeled\"}",
+        )
+        .unwrap();
+        assert_eq!(parsed.food_name, "banana");
+        assert_eq!(parsed.estimated_grams, 118.0);
+        assert_eq!(parsed.confidence, 0.8);
+    }
+
+    #[test]
+    fn normalize_food_lookup_query_removes_container_prefix() {
+        assert_eq!(normalize_food_lookup_query("Bottle of Water"), "water");
+        assert_eq!(normalize_food_lookup_query("a bowl of oatmeal"), "oatmeal");
+        assert_eq!(normalize_food_lookup_query("banana"), "banana");
     }
 
     #[test]
