@@ -1,6 +1,7 @@
 import { useNetwork } from "../lib/NetworkContext";
 import { useState, useRef, useEffect, useMemo, lazy, Suspense, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { Basket, ChatCircleDots, Lightning } from "@phosphor-icons/react";
 import { LLM_PROVIDERS } from "../hooks/useCredentials";
 import { useAiConfig } from "../hooks/useAiConfig";
 import { loadProfile } from "../lib/profileStore";
@@ -47,7 +48,6 @@ interface ChatMessage {
 interface GoalOption {
   value: string;
   label: string;
-  emoji: string;
 }
 
 interface ContextOption {
@@ -56,17 +56,17 @@ interface ContextOption {
 }
 
 const QUICK_PROMPTS = [
-  { label: "📊 Weekly Digest", prompt: "Generate my Weekly Nutrition Report Card. Include: (1) daily average macros vs my targets, (2) best and worst days this week, (3) consistency patterns like meal skipping or late-night eating, (4) my top 3 action items for next week. Set context to Last 7 Days." },
-  { label: "❓ Simulate a Meal", prompt: "I'm thinking about eating a Big Mac for lunch. Simulate the macros for me and tell me how it affects my daily limits." },
-  { label: "📅 Plan Tomorrow", prompt: "Based on my macro deficits, generate a healthy 3-meal plan for tomorrow and automatically log it into my diary." },
-  { label: "🛒 Build Grocery List", prompt: "Look at my diet and suggest 3 ingredients I should buy to improve my nutrition, then add them to my grocery list." },
-  { label: "🔍 Audit This", prompt: "Audit the ingredients in a standard Protein Bar. Tell me if it's healthy." },
+  { label: "Weekly Digest", prompt: "Generate my Weekly Nutrition Report Card. Include: (1) daily average macros vs my targets, (2) best and worst days this week, (3) consistency patterns like meal skipping or late-night eating, (4) my top 3 action items for next week. Set context to Last 7 Days." },
+  { label: "Simulate a Meal", prompt: "I'm thinking about eating a Big Mac for lunch. Simulate the macros for me and tell me how it affects my daily limits." },
+  { label: "Plan Tomorrow", prompt: "Based on my macro deficits, generate a healthy 3-meal plan for tomorrow and automatically log it into my diary." },
+  { label: "Build Grocery List", prompt: "Look at my diet and suggest 3 ingredients I should buy to improve my nutrition, then add them to my grocery list." },
+  { label: "Audit This", prompt: "Audit the ingredients in a standard Protein Bar. Tell me if it's healthy." },
 ];
 
 const GOAL_OPTIONS: GoalOption[] = [
-  { value: "weight_loss", label: "Cut", emoji: "🔥" },
-  { value: "maintenance", label: "Maintain", emoji: "⚖️" },
-  { value: "muscle_gain", label: "Bulk", emoji: "💪" },
+  { value: "weight_loss", label: "Cut" },
+  { value: "maintenance", label: "Maintain" },
+  { value: "muscle_gain", label: "Bulk" },
 ];
 
 const CONTEXT_OPTIONS: ContextOption[] = [
@@ -576,7 +576,7 @@ export default function AiAdvisor() {
         ...prev,
         aiMsg,
         ...(assistantSaveFailed
-          ? [{ role: "assistant" as const, content: "⚠️ I answered, but I could not save this reply to session history." }]
+          ? [{ role: "assistant" as const, content: "Warning: I answered, but I could not save this reply to session history." }]
           : []),
       ]);
       
@@ -594,7 +594,7 @@ export default function AiAdvisor() {
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: `⚠️ ${helpText}` },
+        { role: "assistant", content: `Warning: ${helpText}` },
       ]);
     } finally {
       setLoading(false);
@@ -848,7 +848,7 @@ export default function AiAdvisor() {
             title="Toggle Grocery List"
             style={{ background: isGroceryOpen ? 'rgba(16, 185, 129, 0.15)' : '', borderColor: isGroceryOpen ? 'rgba(16, 185, 129, 0.4)' : '' }}
           >
-            <span>🛒</span>
+            <Basket size={14} weight="duotone" />
             <span style={{ fontSize: 11, fontWeight: "bold", marginLeft: 4 }}>
               List {groceryList.length > 0 && `(${groceryList.length})`}
             </span>
@@ -895,7 +895,6 @@ export default function AiAdvisor() {
                       setGoal(option.value);
                     }}
                   >
-                    <span>{option.emoji}</span>
                     <span>{option.label}</span>
                   </button>
                 ))}
@@ -1035,7 +1034,7 @@ export default function AiAdvisor() {
         {/* Quick prompts (only when empty) */}
         {messages.length === 0 && (
           <div className="flex min-h-[55vh] flex-col items-center justify-center text-center px-1 py-10 gap-2">
-            <div className="text-[40px] mb-1">💬</div>
+            <ChatCircleDots size={38} weight="duotone" className="mb-1 text-white/60" />
             <div className="text-lg font-bold text-white/90">Start a conversation</div>
             <div className="text-sm text-white/40 max-w-[400px] mb-3">
               Ask anything about your nutrition, or try one of these:
@@ -1249,7 +1248,10 @@ export default function AiAdvisor() {
 
             {msg.tokens !== undefined && msg.tokens > 0 && (
               <div className="mt-1.5 text-[10px] text-white/40" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span>⚡ {msg.tokens} tokens</span>
+                <span className="inline-flex items-center gap-1">
+                  <Lightning size={12} weight="fill" />
+                  {msg.tokens} tokens
+                </span>
                 {msg.provider && (
                   <span style={{ color: "var(--muted2)" }}>· via {msg.provider}</span>
                 )}
@@ -1292,7 +1294,10 @@ export default function AiAdvisor() {
           className="w-[280px] shrink-0 flex flex-col border-l border-white/5 bg-[#14161e]/95"
         >
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, paddingBottom: 10, borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: "#10b981" }}>🛒 Smart Grocery List</span>
+            <span style={{ color: "#10b981", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Basket size={15} weight="duotone" />
+              Smart Grocery List
+            </span>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <button
                 onClick={clearGroceryList}
