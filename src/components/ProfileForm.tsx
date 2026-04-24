@@ -71,7 +71,7 @@ export default function ProfileForm(props: {
   }
 
   return (
-    <div className="card" style={{ maxWidth: 720 }}>
+    <div className="card w-full">
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <div>
           <div style={{ fontSize: 16, fontWeight: 600 }}>{title}</div>

@@ -16,6 +16,7 @@ import {
 import { useAiConfig, type AiModelInfo } from "../hooks/useAiConfig";
 import { getMemories, deleteMemory } from "../generated/commands";
 import type { AiMemory } from "../generated/types";
+import { MoonStars, SunDim } from "@phosphor-icons/react";
 
 export default function Settings() {
   const { session } = useDatabaseSession();
@@ -60,17 +61,18 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <div className="card">
+      <div className="card mx-auto w-full max-w-3xl">
         <div style={{ color: "var(--muted)" }}>Loading profile...</div>
       </div>
     );
   }
 
   return (
-    <div className="page-enter" style={{ display: "grid", gap: 14 }}>
+    <div className="page-enter flex w-full flex-col gap-4 px-4 pb-28 pt-4 sm:px-6 md:px-8 md:pb-8 lg:px-10">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       {error && (
         <div
-          className="card"
+          className="card w-full"
           style={{
             border: "1px solid rgba(255,80,80,0.35)",
             background: "rgba(255,80,80,0.08)",
@@ -81,11 +83,11 @@ export default function Settings() {
         </div>
       )}
 
-      <div className="pop-in">
+      <div className="pop-in w-full">
         <ProfileForm initial={profile} onSave={persist} saving={saving} />
       </div>
 
-      <div className="card pop-in-delay-1" style={{ maxWidth: 720 }}>
+      <div className="card pop-in-delay-1 w-full">
         <div style={{ fontSize: 16, fontWeight: 600 }}>Energy estimates</div>
         <div
           style={{ fontSize: 12, color: "var(--muted2)", marginTop: 4 }}
@@ -93,14 +95,7 @@ export default function Settings() {
           Based on Mifflin–St Jeor + activity multiplier.
         </div>
 
-        <div
-          style={{
-            marginTop: 14,
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 12,
-          }}
-        >
+        <div className="mt-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div style={metricBox}>
             <div style={metricLabel}>BMR</div>
             <div style={metricValue}>
@@ -141,12 +136,12 @@ export default function Settings() {
           </div>
         )}
       </div>
-      <div className="card pop-in-delay-1" style={{ maxWidth: 720 }}>
+      <div className="card pop-in-delay-1 w-full">
         <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Appearance</div>
         <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 14 }}>
           Choose your preferred color theme.
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div className="flex flex-col gap-2 sm:flex-row">
           <button
             onClick={() => setTheme("dark")}
             style={{
@@ -163,8 +158,12 @@ export default function Settings() {
               fontSize: 13,
               fontFamily: "inherit",
             }}
+            aria-label="Dark theme"
           >
-            🌙 Dark
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <MoonStars size={16} weight="duotone" />
+              <span>Dark</span>
+            </span>
           </button>
           <button
             onClick={() => setTheme("light")}
@@ -182,13 +181,17 @@ export default function Settings() {
               fontSize: 13,
               fontFamily: "inherit",
             }}
+            aria-label="Light theme"
           >
-            ☀️ Light
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <SunDim size={16} weight="duotone" />
+              <span>Light</span>
+            </span>
           </button>
         </div>
       </div>
 
-      <div className="card pop-in-delay-1" style={{ maxWidth: 720 }}>
+      <div className="card pop-in-delay-1 w-full">
         <div style={{ fontSize: 16, fontWeight: 600 }}>Database export</div>
         <div
           style={{ fontSize: 12, color: "var(--muted2)", marginTop: 4 }}
@@ -196,16 +199,7 @@ export default function Settings() {
           Export the currently connected database as an Excel workbook.
         </div>
 
-        <div
-          style={{
-            marginTop: 14,
-            display: "flex",
-            gap: 10,
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-          }}
-        >
+        <div className="mt-3.5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div style={{ fontSize: 12, color: "var(--muted)" }}>
             {session.connectedPath ?? "No database connected"}
           </div>
@@ -235,6 +229,7 @@ export default function Settings() {
 
       {/* ── AI Provider Configuration ── */}
       <ApiKeySection />
+      </div>
     </div>
   );
 }
@@ -488,7 +483,7 @@ function ApiKeySection() {
   if (aiCfg.loading) return null;
 
   return (
-    <div className="card pop-in-delay-2" style={{ maxWidth: 720 }}>
+    <div className="card pop-in-delay-2 w-full">
       <div className="text-base font-bold leading-snug">
         AI Provider Configuration
       </div>
@@ -697,7 +692,7 @@ function ApiKeySection() {
       </div>
 
       {/* AI Context & Memory */}
-      <div className="card pop-in-delay-3" style={{ maxWidth: 720, marginTop: 14 }}>
+      <div className="card pop-in-delay-3 w-full" style={{ marginTop: 14 }}>
         <div className="text-base font-bold leading-snug" style={{ marginBottom: 4 }}>
           AI Context & Memory
         </div>

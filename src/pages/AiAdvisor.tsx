@@ -16,7 +16,6 @@ import {
 } from "../generated/commands";
 import { AiChatSession, type AiChatMessage, NutritionTrendPoint, type AppUserProfile } from "../generated/types";
 import ReactMarkdown from "react-markdown";
-
 const ConfirmLogCard = lazy(() =>
   import("../components/ConfirmLogCard").then((module) => ({ default: module.ConfirmLogCard })),
 );
@@ -796,7 +795,7 @@ export default function AiAdvisor() {
   return (
     <div className="page-enter pop-in flex flex-col h-full min-h-0 gap-0 w-full mx-auto relative overflow-hidden p-0">
       {(!isOnline && selectedProvider !== "ollama") && (
-        <div className="shrink-0 m-4 mb-0 p-4 rounded-[18px] border border-amber-500/30 bg-amber-500/10 backdrop-blur-md">
+        <div className="shrink-0 mx-4 mt-4 mb-0 p-3.5 rounded-[18px] border border-amber-500/30 bg-amber-500/10 backdrop-blur-md sm:mx-5 md:mx-6">
           <div style={{ fontWeight: 600 }}>You're offline</div>
           <div style={{ marginTop: 6, color: "var(--muted)" }}>
             Cloud AI advice requires an internet connection. Switch to <strong>Ollama (Local)</strong> or connect to the
@@ -806,10 +805,10 @@ export default function AiAdvisor() {
       )}
 
       {/* Toolbar */}
-      <div className="shrink-0 flex items-center justify-between gap-2.5 px-4 py-3 m-4 rounded-[20px] border border-white/10 bg-[#1e1e2a] shadow-lg flex-wrap max-sm:flex-col max-sm:items-start max-sm:m-3">
-        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+      <div className="shrink-0 flex items-center justify-between gap-2 px-3 py-2.5 m-4 rounded-[18px] border border-white/10 bg-[#1e1e2a] shadow-lg flex-wrap max-sm:flex-col max-sm:items-start max-sm:m-3 max-sm:px-3 max-sm:py-2">
+        <div className="flex items-center gap-1 flex-wrap min-w-0">
           <button
-            className="ai-advisor-toolbar-action ai-advisor-controls-btn"
+            className="ai-advisor-toolbar-action ai-advisor-controls-btn w-8 h-8"
             onClick={() => setIsControlsOpen((prev) => !prev)}
             title="Open chat controls"
             aria-label="Open chat controls"
@@ -818,20 +817,20 @@ export default function AiAdvisor() {
           >
             <span aria-hidden="true">☰</span>
           </button>
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap max-w-[180px] overflow-hidden text-ellipsis bg-indigo-500/12 text-indigo-300/95 border border-indigo-500/25">{providerConfig.name}</span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-semibold whitespace-nowrap max-w-[180px] overflow-hidden text-ellipsis bg-indigo-500/12 text-indigo-300/95 border border-indigo-500/25">{providerConfig.name}</span>
           {selectedModel && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap max-w-[180px] overflow-hidden text-ellipsis bg-cyan-500/10 text-cyan-300/90 border border-cyan-500/20" title={selectedModel}>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-semibold whitespace-nowrap max-w-[180px] overflow-hidden text-ellipsis bg-cyan-500/10 text-cyan-300/90 border border-cyan-500/20" title={selectedModel}>
               {selectedModel}
             </span>
           )}
           {selectedProvider === "ollama" ? (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-[0.04em] bg-emerald-500/10 text-emerald-400/90 border border-emerald-500/25">🔒 Local</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.04em] bg-emerald-500/10 text-emerald-400/90 border border-emerald-500/25">Local</span>
           ) : (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-[0.04em] bg-amber-500/10 text-amber-400/90 border border-amber-500/20">☁️ Cloud</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.04em] bg-amber-500/10 text-amber-400/90 border border-amber-500/20">Cloud</span>
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0 max-sm:w-full">
+        <div className="flex items-center gap-1 shrink-0 max-sm:w-full">
           {messages.length > 0 && (
             <button
               className="bg-indigo-500/10 border border-indigo-500/20 text-white/90 px-2.5 py-1 rounded-md cursor-pointer flex items-center transition-all hover:bg-indigo-500/15 hover:border-indigo-500/40 hover:-translate-y-px"
@@ -870,7 +869,7 @@ export default function AiAdvisor() {
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-start gap-2.5 px-0.5 pb-2.5 border-b border-white/[0.07] sticky top-0 z-[2] bg-gradient-to-b from-[#1a1e29]/98 to-[#1a1e29]/93 max-sm:pt-1">
+            <div className="flex justify-between items-start gap-2.5 px-5 py-4 border-b border-white/[0.07] sticky top-0 z-[2] bg-gradient-to-b from-[#1a1e29]/98 to-[#1a1e29]/93 max-sm:px-4 max-sm:py-3">
               <div>
                 <div className="text-base font-[800] text-white/95 tracking-[0.01em] max-sm:text-[15px]">Chat Controls</div>
                 <div className="mt-1 text-sm leading-relaxed text-white/80 max-sm:text-[11px]">Adjust advisor settings and jump between sessions.</div>
@@ -884,7 +883,7 @@ export default function AiAdvisor() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-6">
+            <div className="flex-1 overflow-y-auto px-5 pt-5 pb-3 flex flex-col gap-6 max-sm:px-4 max-sm:pt-4">
               <div className="text-xs font-bold text-white/80 uppercase tracking-[0.08em]">Goal</div>
               <div className="flex flex-wrap gap-2 max-sm:gap-1.5">
                 {GOAL_OPTIONS.map((option) => (
@@ -903,7 +902,7 @@ export default function AiAdvisor() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-6">
+            <div className="px-5 py-3 flex flex-col gap-6 max-sm:px-4">
               <div className="text-xs font-bold text-white/80 uppercase tracking-[0.08em]">Context Window</div>
               <div className="flex flex-wrap gap-2 max-sm:gap-1.5">
                 {CONTEXT_OPTIONS.map((option) => (
@@ -918,7 +917,7 @@ export default function AiAdvisor() {
               </div>
             </div>
 
-            <div className="ai-controls-section ai-controls-history-section">
+            <div className="ai-controls-section ai-controls-history-section px-5 pb-5 flex flex-col gap-3 max-sm:px-4 max-sm:pb-4">
               <div className="text-xs font-bold text-white/80 uppercase tracking-[0.08em]">Chat History</div>
               <input
                 className="w-full rounded-[10px] border border-white/[0.34] bg-white/10 text-white/95 text-xs px-2.5 py-2 outline-none focus:border-blue-400/82 focus:shadow-[0_0_0_3px_rgba(130,162,255,0.2)] placeholder:text-white/60"
@@ -1018,12 +1017,24 @@ export default function AiAdvisor() {
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0, position: 'relative' }}>
         {/* ── Scrollable messages area ── */}
-        <div className="flex-1 min-h-0 overflow-y-auto py-3.5 flex flex-col gap-2.5 [scrollbar-width:thin] [scrollbar-color:rgba(124,92,255,0.25)_transparent]" id="ai-messages-scroll" style={{ flex: 1 }}>
-
+        <div
+          className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-3.5 [scrollbar-width:thin] [scrollbar-color:rgba(124,92,255,0.25)_transparent]"
+          id="ai-messages-scroll"
+          style={{
+            flex: 1,
+            WebkitMaskImage: "linear-gradient(to bottom, transparent 0, black 1.25rem, black calc(100% - 5rem), transparent 100%)",
+            maskImage: "linear-gradient(to bottom, transparent 0, black 1.25rem, black calc(100% - 5rem), transparent 100%)",
+            WebkitMaskRepeat: "no-repeat",
+            maskRepeat: "no-repeat",
+            WebkitMaskSize: "100% 100%",
+            maskSize: "100% 100%",
+          }}
+        >
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-2.5 pb-36 sm:pb-40">
 
         {/* Quick prompts (only when empty) */}
         {messages.length === 0 && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-5 py-10 gap-2">
+          <div className="flex min-h-[55vh] flex-col items-center justify-center text-center px-1 py-10 gap-2">
             <div className="text-[40px] mb-1">💬</div>
             <div className="text-lg font-bold text-white/90">Start a conversation</div>
             <div className="text-sm text-white/40 max-w-[400px] mb-3">
@@ -1171,10 +1182,10 @@ export default function AiAdvisor() {
           return (
           <div
             key={i}
-            className={`[animation:fadeSlideUp_0.3s_cubic-bezier(0.16,1,0.3,1)_forwards] rounded-2xl px-4 py-3.5 border backdrop-blur-sm transition-all ${
+            className={`w-fit max-w-[calc(100%-0.5rem)] sm:max-w-[85%] [animation:fadeSlideUp_0.3s_cubic-bezier(0.16,1,0.3,1)_forwards] rounded-2xl px-4 py-3.5 border backdrop-blur-sm transition-all ${
               msg.role === "assistant"
-                ? "border-indigo-500/20 [border-left:3px_solid_rgba(124,92,255,0.45)] bg-[rgba(124,92,255,0.05)] mr-8 md:mr-16"
-                : "border-cyan-500/15 [border-right:3px_solid_rgba(0,209,255,0.35)] bg-[rgba(0,209,255,0.04)] ml-8 md:ml-16"
+                ? "self-start border-indigo-500/20 [border-left:3px_solid_rgba(124,92,255,0.45)] bg-[rgba(124,92,255,0.05)]"
+                : "self-end border-cyan-500/15 [border-right:3px_solid_rgba(0,209,255,0.35)] bg-[rgba(0,209,255,0.04)]"
             }`}
           >
             <div className="text-[11px] text-white/40 mb-1.5 font-semibold uppercase tracking-[0.04em]" style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1250,7 +1261,7 @@ export default function AiAdvisor() {
 
         {/* Loading indicator */}
         {loading && (
-            <div className="[animation:fadeSlideUp_0.3s_cubic-bezier(0.16,1,0.3,1)_forwards] rounded-2xl px-4 py-3.5 border border-indigo-500/20 [border-left:3px_solid_rgba(124,92,255,0.45)] bg-[rgba(124,92,255,0.05)] mr-8 md:mr-16 backdrop-blur-sm">
+          <div className="w-fit max-w-[calc(100%-0.5rem)] sm:max-w-[85%] self-start [animation:fadeSlideUp_0.3s_cubic-bezier(0.16,1,0.3,1)_forwards] rounded-2xl px-4 py-3.5 border border-indigo-500/20 [border-left:3px_solid_rgba(124,92,255,0.45)] bg-[rgba(124,92,255,0.05)] backdrop-blur-sm">
               <div className="flex items-center gap-2.5 text-sm text-white/80">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="[animation:spin_1s_linear_infinite] text-indigo-400 shrink-0">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
@@ -1264,13 +1275,15 @@ export default function AiAdvisor() {
 
         {/* Error */}
         {error && !loading && (
-          <div className="rounded-2xl px-4 py-3.5 border border-red-500/30 bg-red-500/10">
+          <div className="w-fit max-w-[calc(100%-0.5rem)] sm:max-w-[85%] self-start rounded-2xl px-4 py-3.5 border border-red-500/30 bg-red-500/10">
             <div style={{ fontSize: 13 }}>{error}</div>
           </div>
         )}
 
         {/* Scroll anchor */}
         <div ref={messagesEndRef} />
+          </div>
+        </div>
       </div>
 
       {/* Sliding Grocery List Panel */}
@@ -1310,13 +1323,10 @@ export default function AiAdvisor() {
           </div>
         </div>
       )}
-      </div>
 
-      {/* ── Fixed input bar with fade ── */}
       {!isControlsOpen && (
         <div className="absolute bottom-0 left-0 right-0 z-20 p-4 max-sm:p-3">
-          <div className="absolute bottom-full left-0 right-0 h-24 bg-gradient-to-t from-[#12121a] via-[#12121a]/80 to-transparent pointer-events-none z-10" />
-          <div className="relative flex gap-2.5 items-end px-4 py-3 rounded-[24px] border border-white/10 bg-[#1e1e2a]/95 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+          <div className="relative flex gap-2 items-end px-3.5 py-3 rounded-[22px] border border-white/10 bg-[#1e1e2a]/95 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] max-sm:px-3 max-sm:py-2.5">
             <textarea
               ref={textareaRef}
               value={input}

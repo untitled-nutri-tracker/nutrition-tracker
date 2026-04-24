@@ -128,12 +128,14 @@ fn ensure_camera_permission() -> Result<String, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let mut builder = tauri::Builder::default();
-    
+    let builder = {
+        let builder = tauri::Builder::default();
+
     #[cfg(any(target_os = "android", target_os = "ios"))]
-    {
-        builder = builder.plugin(tauri_plugin_barcode_scanner::init());
-    }
+        let builder = builder.plugin(tauri_plugin_barcode_scanner::init());
+
+        builder
+    };
 
     builder
         .plugin(tauri_plugin_dialog::init())
