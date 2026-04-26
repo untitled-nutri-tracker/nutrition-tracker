@@ -797,8 +797,8 @@ export default function AiAdvisor() {
     <div className="page-enter flex h-full min-h-0 w-full flex-col gap-0 overflow-hidden p-0">
       {(!isOnline && selectedProvider !== "ollama") && (
         <div className="shrink-0 mx-4 mt-4 mb-0 p-3.5 rounded-[18px] border border-amber-500/30 bg-amber-500/10 backdrop-blur-md sm:mx-5 md:mx-6">
-          <div style={{ fontWeight: 600 }}>You're offline</div>
-          <div style={{ marginTop: 6, color: "var(--muted)" }}>
+          <div className="font-semibold">You're offline</div>
+          <div className="mt-1.5 text-white/65">
             Cloud AI advice requires an internet connection. Switch to <strong>Ollama (Local)</strong> or connect to the
             network to continue.
           </div>
@@ -839,18 +839,17 @@ export default function AiAdvisor() {
               title="New Chat"
             >
               <span>+</span>
-              <span style={{ fontSize: 11, fontWeight: "bold", marginLeft: 4 }}>New Chat</span>
+              <span className="ml-1 text-[11px] font-bold">New Chat</span>
             </button>
           )}
 
           <button
-            className="bg-indigo-500/10 border border-indigo-500/20 text-white/90 px-2.5 py-1 rounded-md cursor-pointer flex items-center transition-all hover:bg-indigo-500/15 hover:border-indigo-500/40 hover:-translate-y-px"
+            className={`border px-2.5 py-1 rounded-md cursor-pointer flex items-center transition-all hover:-translate-y-px ${isGroceryOpen ? "border-emerald-500/40 bg-emerald-500/15 text-white" : "border-indigo-500/20 bg-indigo-500/10 text-white/90 hover:bg-indigo-500/15 hover:border-indigo-500/40"}`}
             onClick={() => setIsGroceryOpen(!isGroceryOpen)}
             title="Toggle Grocery List"
-            style={{ background: isGroceryOpen ? 'rgba(16, 185, 129, 0.15)' : '', borderColor: isGroceryOpen ? 'rgba(16, 185, 129, 0.4)' : '' }}
           >
             <Basket size={14} weight="duotone" />
-            <span style={{ fontSize: 11, fontWeight: "bold", marginLeft: 4 }}>
+            <span className="ml-1 text-[11px] font-bold">
               List {groceryList.length > 0 && `(${groceryList.length})`}
             </span>
           </button>
@@ -1198,7 +1197,7 @@ export default function AiAdvisor() {
                 : "self-end border-cyan-500/15 [border-right:3px_solid_rgba(0,209,255,0.35)] bg-[rgba(0,209,255,0.04)]"
             }`}
           >
-            <div className="text-[11px] text-white/40 mb-1.5 font-semibold uppercase tracking-[0.04em]" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-white/40">
               {msg.role === "user" ? "You" : (
                 <>
                   <span className="inline-flex items-center gap-1.5">
@@ -1206,17 +1205,7 @@ export default function AiAdvisor() {
                     NutriLog AI
                   </span>
                   {msg.provider && (
-                    <span style={{
-                      fontSize: 10,
-                      fontWeight: 600,
-                      padding: "2px 7px",
-                      borderRadius: 6,
-                      background: "rgba(124,92,255,0.15)",
-                      border: "1px solid rgba(124,92,255,0.3)",
-                      color: "rgba(124,92,255,0.9)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}>
+                    <span className="rounded-md border border-indigo-400/35 bg-indigo-500/15 px-[7px] py-[2px] text-[10px] font-semibold uppercase tracking-[0.05em] text-indigo-300/95">
                       {msg.provider}
                     </span>
                   )}
@@ -1227,18 +1216,18 @@ export default function AiAdvisor() {
               )}
             </div>
             {msg.role === "assistant" ? (
-              <div className="prose prose-invert prose-sm max-w-none text-white/90" style={{ fontSize: 14, lineHeight: 1.7 }}>
+              <div className="prose prose-invert prose-sm max-w-none text-[14px] leading-[1.7] text-white/90">
                 {contentElements.length > 0 ? contentElements : <ReactMarkdown>{msg.content}</ReactMarkdown>}
               </div>
             ) : (
-              <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+              <div className="whitespace-pre-wrap text-[14px] leading-[1.6]">
                 {msg.content}
               </div>
             )}
 
             {/* .nlog data toggle */}
             {msg.nlogData && (
-              <div style={{ marginTop: 10 }}>
+              <div className="mt-2.5">
                 <button
                   onClick={() => setShowNlog(showNlog === i ? null : i)}
                   className="bg-transparent border-0 text-white/40 text-[11px] cursor-pointer underline p-0 transition-colors hover:text-white/60"
@@ -1260,7 +1249,7 @@ export default function AiAdvisor() {
                   {msg.tokens} tokens
                 </span>
                 {msg.provider && (
-                  <span style={{ color: "var(--muted2)" }}>· via {msg.provider}</span>
+                  <span className="text-white/45">· via {msg.provider}</span>
                 )}
               </div>
             )}
@@ -1285,7 +1274,7 @@ export default function AiAdvisor() {
         {/* Error */}
         {error && !loading && (
           <div className="w-fit max-w-[calc(100%-0.5rem)] sm:max-w-[85%] self-start rounded-2xl px-4 py-3.5 border border-red-500/30 bg-red-500/10">
-            <div style={{ fontSize: 13 }}>{error}</div>
+            <div className="text-[13px]">{error}</div>
           </div>
         )}
 

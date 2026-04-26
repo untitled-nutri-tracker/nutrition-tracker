@@ -16,7 +16,7 @@ import {
 import { useAiConfig, type AiModelInfo } from "../hooks/useAiConfig";
 import { getMemories, deleteMemory } from "../generated/commands";
 import type { AiMemory } from "../generated/types";
-import { MoonStars, SunDim } from "@phosphor-icons/react";
+import { MoonStars, SunDim, Trash } from "@phosphor-icons/react";
 
 export default function Settings() {
   const { session } = useDatabaseSession();
@@ -536,10 +536,7 @@ function ApiKeySection() {
                       className="px-4 py-2 rounded-[10px] border border-emerald-500/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 text-white/90 font-semibold text-[13px] whitespace-nowrap hover:from-emerald-500/30 hover:to-emerald-500/15 transition-all max-sm:w-full"
                       onClick={() => handleSaveKey(provider)}
                       disabled={savingKey || !keyInput.trim()}
-                      style={{
-                        opacity:
-                          savingKey || !keyInput.trim() ? 0.6 : 1,
-                      }}
+                      style={{ opacity: savingKey || !keyInput.trim() ? 0.6 : 1 }}
                     >
                       {savingKey ? "Saving…" : "Save"}
                     </button>
@@ -633,31 +630,31 @@ function ApiKeySection() {
       </div>
 
       {/* AI Context & Memory */}
-      <div className="card pop-in-delay-3 w-full" style={{ marginTop: 14 }}>
-        <div className="text-base font-bold leading-snug" style={{ marginBottom: 4 }}>
+      <div className="card pop-in-delay-3 mt-3.5 w-full">
+        <div className="mb-1 text-base font-bold leading-snug">
           AI Context & Memory
         </div>
-        <div className="text-xs text-white/40 mt-1 leading-relaxed" style={{ marginBottom: 16 }}>
+        <div className="mb-4 mt-1 text-xs leading-relaxed text-white/40">
           The AI automatically learns preferences and facts about you from your conversations to personalize advice. You can review and delete them here.
         </div>
 
         {loadingMemories ? (
-          <div style={{ color: "var(--muted2)", fontSize: 13 }}>Loading your AI memories...</div>
+          <div className="text-[13px] text-white/45">Loading your AI memories...</div>
         ) : memories.length === 0 ? (
-          <div style={{ color: "var(--muted2)", fontSize: 13, fontStyle: "italic", padding: "12px", background: "rgba(255,255,255,0.02)", borderRadius: 8 }}>
+          <div className="rounded-lg bg-white/[0.02] p-3 text-[13px] italic text-white/45">
             No saved memories yet. As you chat, useful preferences can appear here.
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="flex flex-col gap-2">
             {memories.map(m => (
-              <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.03)", borderRadius: 8 }}>
-                <span style={{ fontSize: 14, color: "var(--text)" }}>{m.fact}</span>
+              <div key={m.id} className="flex items-center justify-between rounded-lg border border-white/[0.03] bg-black/20 px-3.5 py-2.5">
+                <span className="text-sm text-white/90">{m.fact}</span>
                 <button
                   onClick={() => handleRemoveMemory(m.id)}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted2)", padding: 4 }}
+                  className="inline-flex items-center justify-center rounded-md p-1 text-white/45 transition-colors hover:bg-white/5 hover:text-white/75"
                   title="Delete memory"
                 >
-                  🗑️
+                  <Trash size={14} weight="bold" />
                 </button>
               </div>
             ))}
@@ -665,29 +662,29 @@ function ApiKeySection() {
         )}
       </div>
 
-      <div style={{ marginTop: 18, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 700 }}>Food photo scanning</div>
-        <div style={{ marginTop: 4, fontSize: 12, color: "var(--muted2)" }}>
+      <div className="mt-[18px] border-t border-white/10 pt-3.5">
+        <div className="text-[13px] font-bold">Food photo scanning</div>
+        <div className="mt-1 text-xs text-white/45">
           Photo scans default to local Ollama. Cloud vision only runs when explicitly enabled here.
         </div>
-        <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-          <label className="p-3.5 rounded-[14px] border border-orange-500/25 bg-orange-500/5 mt-3.5" style={{ cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <div className="mt-2.5 grid gap-2.5">
+          <label className="mt-3.5 flex cursor-pointer items-start gap-2.5 rounded-[14px] border border-orange-500/25 bg-orange-500/5 p-3.5">
             <input
               type="checkbox"
               checked={photoCloudEnabled}
               onChange={(e) => handlePhotoCloudToggle(e.target.checked)}
-              style={{ marginTop: 3 }}
+              className="mt-[3px]"
             />
             <span>
-              <span className="font-bold text-[13px] mb-1.5" style={{ display: "block" }}>
+              <span className="mb-1.5 block text-[13px] font-bold">
                 Allow cloud vision for food photos
               </span>
-              <span className="text-xs text-white/60 leading-relaxed" style={{ display: "block" }}>
+              <span className="block text-xs leading-relaxed text-white/60">
                 When enabled and a cloud vision provider is selected, food photos may be sent to that provider. USDA receives only the predicted food name.
               </span>
             </span>
           </label>
-          <div className="flex gap-1.5 flex-wrap mt-3.5 max-sm:gap-1" style={{ marginTop: 0 }}>
+          <div className="mt-0 flex flex-wrap gap-1.5 max-sm:gap-1">
             {LLM_PROVIDERS.map((p) => {
               const disabled = p.id !== "ollama" && !photoCloudEnabled;
               return (
@@ -707,12 +704,12 @@ function ApiKeySection() {
         </div>
       </div>
 
-      <div style={{ marginTop: 18, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 700 }}>Nutrition data providers</div>
-        <div style={{ marginTop: 4, fontSize: 12, color: "var(--muted2)" }}>
+      <div className="mt-[18px] border-t border-white/10 pt-3.5">
+        <div className="text-[13px] font-bold">Nutrition data providers</div>
+        <div className="mt-1 text-xs text-white/45">
           Photo scans use these keys to compute nutrition from identified foods. Food photos are not sent to nutrition data providers.
         </div>
-        <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+        <div className="mt-2.5 grid gap-2.5">
           {EXTERNAL_DATA_PROVIDERS.map((provider) => {
             const status = providerStatus[provider.id];
             const isEditing = editingProvider === provider.id;
@@ -726,23 +723,20 @@ function ApiKeySection() {
                     <div className="text-[11px] text-white/40 mt-0.5 leading-snug">{provider.description}</div>
                   </div>
                   {status?.hasKey ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap shrink-0 max-sm:self-start bg-emerald-500/10 border border-emerald-500/30 text-emerald-500/90">✅ Key stored</span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap shrink-0 max-sm:self-start bg-emerald-500/10 border border-emerald-500/30 text-emerald-500/90">Key stored</span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap shrink-0 max-sm:self-start bg-orange-500/10 border border-orange-500/30 text-orange-500/90">⚠️ No key</span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap shrink-0 max-sm:self-start bg-orange-500/10 border border-orange-500/30 text-orange-500/90">No key</span>
                   )}
                 </div>
 
                 {status?.hasKey && !isEditing && (
                   <div className="mt-2.5 font-mono text-xs text-white/60 px-3 py-2 rounded-[10px] bg-white/5 border border-white/5 flex items-center justify-between gap-2 max-sm:flex-col max-sm:items-start">
                     <span>{status.preview}</span>
-                    <div style={{ display: "flex", gap: 6 }}>
+                    <div className="flex gap-1.5">
                       <button
                         className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-white/60 text-[11px] hover:bg-red-500/20 transition-all cursor-pointer"
                         onClick={() => setEditingProvider(provider.id)}
-                        style={{
-                          borderColor: "rgba(124,92,255,0.3)",
-                          background: "rgba(124,92,255,0.08)",
-                        }}
+                        style={{ borderColor: "rgba(124,92,255,0.3)", background: "rgba(124,92,255,0.08)" }}
                       >
                         Change
                       </button>
@@ -791,7 +785,7 @@ function ApiKeySection() {
       {/* Privacy notice for cloud providers */}
       {selectedProvider !== "ollama" && (
         <div className="p-3.5 rounded-[14px] border border-orange-500/25 bg-orange-500/5 mt-3.5">
-          <div className="font-bold text-[13px] mb-1.5">⚠️ Privacy Notice</div>
+          <div className="mb-1.5 text-[13px] font-bold">Privacy Notice</div>
           <div className="text-xs text-white/60 leading-relaxed">
             When using cloud AI providers (OpenAI, Anthropic, Google, Custom),
             your meal data will be sent to their servers for analysis.
