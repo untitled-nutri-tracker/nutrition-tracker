@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "scan:style-debt": "sh -c \"echo '[inline styles]' && grep -RIn 'style={{' src/pages src/components || true && echo '' && echo '[raw color literals]' && grep -RInE '#[0-9A-Fa-f]{3,8}|rgba\\(|hsl\\(' src/pages src/components || true && echo '' && echo '[safe-area usage]' && grep -RInE 'safe-area|env\\(safe-area-inset' src || true\""
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
