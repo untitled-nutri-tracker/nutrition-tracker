@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDatabaseSession } from "../lib/DatabaseSessionContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { House, ForkKnife, ChartLineUp, Robot, Gear, Plus } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 
 function usePageMeta() {
   const { pathname } = useLocation();
@@ -111,8 +111,16 @@ export default function AppShell() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  const shellStyles = {
+    "--shell-mobile-nav-offset": "calc(env(safe-area-inset-bottom) + 0.5rem)",
+    "--shell-mobile-content-padding": "calc(6rem + env(safe-area-inset-bottom))",
+  } as CSSProperties;
+
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-[#12121A] font-sans text-white/90">
+    <div
+      className="flex h-[100dvh] w-full overflow-hidden bg-[#12121A] font-sans text-white/90"
+      style={shellStyles}
+    >
       
       {/* ── DESKTOP SIDEBAR ─────────────────────────────────────────── */}
       <aside className="hidden w-[260px] shrink-0 flex-col border-r border-white/6 bg-[#14141c]/90 backdrop-blur-xl md:flex">
@@ -159,7 +167,7 @@ export default function AppShell() {
           </div>
         </header>
 
-        <main className="relative flex flex-1 flex-col overflow-x-hidden overflow-y-auto scroll-smooth">
+        <main className="relative flex flex-1 flex-col overflow-x-hidden overflow-y-auto scroll-smooth pb-[var(--shell-mobile-content-padding)] md:pb-0">
           <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col">
             <AnimatePresence mode="wait">
               <motion.div
@@ -183,7 +191,8 @@ export default function AppShell() {
           initial={{ y: 96, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ type: "spring", stiffness: 210, damping: 28, delay: 0.08 }}
-          className="pointer-events-none fixed bottom-2 left-0 right-0 z-50 flex justify-center px-4 pb-[env(safe-area-inset-bottom)] md:hidden"
+          className="pointer-events-none fixed left-0 right-0 z-50 flex justify-center px-4 md:hidden"
+          style={{ bottom: "var(--shell-mobile-nav-offset)" }}
         >
           <div className="pointer-events-auto flex items-center rounded-[2rem] border border-white/12 bg-[#1c1c22]/95 p-1.5 shadow-[0_18px_32px_-16px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl">
             <div className="flex items-center gap-1 px-2">

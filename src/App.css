@@ -12,6 +12,8 @@
   color-scheme: dark;
   --muted: rgba(255, 255, 255, 0.66);
   --muted2: rgba(255, 255, 255, 0.45);
+  --shell-mobile-nav-offset: calc(env(safe-area-inset-bottom) + 0.5rem);
+  --shell-mobile-content-padding: calc(6rem + env(safe-area-inset-bottom));
 }
 
 * {
