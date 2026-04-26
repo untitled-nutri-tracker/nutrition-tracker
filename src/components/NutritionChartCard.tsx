@@ -8,6 +8,13 @@ interface NutritionChartCardProps {
   title: string;
 }
 
+const METRIC_COLORS: Record<TrendMetric, { base: string; gradient: string }> = {
+  calories: { base: "var(--metric-calories)", gradient: "var(--metric-fat)" },
+  protein: { base: "var(--metric-protein)", gradient: "var(--metric-carbs)" },
+  carbs: { base: "var(--metric-carbs)", gradient: "var(--metric-carbs)" },
+  fat: { base: "var(--metric-fat)", gradient: "var(--metric-fat)" },
+};
+
 export function NutritionChartCard({ data, metric, title }: NutritionChartCardProps) {
   if (!data || data.length === 0) return null;
 
@@ -15,8 +22,8 @@ export function NutritionChartCard({ data, metric, title }: NutritionChartCardPr
   const latestValue = values[values.length - 1] || 0;
   
   const unit = metric === 'calories' ? 'kcal' : 'g';
-  const color = metric === 'calories' ? '#f97316' : metric === 'protein' ? '#34d399' : metric === 'carbs' ? '#22d3ee' : '#f59e0b';
-  const gradientColor = metric === 'calories' ? '#f59e0b' : color;
+  const color = METRIC_COLORS[metric].base;
+  const gradientColor = METRIC_COLORS[metric].gradient;
 
   const chartData: AreaChartPoint[] = data.map(d => ({
     date: new Date(d.periodStart * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),

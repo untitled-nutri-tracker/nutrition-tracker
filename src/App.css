@@ -14,6 +14,10 @@
   --muted2: rgba(255, 255, 255, 0.45);
   --shell-mobile-nav-offset: calc(env(safe-area-inset-bottom) + 0.5rem);
   --shell-mobile-content-padding: calc(6rem + env(safe-area-inset-bottom));
+  --metric-protein: rgb(52 211 153);
+  --metric-carbs: rgb(34 211 238);
+  --metric-fat: rgb(245 158 11);
+  --metric-calories: rgb(249 115 22);
 }
 
 * {

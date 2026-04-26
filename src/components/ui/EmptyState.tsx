@@ -6,7 +6,7 @@ import React from "react";
 import Button from "./Button";
 
 interface EmptyStateProps {
-  icon?:        string;
+  icon?:        React.ReactNode;
   title:        string;
   description?: string;
   /** Optional CTA button */
@@ -19,7 +19,7 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({
-  icon  = "🍽️",
+  icon,
   title,
   description,
   action,
@@ -28,7 +28,7 @@ export default function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className="pop-in" style={{ ...containerStyle, ...style }}>
-      <div style={iconStyle}>{icon}</div>
+      {icon ? <div style={iconStyle}>{icon}</div> : null}
       <div style={titleStyle}>{title}</div>
       {description && (
         <div style={descStyle}>{description}</div>

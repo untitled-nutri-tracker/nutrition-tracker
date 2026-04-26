@@ -13,18 +13,25 @@ interface GoalVsActualCardProps {
   };
 }
 
+const METRIC_COLORS = {
+  calories: "var(--metric-calories)",
+  protein: "var(--metric-protein)",
+  carbs: "var(--metric-carbs)",
+  fat: "var(--metric-fat)",
+} as const;
+
 export function GoalVsActualCard({ period, targets, actual }: GoalVsActualCardProps) {
   const donutData = [
-    { name: 'Protein', value: actual.protein, color: '#34d399' },
-    { name: 'Carbs', value: actual.carbs, color: '#22d3ee' },
-    { name: 'Fat', value: actual.fat, color: '#f59e0b' },
+    { name: 'Protein', value: actual.protein, color: METRIC_COLORS.protein },
+    { name: 'Carbs', value: actual.carbs, color: METRIC_COLORS.carbs },
+    { name: 'Fat', value: actual.fat, color: METRIC_COLORS.fat },
   ];
 
   const progressData = [
-    { name: 'Cals', actual: actual.calories, target: targets.calories, color: '#f97316', unit: 'kcal' },
-    { name: 'Protein', actual: actual.protein, target: targets.protein, color: '#34d399', unit: 'g' },
-    { name: 'Carbs', actual: actual.carbs, target: targets.carbs, color: '#22d3ee', unit: 'g' },
-    { name: 'Fat', actual: actual.fat, target: targets.fat, color: '#f59e0b', unit: 'g' },
+    { name: 'Cals', actual: actual.calories, target: targets.calories, color: METRIC_COLORS.calories, unit: 'kcal' },
+    { name: 'Protein', actual: actual.protein, target: targets.protein, color: METRIC_COLORS.protein, unit: 'g' },
+    { name: 'Carbs', actual: actual.carbs, target: targets.carbs, color: METRIC_COLORS.carbs, unit: 'g' },
+    { name: 'Fat', actual: actual.fat, target: targets.fat, color: METRIC_COLORS.fat, unit: 'g' },
   ];
 
   const adherenceValues = [

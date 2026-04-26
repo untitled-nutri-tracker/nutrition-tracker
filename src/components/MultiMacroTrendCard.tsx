@@ -31,10 +31,10 @@ interface MultiMacroTrendCardProps {
 }
 
 const METRIC_META: Record<SupportedMetric, { label: string; color: string; unit: string }> = {
-  calories: { label: "Calories", color: "#f59e0b", unit: "kcal" },
-  protein: { label: "Protein", color: "#34d399", unit: "g" },
-  carbs: { label: "Carbs", color: "#22d3ee", unit: "g" },
-  fat: { label: "Fat", color: "#f97316", unit: "g" },
+  calories: { label: "Calories", color: "var(--metric-calories)", unit: "kcal" },
+  protein: { label: "Protein", color: "var(--metric-protein)", unit: "g" },
+  carbs: { label: "Carbs", color: "var(--metric-carbs)", unit: "g" },
+  fat: { label: "Fat", color: "var(--metric-fat)", unit: "g" },
 };
 
 function hasLoggedNutrition(point: NutritionTrendPoint): boolean {
@@ -146,8 +146,8 @@ export function MultiMacroTrendCard({ data, metrics, period, targets }: MultiMac
       <div className="h-[220px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 8, right: 4, left: -8, bottom: 8 }}>
-            <ReferenceArea y1={80} y2={120} fill="rgba(16,185,129,0.09)" />
-            <ReferenceLine y={100} stroke="rgba(16,185,129,0.9)" strokeDasharray="4 4" strokeWidth={1.1} />
+            <ReferenceArea y1={80} y2={120} fill="rgb(52 211 153 / 0.10)" />
+            <ReferenceLine y={100} stroke="var(--metric-protein)" strokeDasharray="4 4" strokeWidth={1.1} />
             <CartesianGrid strokeDasharray="3 4" stroke="rgba(255,255,255,0.08)" vertical={false} />
             <XAxis
               dataKey="label"
@@ -176,7 +176,7 @@ export function MultiMacroTrendCard({ data, metrics, period, targets }: MultiMac
                 stroke={METRIC_META[metric].color}
                 strokeWidth={2.4}
                 dot={false}
-                activeDot={{ r: 4, fill: "#fff", stroke: METRIC_META[metric].color, strokeWidth: 2 }}
+                activeDot={{ r: 4, fill: "rgb(255 255 255)", stroke: METRIC_META[metric].color, strokeWidth: 2 }}
                 animationDuration={850}
               />
             ))}

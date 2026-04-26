@@ -33,6 +33,13 @@ interface Targets {
   fatG: number;
 }
 
+const METRIC_COLORS = {
+  calories: "var(--metric-calories)",
+  protein: "var(--metric-protein)",
+  carbs: "var(--metric-carbs)",
+  fat: "var(--metric-fat)",
+} as const;
+
 function getTargets(): Targets {
   const goal = localStorage.getItem("nutrilog_goal") || "maintenance";
   let cal = 2000;
@@ -256,19 +263,19 @@ export default function Insights() {
 
   const donutData = useMemo(
     () => [
-      { name: "Protein", value: dailyTotals?.proteinG ?? 0, color: "#34d399" },
-      { name: "Carbs", value: dailyTotals?.totalCarbohydrateG ?? 0, color: "#22d3ee" },
-      { name: "Fat", value: dailyTotals?.fatG ?? 0, color: "#f59e0b" },
+      { name: "Protein", value: dailyTotals?.proteinG ?? 0, color: METRIC_COLORS.protein },
+      { name: "Carbs", value: dailyTotals?.totalCarbohydrateG ?? 0, color: METRIC_COLORS.carbs },
+      { name: "Fat", value: dailyTotals?.fatG ?? 0, color: METRIC_COLORS.fat },
     ],
     [dailyTotals?.fatG, dailyTotals?.proteinG, dailyTotals?.totalCarbohydrateG],
   );
 
   const progressData = useMemo(
     () => [
-      { name: "Calories", actual: stats.avgCalories, target: targets.calories, color: "#f97316", unit: "kcal" },
-      { name: "Protein", actual: stats.avgProtein, target: targets.proteinG, color: "#34d399", unit: "g" },
-      { name: "Carbs", actual: stats.avgCarbs, target: targets.carbsG, color: "#22d3ee", unit: "g" },
-      { name: "Fat", actual: stats.avgFat, target: targets.fatG, color: "#f59e0b", unit: "g" },
+      { name: "Calories", actual: stats.avgCalories, target: targets.calories, color: METRIC_COLORS.calories, unit: "kcal" },
+      { name: "Protein", actual: stats.avgProtein, target: targets.proteinG, color: METRIC_COLORS.protein, unit: "g" },
+      { name: "Carbs", actual: stats.avgCarbs, target: targets.carbsG, color: METRIC_COLORS.carbs, unit: "g" },
+      { name: "Fat", actual: stats.avgFat, target: targets.fatG, color: METRIC_COLORS.fat, unit: "g" },
     ],
     [stats.avgCalories, stats.avgProtein, stats.avgCarbs, stats.avgFat, targets],
   );
@@ -354,8 +361,8 @@ export default function Insights() {
       >
         <PremiumAreaChart
           data={calorieAreaData}
-          color="#34d399"
-          gradientColor="#22d3ee"
+          color={METRIC_COLORS.protein}
+          gradientColor={METRIC_COLORS.carbs}
           height={220}
           valueFormatter={(v) => `${Math.round(v)} kcal`}
         />
