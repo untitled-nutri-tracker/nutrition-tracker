@@ -62,7 +62,7 @@ export default function Settings() {
   if (loading) {
     return (
       <div className="card mx-auto w-full max-w-3xl">
-        <div style={{ color: "var(--muted)" }}>Loading profile...</div>
+        <div className="text-sm text-white/60">Loading profile...</div>
       </div>
     );
   }
@@ -71,15 +71,9 @@ export default function Settings() {
     <div className="page-enter flex w-full flex-col gap-4 px-4 pb-28 pt-4 sm:px-6 md:px-8 md:pb-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       {error && (
-        <div
-          className="card w-full"
-          style={{
-            border: "1px solid rgba(255,80,80,0.35)",
-            background: "rgba(255,80,80,0.08)",
-          }}
-        >
-          <div style={{ fontWeight: 600 }}>Error</div>
-          <div style={{ marginTop: 6, color: "var(--muted)" }}>{error}</div>
+        <div className="card w-full border-red-400/35 bg-red-500/10">
+          <div className="font-semibold text-white/95">Error</div>
+          <div className="mt-1.5 text-sm text-white/70">{error}</div>
         </div>
       )}
 
@@ -88,10 +82,8 @@ export default function Settings() {
       </div>
 
       <div className="card pop-in-delay-1 w-full">
-        <div style={{ fontSize: 16, fontWeight: 600 }}>Energy estimates</div>
-        <div
-          style={{ fontSize: 12, color: "var(--muted2)", marginTop: 4 }}
-        >
+        <div className="text-base font-semibold">Energy estimates</div>
+        <div className="mt-1 text-xs text-white/45">
           Based on Mifflin–St Jeor + activity multiplier.
         </div>
 
@@ -111,25 +103,11 @@ export default function Settings() {
         </div>
 
         {profile && (
-          <div
-            style={{
-              marginTop: 12,
-              display: "flex",
-              justifyContent: "flex-end",
-            }}
-          >
+          <div className="mt-3 flex justify-end">
             <button
               onClick={reset}
               disabled={saving}
-              style={{
-                padding: "8px 10px",
-                borderRadius: 12,
-                border: "1px solid var(--border)",
-                background: "rgba(255,255,255,0.04)",
-                color: "var(--muted)",
-                cursor: "pointer",
-                opacity: saving ? 0.6 : 1,
-              }}
+              className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-2 text-sm text-white/65 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Reset profile
             </button>
@@ -137,53 +115,27 @@ export default function Settings() {
         )}
       </div>
       <div className="card pop-in-delay-1 w-full">
-        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Appearance</div>
-        <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 14 }}>
+        <div className="mb-1 text-base font-semibold">Appearance</div>
+        <div className="mb-3.5 text-sm text-white/65">
           Choose your preferred color theme.
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <button
             onClick={() => setTheme("dark")}
-            style={{
-              flex: 1,
-              padding: "10px 14px",
-              borderRadius: 12,
-              border: `1px solid ${theme === "dark" ? "rgba(124,92,255,0.5)" : "var(--border)"}`,
-              background: theme === "dark"
-                ? "linear-gradient(135deg, rgba(124,92,255,0.2), rgba(0,209,255,0.08))"
-                : "rgba(255,255,255,0.04)",
-              color: "var(--text)",
-              cursor: "pointer",
-              fontWeight: theme === "dark" ? 700 : 400,
-              fontSize: 13,
-              fontFamily: "inherit",
-            }}
+            className={`flex-1 rounded-xl px-3.5 py-2.5 text-sm transition-all max-sm:min-h-[44px] ${theme === "dark" ? "border border-indigo-500/50 bg-gradient-to-br from-indigo-500/20 to-cyan-500/10 font-bold text-white" : "border border-white/10 bg-white/5 font-medium text-white/85 hover:bg-white/10"}`}
             aria-label="Dark theme"
           >
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <span className="inline-flex items-center gap-2">
               <MoonStars size={16} weight="duotone" />
               <span>Dark</span>
             </span>
           </button>
           <button
             onClick={() => setTheme("light")}
-            style={{
-              flex: 1,
-              padding: "10px 14px",
-              borderRadius: 12,
-              border: `1px solid ${theme === "light" ? "rgba(124,92,255,0.5)" : "var(--border)"}`,
-              background: theme === "light"
-                ? "linear-gradient(135deg, rgba(124,92,255,0.2), rgba(0,209,255,0.08))"
-                : "rgba(255,255,255,0.04)",
-              color: "var(--text)",
-              cursor: "pointer",
-              fontWeight: theme === "light" ? 700 : 400,
-              fontSize: 13,
-              fontFamily: "inherit",
-            }}
+            className={`flex-1 rounded-xl px-3.5 py-2.5 text-sm transition-all max-sm:min-h-[44px] ${theme === "light" ? "border border-indigo-500/50 bg-gradient-to-br from-indigo-500/20 to-cyan-500/10 font-bold text-white" : "border border-white/10 bg-white/5 font-medium text-white/85 hover:bg-white/10"}`}
             aria-label="Light theme"
           >
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <span className="inline-flex items-center gap-2">
               <SunDim size={16} weight="duotone" />
               <span>Light</span>
             </span>
@@ -192,15 +144,13 @@ export default function Settings() {
       </div>
 
       <div className="card pop-in-delay-1 w-full">
-        <div style={{ fontSize: 16, fontWeight: 600 }}>Database export</div>
-        <div
-          style={{ fontSize: 12, color: "var(--muted2)", marginTop: 4 }}
-        >
+        <div className="text-base font-semibold">Database export</div>
+        <div className="mt-1 text-xs text-white/45">
           Export the currently connected database as an Excel workbook.
         </div>
 
         <div className="mt-3.5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div style={{ fontSize: 12, color: "var(--muted)" }}>
+          <div className="text-xs text-white/65">
             {session.connectedPath ?? "No database connected"}
           </div>
 
@@ -208,16 +158,7 @@ export default function Settings() {
             type="button"
             onClick={handleExportXlsx}
             disabled={exporting || !session.connectedPath}
-            style={{
-              padding: "10px 14px",
-              borderRadius: 12,
-              border: "1px solid var(--border)",
-              background: "rgba(255,255,255,0.04)",
-              color: "var(--text)",
-              cursor:
-                exporting || !session.connectedPath ? "not-allowed" : "pointer",
-              opacity: exporting || !session.connectedPath ? 0.6 : 1,
-            }}
+            className="rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {exporting ? "Exporting..." : "Export as XLSX"}
           </button>
