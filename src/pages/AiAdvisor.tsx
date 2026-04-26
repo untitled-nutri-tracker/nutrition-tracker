@@ -1016,7 +1016,7 @@ export default function AiAdvisor() {
         </div>
       )}
 
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, position: 'relative' }}>
+      <div className="relative flex min-h-0 flex-1">
         <div className="relative flex min-w-0 flex-1">
           {/* ── Scrollable messages area ── */}
           <div
