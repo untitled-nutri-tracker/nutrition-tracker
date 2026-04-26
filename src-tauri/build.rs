@@ -17,7 +17,7 @@ fn generate_bindings() {
         include_patterns: None,
         default_parameter_case: "".to_string(),
         default_field_case: "".to_string(),
-        force: None,
+        force: Some(true),
     };
 
     let _files = generate_from_config(&config).expect("failed to generate bindings");

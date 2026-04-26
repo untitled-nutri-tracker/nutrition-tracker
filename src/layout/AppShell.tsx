@@ -42,17 +42,17 @@ function DesktopNavItem({
       to={to}
       end={end}
       className={({ isActive }) =>
-        `flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-200 border ${
+        `flex items-center gap-3 rounded-2xl border px-3 py-2.5 transition-all duration-200 ${
           isActive
-            ? "bg-gradient-to-br from-indigo-500/10 to-cyan-500/5 border-indigo-500/20 text-white"
-            : "border-transparent text-white/50 hover:bg-white/5 hover:text-white/90"
+            ? "border-white/14 bg-white/8 text-white"
+            : "border-transparent text-white/55 hover:bg-white/5 hover:text-white/90"
         }`
       }
     >
       {({ isActive }) => (
         <>
-          <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl border ${
-            isActive ? "border-indigo-500/30 bg-indigo-500/10" : "border-white/5 bg-white/5"
+          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
+            isActive ? "border-emerald-300/35 bg-emerald-300/15 text-emerald-100" : "border-white/8 bg-white/5"
           }`}>
             {icon}
           </div>
@@ -79,7 +79,7 @@ function MobileNavItem({
       to={to}
       end={end}
       className={({ isActive }) =>
-        `flex flex-col items-center justify-center w-14 h-14 rounded-full transition-all duration-300 relative ${
+        `relative flex h-14 w-14 flex-col items-center justify-center rounded-full transition-all duration-300 ${
           isActive ? "text-white" : "text-white/40 hover:text-white/70"
         }`
       }
@@ -89,7 +89,7 @@ function MobileNavItem({
           {isActive && (
             <motion.div
               layoutId="mobileNavIndicator"
-              className="absolute inset-0 bg-white/10 rounded-full"
+              className="absolute inset-0 rounded-full border border-white/12 bg-white/10"
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             />
           )}
@@ -112,19 +112,19 @@ export default function AppShell() {
   useEffect(() => setMounted(true), []);
 
   return (
-    <div className="flex h-[100dvh] w-full bg-[#12121A] text-white/90 overflow-hidden font-sans">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-[#12121A] font-sans text-white/90">
       
       {/* ── DESKTOP SIDEBAR ─────────────────────────────────────────── */}
-      <aside className="hidden md:flex flex-col w-[260px] flex-shrink-0 border-r border-white/5 bg-[#12121A]/80 backdrop-blur-xl">
-        <div className="flex items-center gap-3 p-5 border-b border-white/5">
-          <div className="w-9 h-9 rounded-[14px] bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-[0_8px_16px_rgba(99,102,241,0.2)]" />
+      <aside className="hidden w-[260px] shrink-0 flex-col border-r border-white/6 bg-[#14141c]/90 backdrop-blur-xl md:flex">
+        <div className="flex items-center gap-3 border-b border-white/6 p-5">
+          <div className="h-9 w-9 rounded-[14px] border border-white/12 bg-gradient-to-br from-emerald-300/45 to-cyan-300/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.26)]" />
           <div className="flex flex-col">
             <strong className="text-base font-semibold tracking-tight leading-none mb-1">NutriLog</strong>
-            <span className="text-xs text-white/40 tracking-wide leading-none">Local-first tracker</span>
+            <span className="text-xs leading-none tracking-wide text-white/40">Local-first tracker</span>
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-4 flex flex-col gap-1.5">
+        <nav className="flex flex-1 flex-col gap-1.5 overflow-y-auto p-4">
           <DesktopNavItem to="/" end label="Daily Log" icon={<House weight="duotone" size={18} />} />
           <DesktopNavItem to="/log" label="Log Food" icon={<ForkKnife weight="duotone" size={18} />} />
           <DesktopNavItem to="/insights" label="Insights" icon={<ChartLineUp weight="duotone" size={18} />} />
@@ -132,13 +132,13 @@ export default function AppShell() {
           <DesktopNavItem to="/settings" label="Settings" icon={<Gear weight="duotone" size={18} />} />
         </nav>
 
-        <div className="p-4 border-t border-white/5 mt-auto">
-          <div className="text-[10px] uppercase tracking-wider text-white/30 font-semibold mb-1.5">Connected DB</div>
-          <div className="text-xs text-white/80 break-all leading-relaxed mb-3 line-clamp-2" title={session.connectedPath ?? ""}>
+        <div className="mt-auto border-t border-white/6 p-4">
+          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/30">Connected DB</div>
+          <div className="mb-3 line-clamp-2 break-all text-xs leading-relaxed text-white/80" title={session.connectedPath ?? ""}>
             {session.connectedPath}
           </div>
           <button 
-            className="w-full py-2.5 px-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-sm font-medium text-white/90"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-white/90 transition-colors hover:bg-white/10"
             onClick={closeDatabase} 
             type="button"
           >
@@ -148,8 +148,8 @@ export default function AppShell() {
       </aside>
 
       {/* ── MAIN CONTENT AREA ───────────────────────────────────────── */}
-      <section className="flex-1 flex flex-col min-w-0 h-full relative">
-        <header className="hidden md:flex items-center justify-between px-8 py-5 border-b border-white/5 bg-[#12121A]/80 backdrop-blur-xl z-10 sticky top-0">
+      <section className="relative flex h-full min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 hidden items-center justify-between border-b border-white/6 bg-[#12121A]/88 px-8 py-5 backdrop-blur-xl md:flex">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-white">{title}</h1>
             {subtitle && <p className="text-sm text-white/40 mt-1">{subtitle}</p>}
@@ -159,8 +159,8 @@ export default function AppShell() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth flex flex-col">
-          <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col min-h-0">
+        <main className="relative flex flex-1 flex-col overflow-x-hidden overflow-y-auto scroll-smooth">
+          <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col">
             <AnimatePresence mode="wait">
               <motion.div
                 key={pathname}
@@ -180,12 +180,12 @@ export default function AppShell() {
       {/* ── MOBILE BOTTOM PILL NAV ──────────────────────────────────── */}
       {mounted && (
         <motion.div 
-          initial={{ y: 100, opacity: 0 }}
+          initial={{ y: 96, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 200, damping: 25, delay: 0.1 }}
-          className="md:hidden fixed bottom-6 left-0 right-0 px-4 z-50 flex justify-center pb-[env(safe-area-inset-bottom)] pointer-events-none"
+          transition={{ type: "spring", stiffness: 210, damping: 28, delay: 0.08 }}
+          className="pointer-events-none fixed bottom-2 left-0 right-0 z-50 flex justify-center px-4 pb-[env(safe-area-inset-bottom)] md:hidden"
         >
-          <div className="flex items-center p-1.5 rounded-[2rem] bg-[#1C1C22]/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] pointer-events-auto liquid-glass">
+          <div className="pointer-events-auto flex items-center rounded-[2rem] border border-white/12 bg-[#1c1c22]/95 p-1.5 shadow-[0_18px_32px_-16px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl">
             <div className="flex items-center gap-1 px-2">
               <MobileNavItem to="/" end label="Home" icon={<House weight="fill" size={22} />} />
               <MobileNavItem to="/insights" label="Insights" icon={<ChartLineUp weight="fill" size={22} />} />
@@ -195,9 +195,9 @@ export default function AppShell() {
             <div className="w-[1px] h-8 bg-white/10 mx-2" />
             <button
               onClick={() => navigate('/log')}
-              className="w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:scale-105 active:scale-95 transition-all mr-1 relative overflow-hidden"
+              className="relative mr-1 flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-emerald-200/45 bg-gradient-to-br from-emerald-300/55 to-cyan-300/48 text-[#10131a] shadow-[0_8px_18px_-8px_rgba(16,185,129,0.7)] transition-all hover:scale-105 active:scale-95"
             >
-              <div className="absolute inset-0 bg-white/20 opacity-0 hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity hover:opacity-100" />
               <Plus weight="bold" size={20} />
             </button>
           </div>
@@ -207,11 +207,11 @@ export default function AppShell() {
       {/* Global Contextual AI FAB (Desktop Only) */}
       {pathname !== '/ai' && (
         <button 
-          className="hidden md:flex fixed bottom-8 right-8 w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 shadow-[0_8px_24px_rgba(99,102,241,0.4)] items-center justify-center text-2xl z-50 hover:scale-110 active:scale-95 transition-all duration-300"
+          className="fixed bottom-8 right-8 z-50 hidden h-14 w-14 items-center justify-center rounded-full border border-emerald-200/35 bg-gradient-to-br from-emerald-300/50 to-cyan-300/42 text-2xl text-[#10131a] shadow-[0_12px_26px_-12px_rgba(16,185,129,0.7)] transition-all duration-300 hover:scale-110 active:scale-95 md:flex"
           onClick={() => navigate('/ai')}
           title="Ask AI"
         >
-          <Robot weight="fill" size={24} className="text-white drop-shadow-md" />
+          <Robot weight="fill" size={24} className="drop-shadow-md" />
         </button>
       )}
     </div>

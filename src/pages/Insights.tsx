@@ -13,8 +13,8 @@ import ProfileSummaryCard from "../components/ProfileSummaryCard";
 import { PremiumAreaChart } from "../components/charts/PremiumAreaChart";
 import { PremiumDonutChart } from "../components/charts/PremiumDonutChart";
 import { StackedProgressBar } from "../components/charts/StackedProgressBar";
-import { loadEntriesRange, localDateString } from "../lib/foodLogStore";
-import type { FoodEntry } from "../types/foodLog";
+import { getDailyNutritionTotals, getNutritionTrend } from "../generated/commands";
+import type { NutritionTotals, NutritionTrendPoint } from "../generated/types";
 
 interface DayData {
   date: string;
@@ -171,39 +171,53 @@ function HealthNudgeCard({ data, targets }: { data: DayData[]; targets: Targets 
 export default function Insights() {
   const [range, setRange] = useState<7 | 14 | 30>(30);
   const [dayData, setDayData] = useState<DayData[]>([]);
+  const [dailyTotals, setDailyTotals] = useState<NutritionTotals | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
 
-      const endStr = localDateString();
-      const startD = new Date();
-      startD.setDate(startD.getDate() - (range - 1));
-      const startStr = localDateString(startD);
-      const rangeData = await loadEntriesRange(startStr, endStr);
+      try {
+        const now = Math.floor(Date.now() / 1000);
+        const start = now - (range - 1) * 86400;
+        const offsetMinutes = new Date().getTimezoneOffset();
 
-      const days: DayData[] = [];
-      const cur = new Date(`${startStr}T12:00:00`);
-      const endD = new Date(`${endStr}T12:00:00`);
+        const [trend, todayTotals] = await Promise.all([
+          getNutritionTrend({
+            start,
+            end: now,
+            bucket: "DAY",
+            offsetMinutes,
+          }),
+          getDailyNutritionTotals({
+            anchor: now,
+            offsetMinutes,
+          }),
+        ]);
 
-      while (cur <= endD) {
-        const dateStr = localDateString(cur);
-        const entries: FoodEntry[] = rangeData[dateStr] || [];
-        days.push({
-          date: dateStr,
-          label: cur.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-          calories: entries.reduce((sum, e) => sum + e.calories, 0),
-          proteinG: entries.reduce((sum, e) => sum + e.proteinG, 0),
-          carbsG: entries.reduce((sum, e) => sum + e.carbsG, 0),
-          fatG: entries.reduce((sum, e) => sum + e.fatG, 0),
-          entryCount: entries.length,
+        const days: DayData[] = (trend || []).map((point: NutritionTrendPoint) => {
+          const date = new Date(point.periodStart * 1000);
+          return {
+            date: date.toISOString().slice(0, 10),
+            label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+            calories: point.totals.caloriesKcal,
+            proteinG: point.totals.proteinG,
+            carbsG: point.totals.totalCarbohydrateG,
+            fatG: point.totals.fatG,
+            entryCount: point.totals.itemCount,
+          };
         });
-        cur.setDate(cur.getDate() + 1);
-      }
 
-      setDayData(days);
-      setLoading(false);
+        setDayData(days);
+        setDailyTotals(todayTotals);
+      } catch (err) {
+        console.error("Failed to load insights data:", err);
+        setDayData([]);
+        setDailyTotals(null);
+      } finally {
+        setLoading(false);
+      }
     }
 
     load();
@@ -242,18 +256,18 @@ export default function Insights() {
 
   const donutData = useMemo(
     () => [
-      { name: "Protein", value: stats.avgProtein, color: "#8b5cf6" },
-      { name: "Carbs", value: stats.avgCarbs, color: "#60a5fa" },
-      { name: "Fat", value: stats.avgFat, color: "#f59e0b" },
+      { name: "Protein", value: dailyTotals?.proteinG ?? 0, color: "#34d399" },
+      { name: "Carbs", value: dailyTotals?.totalCarbohydrateG ?? 0, color: "#22d3ee" },
+      { name: "Fat", value: dailyTotals?.fatG ?? 0, color: "#f59e0b" },
     ],
-    [stats.avgProtein, stats.avgCarbs, stats.avgFat],
+    [dailyTotals?.fatG, dailyTotals?.proteinG, dailyTotals?.totalCarbohydrateG],
   );
 
   const progressData = useMemo(
     () => [
-      { name: "Calories", actual: stats.avgCalories, target: targets.calories, color: "#fb7185", unit: "kcal" },
-      { name: "Protein", actual: stats.avgProtein, target: targets.proteinG, color: "#8b5cf6", unit: "g" },
-      { name: "Carbs", actual: stats.avgCarbs, target: targets.carbsG, color: "#60a5fa", unit: "g" },
+      { name: "Calories", actual: stats.avgCalories, target: targets.calories, color: "#f97316", unit: "kcal" },
+      { name: "Protein", actual: stats.avgProtein, target: targets.proteinG, color: "#34d399", unit: "g" },
+      { name: "Carbs", actual: stats.avgCarbs, target: targets.carbsG, color: "#22d3ee", unit: "g" },
       { name: "Fat", actual: stats.avgFat, target: targets.fatG, color: "#f59e0b", unit: "g" },
     ],
     [stats.avgCalories, stats.avgProtein, stats.avgCarbs, stats.avgFat, targets],
@@ -340,8 +354,8 @@ export default function Insights() {
       >
         <PremiumAreaChart
           data={calorieAreaData}
-          color="#f472b6"
-          gradientColor="#fb7185"
+          color="#34d399"
+          gradientColor="#22d3ee"
           height={220}
           valueFormatter={(v) => `${Math.round(v)} kcal`}
         />
@@ -350,7 +364,7 @@ export default function Insights() {
       <div className="grid gap-4 md:grid-cols-2 md:gap-5">
         <BentoCard
           title="Macro Distribution"
-          subtitle="Average macro split during selected window"
+          subtitle="Today's macro split from daily totals"
           icon={<Barbell size={18} weight="duotone" />}
         >
           <div className="h-[250px]">

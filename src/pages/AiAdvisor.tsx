@@ -1,7 +1,7 @@
 import { useNetwork } from "../lib/NetworkContext";
 import { useState, useRef, useEffect, useMemo, lazy, Suspense, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Basket, ChatCircleDots, Lightning } from "@phosphor-icons/react";
+import { Basket, ChatCircleDots, Lightning, List, Robot, SpinnerGap } from "@phosphor-icons/react";
 import { LLM_PROVIDERS } from "../hooks/useCredentials";
 import { useAiConfig } from "../hooks/useAiConfig";
 import { loadProfile } from "../lib/profileStore";
@@ -794,7 +794,7 @@ export default function AiAdvisor() {
   };
 
   return (
-    <div className="page-enter pop-in flex flex-col h-full min-h-0 gap-0 w-full mx-auto relative overflow-hidden p-0">
+    <div className="page-enter flex h-full min-h-0 w-full flex-col gap-0 overflow-hidden p-0">
       {(!isOnline && selectedProvider !== "ollama") && (
         <div className="shrink-0 mx-4 mt-4 mb-0 p-3.5 rounded-[18px] border border-amber-500/30 bg-amber-500/10 backdrop-blur-md sm:mx-5 md:mx-6">
           <div style={{ fontWeight: 600 }}>You're offline</div>
@@ -806,17 +806,17 @@ export default function AiAdvisor() {
       )}
 
       {/* Toolbar */}
-      <div className="shrink-0 flex items-center justify-between gap-2 px-3 py-2.5 m-4 rounded-[18px] border border-white/10 bg-[#1e1e2a] shadow-lg flex-wrap max-sm:flex-col max-sm:items-start max-sm:m-3 max-sm:px-3 max-sm:py-2">
+      <div className="m-4 shrink-0 flex flex-wrap items-center justify-between gap-2 rounded-[18px] border border-white/10 bg-[#1e1e2a]/90 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] max-sm:m-3 max-sm:flex-col max-sm:items-start max-sm:px-3 max-sm:py-2">
         <div className="flex items-center gap-1 flex-wrap min-w-0">
           <button
-            className="ai-advisor-toolbar-action ai-advisor-controls-btn w-8 h-8"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/14 bg-white/5 text-white/80 transition-all hover:-translate-y-px hover:border-white/20 hover:text-white"
             onClick={() => setIsControlsOpen((prev) => !prev)}
             title="Open chat controls"
             aria-label="Open chat controls"
             aria-haspopup="dialog"
             aria-expanded={isControlsOpen}
           >
-            <span aria-hidden="true">☰</span>
+            <List size={18} weight="bold" />
           </button>
           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-semibold whitespace-nowrap max-w-[180px] overflow-hidden text-ellipsis bg-indigo-500/12 text-indigo-300/95 border border-indigo-500/25">{providerConfig.name}</span>
           {selectedModel && (
@@ -859,7 +859,7 @@ export default function AiAdvisor() {
 
       {isControlsOpen && (
         <div
-          className="absolute inset-0 z-[1200] bg-gradient-to-br from-[rgba(68,81,124,0.20)] via-[rgba(6,8,12,0.76)] to-[rgba(92,52,116,0.18)] backdrop-blur-md flex items-stretch justify-center p-2.5 max-sm:items-end max-sm:p-0"
+          className="absolute inset-0 z-[1200] flex items-stretch justify-center bg-gradient-to-br from-[rgba(68,81,124,0.20)] via-[rgba(6,8,12,0.76)] to-[rgba(20,90,90,0.18)] p-2.5 backdrop-blur-md max-sm:items-end max-sm:p-0"
           onClick={() => setIsControlsOpen(false)}
           role="presentation"
         >
@@ -917,7 +917,7 @@ export default function AiAdvisor() {
               </div>
             </div>
 
-            <div className="ai-controls-section ai-controls-history-section px-5 pb-5 flex flex-col gap-3 max-sm:px-4 max-sm:pb-4">
+            <div className="flex flex-col gap-3 px-5 pb-5 max-sm:px-4 max-sm:pb-4">
               <div className="text-xs font-bold text-white/80 uppercase tracking-[0.08em]">Chat History</div>
               <input
                 className="w-full rounded-[10px] border border-white/[0.34] bg-white/10 text-white/95 text-xs px-2.5 py-2 outline-none focus:border-blue-400/82 focus:shadow-[0_0_0_3px_rgba(130,162,255,0.2)] placeholder:text-white/60"
@@ -1017,20 +1017,21 @@ export default function AiAdvisor() {
       )}
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0, position: 'relative' }}>
-        {/* ── Scrollable messages area ── */}
-        <div
-          className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-3.5 [scrollbar-width:thin] [scrollbar-color:rgba(124,92,255,0.25)_transparent]"
-          id="ai-messages-scroll"
-          style={{
-            flex: 1,
-            WebkitMaskImage: "linear-gradient(to bottom, transparent 0, black 1.25rem, black calc(100% - 5rem), transparent 100%)",
-            maskImage: "linear-gradient(to bottom, transparent 0, black 1.25rem, black calc(100% - 5rem), transparent 100%)",
-            WebkitMaskRepeat: "no-repeat",
-            maskRepeat: "no-repeat",
-            WebkitMaskSize: "100% 100%",
-            maskSize: "100% 100%",
-          }}
-        >
+        <div className="relative flex min-w-0 flex-1">
+          {/* ── Scrollable messages area ── */}
+          <div
+            className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-3.5 [scrollbar-width:thin] [scrollbar-color:rgba(124,92,255,0.25)_transparent]"
+            id="ai-messages-scroll"
+            style={{
+              flex: 1,
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 0, black 1.25rem, black calc(100% - 5rem), transparent 100%)",
+              maskImage: "linear-gradient(to bottom, transparent 0, black 1.25rem, black calc(100% - 5rem), transparent 100%)",
+              WebkitMaskRepeat: "no-repeat",
+              maskRepeat: "no-repeat",
+              WebkitMaskSize: "100% 100%",
+              maskSize: "100% 100%",
+            }}
+          >
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-2.5 pb-36 sm:pb-40">
 
         {/* Quick prompts (only when empty) */}
@@ -1058,13 +1059,9 @@ export default function AiAdvisor() {
 
         {/* Loading session history */}
         {sessionLoading && (
-          <div className="ai-advisor-empty" style={{ marginTop: 40 }}>
-             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, color: "var(--muted2)", fontSize: 13 }}>
-               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ai-loading-spinner">
-                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-               </svg>
-               <span>Loading chat history...</span>
-             </div>
+          <div className="mt-10 flex items-center justify-center gap-2 text-[13px] text-white/45">
+            <SpinnerGap size={17} weight="bold" className="animate-spin" />
+            <span>Loading chat history...</span>
           </div>
         )}
 
@@ -1204,7 +1201,10 @@ export default function AiAdvisor() {
             <div className="text-[11px] text-white/40 mb-1.5 font-semibold uppercase tracking-[0.04em]" style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {msg.role === "user" ? "You" : (
                 <>
-                  <span>🤖 NutriLog AI</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Robot size={12} weight="fill" />
+                    NutriLog AI
+                  </span>
                   {msg.provider && (
                     <span style={{
                       fontSize: 10,
@@ -1220,14 +1220,7 @@ export default function AiAdvisor() {
                       {msg.provider}
                     </span>
                   )}
-                  <span style={{
-                    fontSize: 10,
-                    padding: "2px 7px",
-                    borderRadius: 6,
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "var(--muted2)",
-                  }}>
+                  <span className="rounded-md border border-white/10 bg-white/5 px-[7px] py-[2px] text-[10px] text-white/45">
                     AI Generated
                   </span>
                 </>
@@ -1261,7 +1254,7 @@ export default function AiAdvisor() {
             )}
 
             {msg.tokens !== undefined && msg.tokens > 0 && (
-              <div className="mt-1.5 text-[10px] text-white/40" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div className="mt-1.5 flex items-center gap-2 text-[10px] text-white/40">
                 <span className="inline-flex items-center gap-1">
                   <Lightning size={12} weight="fill" />
                   {msg.tokens} tokens
@@ -1300,71 +1293,70 @@ export default function AiAdvisor() {
         <div ref={messagesEndRef} />
           </div>
         </div>
-      </div>
+        {!isControlsOpen && (
+          <div className="absolute bottom-0 left-0 right-0 z-20 p-4 max-sm:p-3">
+            <div className="mx-auto w-full max-w-4xl">
+              <div className="relative flex gap-2 items-end px-3.5 py-3 rounded-[22px] border border-white/10 bg-[#1e1e2a]/95 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] max-sm:px-3 max-sm:py-2.5">
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask about your nutrition…"
+                  rows={1}
+                  className="flex-1 min-w-0 px-3 py-2.5 rounded-[10px] border border-white/[0.08] bg-white/5 text-white/90 resize-none text-[13px] font-[inherit] leading-relaxed max-h-[120px] transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40"
+                />
+                <button
+                  onClick={() => sendQuestion(input)}
+                  disabled={loading || !input.trim()}
+                  className="px-5 py-2.5 rounded-[10px] border border-indigo-500/35 bg-gradient-to-br from-indigo-500/25 to-cyan-500/10 text-white/90 cursor-pointer font-semibold text-[13px] whitespace-nowrap transition-all hover:from-indigo-500/35 hover:to-cyan-500/18 disabled:opacity-50 disabled:cursor-default max-sm:px-4 max-sm:py-3 max-sm:min-h-[44px]"
+                >
+                  {loading ? "…" : "Send"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
 
-      {/* Sliding Grocery List Panel */}
-      {isGroceryOpen && (
-        <div
-          className="w-[280px] shrink-0 flex flex-col border-l border-white/5 bg-[#14161e]/95"
-        >
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, paddingBottom: 10, borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: "#10b981", display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <Basket size={15} weight="duotone" />
-              Smart Grocery List
-            </span>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        {/* Sliding Grocery List Panel */}
+        {isGroceryOpen && (
+          <div className="absolute right-3 top-3 bottom-24 z-30 flex w-[min(360px,calc(100%-1.5rem))] max-w-sm flex-col rounded-2xl border border-white/10 bg-[#14161e]/95 p-3 shadow-[0_18px_44px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:static lg:ml-3 lg:mb-0 lg:w-[320px] lg:max-w-none lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:border-white/5 lg:bg-[#14161e]/95 lg:p-4 lg:shadow-none">
+            <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-2.5">
+              <span className="inline-flex items-center gap-1.5 text-[14px] font-bold text-emerald-400">
+                <Basket size={15} weight="duotone" />
+                Smart Grocery List
+              </span>
               <button
                 onClick={clearGroceryList}
-                style={{ background: "none", border: "none", color: "var(--muted2)", fontSize: 10, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.05em" }}
+                className="border-0 bg-transparent text-[10px] uppercase tracking-[0.05em] text-white/55 transition-colors hover:text-white/80"
               >
                 Clear All
               </button>
             </div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1, overflowY: "auto" }}>
-            {groceryList.length === 0 ? (
-              <div style={{ textAlign: "center", color: "var(--muted2)", fontSize: 12, marginTop: 40 }}>
-                Your grocery list is empty. Ask the AI to build one for you!
-              </div>
-            ) : (
-              groceryList.map((item) => (
-                <div key={item} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(0,0,0,0.3)", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.02)" }}>
-                  <span style={{ fontSize: 13 }}>{item}</span>
-                  <button
-                    onClick={() => removeGroceryItem(item)}
-                    style={{ background: "none", border: "none", color: "var(--muted2)", cursor: "pointer", fontSize: 16 }}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
 
-      {!isControlsOpen && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 max-sm:p-3">
-          <div className="relative flex gap-2 items-end px-3.5 py-3 rounded-[22px] border border-white/10 bg-[#1e1e2a]/95 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] max-sm:px-3 max-sm:py-2.5">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about your nutrition…"
-              rows={1}
-              className="flex-1 min-w-0 px-3 py-2.5 rounded-[10px] border border-white/[0.08] bg-white/5 text-white/90 resize-none text-[13px] font-[inherit] leading-relaxed max-h-[120px] transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40"
-            />
-            <button
-              onClick={() => sendQuestion(input)}
-              disabled={loading || !input.trim()}
-              className="px-5 py-2.5 rounded-[10px] border border-indigo-500/35 bg-gradient-to-br from-indigo-500/25 to-cyan-500/10 text-white/90 cursor-pointer font-semibold text-[13px] whitespace-nowrap transition-all hover:from-indigo-500/35 hover:to-cyan-500/18 disabled:opacity-50 disabled:cursor-default max-sm:px-4 max-sm:py-3 max-sm:min-h-[44px]"
-            >
-              {loading ? "…" : "Send"}
-            </button>
+            <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
+              {groceryList.length === 0 ? (
+                <div className="mt-10 text-center text-[12px] text-white/50">
+                  Your grocery list is empty. Ask the AI to build one for you!
+                </div>
+              ) : (
+                groceryList.map((item) => (
+                  <div key={item} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/25 px-3 py-2">
+                    <span className="text-[13px] text-white/90">{item}</span>
+                    <button
+                      onClick={() => removeGroceryItem(item)}
+                      className="border-0 bg-transparent text-[16px] leading-none text-white/55 transition-colors hover:text-white/85"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

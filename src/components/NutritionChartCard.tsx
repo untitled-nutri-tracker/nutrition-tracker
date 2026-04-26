@@ -15,8 +15,8 @@ export function NutritionChartCard({ data, metric, title }: NutritionChartCardPr
   const latestValue = values[values.length - 1] || 0;
   
   const unit = metric === 'calories' ? 'kcal' : 'g';
-  const color = metric === 'calories' ? '#7c5cff' : metric === 'protein' ? '#10b981' : metric === 'carbs' ? '#06b6d4' : '#f59e0b';
-  const gradientColor = metric === 'calories' ? '#00d1ff' : color;
+  const color = metric === 'calories' ? '#f97316' : metric === 'protein' ? '#34d399' : metric === 'carbs' ? '#22d3ee' : '#f59e0b';
+  const gradientColor = metric === 'calories' ? '#f59e0b' : color;
 
   const chartData: AreaChartPoint[] = data.map(d => ({
     date: new Date(d.periodStart * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
@@ -24,22 +24,21 @@ export function NutritionChartCard({ data, metric, title }: NutritionChartCardPr
   }));
 
   return (
-    <div className="liquid-glass p-6 w-full flex flex-col gap-4">
+    <section className="flex w-full flex-col gap-4 rounded-3xl border border-white/8 bg-[#1c1c22]/92 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-6">
       <div className="flex justify-between items-start">
         <div>
-          <h4 className="text-white/50 text-[11px] uppercase tracking-[0.15em] font-semibold mb-1">Trend Analysis</h4>
-          <div className="text-white text-lg font-bold tracking-tight">{title}</div>
+          <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">Trend Analysis</h4>
+          <div className="text-lg font-semibold tracking-tight text-white">{title}</div>
         </div>
         <div className="flex flex-col items-end">
-          <div className="text-transparent bg-clip-text bg-gradient-to-br from-indigo-400 to-cyan-400 text-3xl font-bold tracking-tighter leading-none" style={{ backgroundImage: `linear-gradient(to bottom right, ${color}, ${gradientColor})`}}>
+          <div className="bg-clip-text text-3xl font-bold leading-none tracking-tighter text-transparent" style={{ backgroundImage: `linear-gradient(to bottom right, ${color}, ${gradientColor})`}}>
             {Math.round(latestValue)}<span className="text-sm font-medium opacity-70 ml-1">{unit}</span>
           </div>
-          <div className="text-white/40 text-xs font-medium mt-1">Latest</div>
+          <div className="mt-1 text-xs font-medium text-white/40">Latest</div>
         </div>
       </div>
 
-      <div className="mt-2 relative">
-        {/* Render the Recharts AreaChart */}
+      <div className="relative mt-2">
         <PremiumAreaChart 
           data={chartData} 
           color={color} 
@@ -48,6 +47,6 @@ export function NutritionChartCard({ data, metric, title }: NutritionChartCardPr
           height={180}
         />
       </div>
-    </div>
+    </section>
   );
 }

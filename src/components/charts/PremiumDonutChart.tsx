@@ -1,4 +1,4 @@
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 interface DonutData {
   name: string;
@@ -21,10 +21,10 @@ export function PremiumDonutChart({ data, title }: { data: DonutData[]; title?: 
     if (active && payload && payload.length) {
       const { name, value, color } = payload[0].payload;
       return (
-        <div className="bg-[#1C1C22]/95 backdrop-blur-md border border-white/10 p-3 rounded-2xl shadow-xl">
+        <div className="rounded-2xl border border-white/12 bg-[#1c1c22]/95 p-3 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
           <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-white/70 text-xs font-medium">{name}</span>
+            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+            <span className="text-xs font-medium text-white/70">{name}</span>
           </div>
           <div className="mt-1 font-mono text-lg font-semibold text-white">
             {Math.round(value)}g <span className="text-white/40 text-xs">({Math.round((value / total) * 100)}%)</span>
@@ -36,53 +36,47 @@ export function PremiumDonutChart({ data, title }: { data: DonutData[]; title?: 
   };
 
   return (
-    <div className="flex flex-col h-full w-full">
-      {title && <h3 className="text-white font-semibold tracking-tight text-sm mb-4">{title}</h3>}
-      
-      <div className="flex-1 flex items-center justify-center relative min-h-[160px]">
-        {/* Glow behind the chart */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-24 h-24 rounded-full bg-indigo-500/10 blur-xl mix-blend-screen" />
+    <div className="flex h-full w-full flex-col">
+      {title && <h3 className="mb-4 text-sm font-semibold tracking-tight text-white">{title}</h3>}
+
+      <div className="relative flex min-h-[180px] flex-1 items-center justify-center">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="h-24 w-24 rounded-full bg-emerald-400/12 blur-xl" />
         </div>
-        
+
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
               cx="50%"
               cy="50%"
-              innerRadius="65%"
-              outerRadius="85%"
-              paddingAngle={4}
+              innerRadius="62%"
+              outerRadius="84%"
               dataKey="value"
-              stroke="none"
-              cornerRadius={8}
+              paddingAngle={3}
+              stroke="rgba(255,255,255,0.08)"
+              strokeWidth={1}
+              cornerRadius={9}
             >
               {data.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={entry.color} 
-                  style={{ filter: `drop-shadow(0px 4px 8px ${entry.color}40)` }} 
-                />
+                <Cell key={`cell-${index}`} fill={entry.color} style={{ filter: `drop-shadow(0px 2px 8px ${entry.color}33)` }} />
               ))}
             </Pie>
-            <Tooltip content={renderCustomTooltip} cursor={{ fill: 'transparent' }} />
+            <Tooltip content={renderCustomTooltip} cursor={{ fill: "transparent" }} />
           </PieChart>
         </ResponsiveContainer>
-        
-        {/* Center Text */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-white/40 text-[10px] font-semibold uppercase tracking-wider">Total</span>
-          <span className="text-white font-mono font-bold text-xl">{Math.round(total)}g</span>
+
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">Total</span>
+          <span className="font-mono text-2xl font-bold text-white">{Math.round(total)}g</span>
         </div>
       </div>
-      
-      {/* Legend */}
-      <div className="flex justify-center gap-4 mt-4 flex-wrap">
+
+      <div className="mt-4 flex flex-wrap justify-center gap-4">
         {data.map((item, idx) => (
           <div key={idx} className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-            <span className="text-white/60 text-xs font-medium">{item.name}</span>
+            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
+            <span className="text-xs font-medium text-white/65">{item.name}</span>
           </div>
         ))}
       </div>
