@@ -229,12 +229,12 @@ export default function FoodPhotoScanner({
               className="absolute inset-0 h-full w-full object-cover"
             />
           )}
-          <div className="absolute top-[18px] left-1/2 -translate-x-1/2 w-max max-w-[min(520px,calc(100vw-32px))] rounded-lg px-2.5 py-2 bg-black/55 text-white/90 text-xs text-center">
+          <div className="absolute left-1/2 -translate-x-1/2 top-[calc(env(safe-area-inset-top)+18px)] w-max max-w-[min(520px,calc(100vw-32px))] rounded-lg px-2.5 py-2 bg-black/55 text-white/90 text-xs text-center">
             Place one food item in the frame
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 z-[2] bg-gradient-to-b from-transparent via-black/35 to-black/58 pt-16 px-4 pb-[18px] grid gap-2.5 justify-items-center">
+        <div className="absolute bottom-0 left-0 right-0 z-[2] bg-gradient-to-b from-transparent via-black/35 to-black/58 pt-16 px-4 pb-[calc(env(safe-area-inset-bottom)+18px)] grid gap-2.5 justify-items-center">
           <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
             {!usePickerCapture && (
               <button

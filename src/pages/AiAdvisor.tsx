@@ -1294,7 +1294,7 @@ export default function AiAdvisor() {
           </div>
         </div>
         {!isControlsOpen && (
-          <div className="absolute bottom-0 left-0 right-0 z-20 p-4 max-sm:p-3">
+          <div className="absolute left-0 right-0 z-20 p-4 max-sm:p-3 bottom-[var(--shell-mobile-nav-offset)] md:bottom-0">
             <div className="mx-auto w-full max-w-4xl">
               <div className="relative flex gap-2 items-end px-3.5 py-3 rounded-[22px] border border-white/10 bg-[#1e1e2a]/95 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] max-sm:px-3 max-sm:py-2.5">
                 <textarea
@@ -1321,7 +1321,7 @@ export default function AiAdvisor() {
 
         {/* Sliding Grocery List Panel */}
         {isGroceryOpen && (
-          <div className="absolute right-3 top-3 bottom-24 z-30 flex w-[min(360px,calc(100%-1.5rem))] max-w-sm flex-col rounded-2xl border border-white/10 bg-[#14161e]/95 p-3 shadow-[0_18px_44px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:static lg:ml-3 lg:mb-0 lg:w-[320px] lg:max-w-none lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:border-white/5 lg:bg-[#14161e]/95 lg:p-4 lg:shadow-none">
+          <div className="absolute right-3 top-3 bottom-[calc(var(--shell-mobile-content-padding)+0.5rem)] z-30 flex w-[min(360px,calc(100%-1.5rem))] max-w-sm flex-col rounded-2xl border border-white/10 bg-[#14161e]/95 p-3 shadow-[0_18px_44px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:static lg:ml-3 lg:mb-0 lg:w-[320px] lg:max-w-none lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:border-white/5 lg:bg-[#14161e]/95 lg:p-4 lg:shadow-none">
             <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-2.5">
               <span className="inline-flex items-center gap-1.5 text-[14px] font-bold text-emerald-400">
                 <Basket size={15} weight="duotone" />

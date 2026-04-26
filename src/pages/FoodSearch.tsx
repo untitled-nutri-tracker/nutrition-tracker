@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
+import { Barcode, Camera, MagnifyingGlass, WarningCircle } from "@phosphor-icons/react";
 import { createEntry } from "../lib/foodLogStore";
 
 // Toggle: false = localStorage (works now), true = Tauri IPC
@@ -401,19 +402,20 @@ export default function LogFood() {
   }
 
   return (
-    <div className="page-enter p-4 pb-28 md:p-8 md:pb-8" style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: "1000px", margin: "0 auto", width: "100%" }}>
+    <div className="page-enter mx-auto flex w-full max-w-[1000px] flex-col gap-4 p-4 pb-[calc(var(--shell-mobile-content-padding)+1rem)] md:p-8 md:pb-8">
       {/* Meal type + date selector */}
-      <div className="card pop-in" style={{ maxWidth: 900 }}>
-        <div style={{ fontSize: 16, fontWeight: 600 }}>Log Food</div>
-        <div style={{ fontSize: 12, color: "var(--muted2)", marginTop: 4 }}>
+      <div className="card pop-in max-w-[900px]">
+        <div className="text-base font-semibold">Log Food</div>
+        <div className="mt-1 text-xs text-white/45">
           Search for food, scan a barcode, or enter one manually.
         </div>
 
-        <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <div className="mt-3.5 flex flex-wrap items-center gap-2">
           {MEAL_TYPES.map((mt) => (
             <button
               key={mt.value}
               onClick={() => setMealType(mt.value)}
+              className="max-sm:min-h-[44px]"
               style={{
                 ...pillStyle,
                 background: mealType === mt.value
@@ -431,44 +433,42 @@ export default function LogFood() {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            className="ml-auto rounded-[10px] border border-white/10 bg-white/5 px-2.5 py-[7px] text-xs text-white/90 max-sm:ml-0 max-sm:w-full max-sm:min-h-[44px]"
             style={{
-              padding: "7px 10px",
-              borderRadius: 10,
-              border: "1px solid var(--border)",
-              background: "rgba(255,255,255,0.04)",
-              color: "var(--text)",
-              fontSize: 12,
-              marginLeft: "auto",
+              colorScheme: "dark",
             }}
           />
         </div>
       </div>
 
       {/* Search + Barcode input */}
-      <div className="card" style={{ maxWidth: 900 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10 }}>
+      <div className="card max-w-[900px]">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[1fr_auto]">
           <input
             id="food-search-input"
             value={query}
             onChange={(e) => { setQuery(e.target.value); setHasSearched(false); }}
             onKeyDown={(e) => handleKeyDown(e, handleTextSearch)}
             placeholder="Search food (e.g. banana, pizza, chicken breast)…"
+            className="max-sm:min-h-[44px]"
             style={inputStyle}
           />
           <button
             id="food-search-btn"
             onClick={handleTextSearch}
             disabled={loading || !query.trim()}
+            className="inline-flex items-center justify-center gap-2 max-sm:min-h-[44px]"
             style={{ ...buttonStyle, opacity: loading || !query.trim() ? 0.6 : 1 }}
           >
-            {loading ? "Searching…" : "🔍 Search"}
+            <MagnifyingGlass size={16} weight="bold" />
+            <span>{loading ? "Searching…" : "Search"}</span>
           </button>
         </div>
 
         {/* Barcode input row */}
-        <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: 10, alignItems: "start" }}>
+        <div className="mt-2.5 grid grid-cols-1 items-start gap-2.5 sm:grid-cols-[1fr_auto_auto_auto]">
           <div>
-            <div style={{ position: "relative" }}>
+            <div className="relative">
               <input
                 id="barcode-input"
                 value={barcode}
@@ -519,8 +519,9 @@ export default function LogFood() {
             </div>
             {/* Inline validation error */}
             {barcodeError && (
-              <div style={{ marginTop: 4, fontSize: 11, color: "rgba(255,100,100,0.9)" }}>
-                ⚠️ {barcodeError}
+              <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-red-300/95">
+                <WarningCircle size={12} weight="fill" />
+                <span>{barcodeError}</span>
               </div>
             )}
           </div>
@@ -529,6 +530,7 @@ export default function LogFood() {
             id="barcode-search-btn"
             onClick={handleBarcodeSearch}
             disabled={loading || !barcodeIsReady}
+            className="inline-flex items-center justify-center gap-2 max-sm:min-h-[44px]"
             style={{
               ...buttonStyle,
               opacity: loading || !barcodeIsReady ? 0.5 : 1,
@@ -540,13 +542,15 @@ export default function LogFood() {
                 : "var(--border)",
             }}
           >
-            {loading ? "Looking up…" : "🔢 Lookup"}
+            <Barcode size={16} weight="bold" />
+            <span>{loading ? "Looking up…" : "Lookup"}</span>
           </button>
 
           <button
             id="barcode-scan-btn"
             onClick={() => setShowScanner(true)}
             disabled={loading}
+            className="inline-flex items-center justify-center gap-1.5 max-sm:min-h-[44px]"
             style={{
               ...buttonStyle,
               background: "linear-gradient(135deg, rgba(0,180,255,0.2), rgba(124,92,255,0.12))",
@@ -556,13 +560,15 @@ export default function LogFood() {
               gap: 5,
             }}
           >
-            📷 Scan
+            <Camera size={16} weight="bold" />
+            <span>Scan</span>
           </button>
 
           <button
             id="food-photo-scan-btn"
             onClick={() => setShowPhotoScanner(true)}
             disabled={loading || photoLoading}
+            className="inline-flex items-center justify-center gap-1.5 max-sm:min-h-[44px]"
             style={{
               ...buttonStyle,
               background: "linear-gradient(135deg, rgba(80,200,120,0.22), rgba(0,209,255,0.10))",
@@ -572,7 +578,8 @@ export default function LogFood() {
               gap: 5,
             }}
           >
-            {photoLoading ? "Analyzing…" : "🥗 Snap Food"}
+            <Camera size={16} weight="duotone" />
+            <span>{photoLoading ? "Analyzing…" : "Snap Food"}</span>
           </button>
         </div>
       </div>
@@ -899,7 +906,7 @@ export default function LogFood() {
                         borderColor: isLogged ? "rgba(80,200,120,0.35)" : "rgba(124,92,255,0.35)",
                       }}
                     >
-                      {isLogged ? "✓ Logged" : isLogging ? "Logging…" : "📝 Log"}
+                      {isLogged ? "✓ Logged" : isLogging ? "Logging…" : "Log"}
                     </button>
                   </div>
                 </div>
