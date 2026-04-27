@@ -162,16 +162,16 @@ function computeScore(totals: { calories: number; proteinG: number; carbsG: numb
 }
 
 function scoreToGrade(score: number) {
-  if (score >= 90) return { letter: 'A', color: '#10b981', emoji: '🏆' };
-  if (score >= 75) return { letter: 'B', color: '#34d399', emoji: '💪' };
-  if (score >= 60) return { letter: 'C', color: '#fbbf24', emoji: '👍' };
-  if (score >= 40) return { letter: 'D', color: '#f97316', emoji: '⚠️' };
-  return { letter: 'F', color: '#ef4444', emoji: '🔻' };
+  if (score >= 90) return { letter: 'A', emoji: '🏆', toneClass: 'border-emerald-400/20 bg-emerald-500/8', textClass: 'text-emerald-300' };
+  if (score >= 75) return { letter: 'B', emoji: '💪', toneClass: 'border-emerald-300/20 bg-emerald-400/8', textClass: 'text-emerald-200' };
+  if (score >= 60) return { letter: 'C', emoji: '👍', toneClass: 'border-amber-300/25 bg-amber-400/10', textClass: 'text-amber-300' };
+  if (score >= 40) return { letter: 'D', emoji: '⚠️', toneClass: 'border-orange-300/25 bg-orange-500/10', textClass: 'text-orange-300' };
+  return { letter: 'F', emoji: '🔻', toneClass: 'border-red-400/30 bg-red-500/10', textClass: 'text-red-300' };
 }
 
 function MacroBar({ label, actual, target, unit }: { label: string; actual: number; target: number; unit: string }) {
   const pct = target > 0 ? Math.min((actual / target) * 100, 150) : 0;
-  const barColor = pct > 110 ? '#f97316' : pct >= 80 ? '#10b981' : '#fbbf24';
+  const barColorClass = pct > 110 ? 'bg-orange-400' : pct >= 80 ? 'bg-emerald-400' : 'bg-amber-300';
   return (
     <div className="text-xs">
       <div className="mb-0.5 flex justify-between">
@@ -179,7 +179,7 @@ function MacroBar({ label, actual, target, unit }: { label: string; actual: numb
         <span className="text-white/45">{Math.round(actual)}/{target}{unit}</span>
       </div>
       <div className="h-1.5 overflow-hidden rounded bg-white/10">
-        <div style={{ width: `${Math.min(pct, 100)}%`, background: barColor }} className="h-full rounded transition-[width] duration-400" />
+        <div style={{ width: `${Math.min(pct, 100)}%` }} className={`h-full rounded transition-[width] duration-400 ${barColorClass}`} />
       </div>
     </div>
   );
@@ -190,16 +190,16 @@ function NutriScoreCard({ totals }: { totals: { calories: number; proteinG: numb
   const score = computeScore(totals, targets);
   const grade = scoreToGrade(score);
   return (
-    <div style={{ borderColor: `${grade.color}33`, background: `${grade.color}08` }} className="grid grid-cols-[auto_1fr] items-center gap-4 rounded-2xl border px-4 py-3.5">
+    <div className={`grid grid-cols-[auto_1fr] items-center gap-4 rounded-2xl border px-4 py-3.5 ${grade.toneClass}`}>
       <div className="text-center">
-        <div style={{ color: grade.color }} className="text-4xl font-extrabold leading-none">{grade.letter}</div>
+        <div className={`text-4xl font-extrabold leading-none ${grade.textClass}`}>{grade.letter}</div>
         <div className="mt-0.5 text-[11px] text-white/45">{score}/100</div>
         <div className="mt-1 inline-flex items-center justify-center rounded-md border border-white/10 bg-white/5 p-1">
           {score >= 90 ? <Fire size={14} weight="fill" className="text-emerald-300" /> : score >= 60 ? <ShootingStar size={14} weight="fill" className="text-amber-300" /> : <Leaf size={14} weight="fill" className="text-rose-300" />}
         </div>
       </div>
       <div className="grid gap-2">
-        <div style={{ color: grade.color }} className="text-[13px] font-bold">Daily Nutrition Score</div>
+        <div className={`text-[13px] font-bold ${grade.textClass}`}>Daily Nutrition Score</div>
         <MacroBar label="Calories" actual={totals.calories} target={targets.calories} unit="kcal" />
         <MacroBar label="Protein" actual={totals.proteinG} target={targets.proteinG} unit="g" />
         <MacroBar label="Carbs" actual={totals.carbsG} target={targets.carbsG} unit="g" />
