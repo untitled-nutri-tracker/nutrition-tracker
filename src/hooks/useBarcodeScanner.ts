@@ -11,6 +11,7 @@ import {
   BrowserMultiFormatReader,
   BarcodeFormat,
 } from "@zxing/library";
+import { attachCameraStream, stopMediaStream, stopVideoElementStream } from "./cameraSession";
 
 
 /* ------------------------------------------------------------------ */
@@ -100,24 +101,12 @@ export function useBarcodeScanner(
   const killAllTracks = useCallback(() => {
     // 1. Stop tracks from our stored stream ref (primary source of truth)
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => {
-        console.log("[BarcodeScanner] Stopping track:", track.kind, track.label, "readyState:", track.readyState);
-        track.stop();
-      });
+      stopMediaStream(streamRef.current);
       streamRef.current = null;
     }
 
     // 2. Also check the video element as a fallback
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => {
-        if (track.readyState === "live") {
-          console.log("[BarcodeScanner] Stopping orphan track:", track.kind, track.label);
-          track.stop();
-        }
-      });
-      videoRef.current.srcObject = null;
-    }
+    stopVideoElementStream(videoRef.current);
 
     console.log("[BarcodeScanner] All camera tracks killed");
   }, []);
@@ -157,12 +146,8 @@ export function useBarcodeScanner(
           audio: false,
         };
 
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const stream = await attachCameraStream(videoEl, constraints);
         streamRef.current = stream; // ★ Store it so we can always kill it
-
-        // ★ Step 2: Attach stream to video element
-        videoEl.srcObject = stream;
-        await videoEl.play();
 
         console.log("[BarcodeScanner] Camera stream active. Tracks:", stream.getTracks().map(t => `${t.kind}:${t.label}:${t.readyState}`));
 
@@ -324,14 +309,10 @@ export function useBarcodeScanner(
       }
       // Kill any surviving tracks
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
+        stopMediaStream(streamRef.current);
         streamRef.current = null;
       }
-      if (videoRef.current?.srcObject) {
-        const s = videoRef.current.srcObject as MediaStream;
-        s.getTracks().forEach((t) => t.stop());
-        videoRef.current.srcObject = null;
-      }
+      stopVideoElementStream(videoRef.current);
     };
   }, []);
 

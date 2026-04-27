@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { attachCameraStream, stopMediaStream, stopVideoElementStream } from "../hooks/cameraSession";
 
 interface FoodPhotoPayload {
   imageBase64: string;
@@ -35,14 +36,10 @@ export default function FoodPhotoScanner({
 
   function stopCamera() {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      stopMediaStream(streamRef.current);
       streamRef.current = null;
     }
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
-    }
+    stopVideoElementStream(videoRef.current);
     setCameraReady(false);
   }
 
@@ -76,19 +73,21 @@ export default function FoodPhotoScanner({
           return;
         }
 
-        const stream = await navigator.mediaDevices.getUserMedia({
+        const videoEl = videoRef.current;
+        if (!videoEl) {
+          setLivePreviewUnavailable(true);
+          return;
+        }
+
+        const stream = await attachCameraStream(videoEl, {
           video: { facingMode: "environment" },
           audio: false,
         });
         if (cancelled) {
-          stream.getTracks().forEach((track) => track.stop());
+          stopMediaStream(stream);
           return;
         }
         streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
         setCameraReady(true);
       } catch {
         if (cancelled) return;

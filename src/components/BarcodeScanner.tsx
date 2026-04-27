@@ -41,18 +41,6 @@ export default function BarcodeScanner({
     selectDevice,
   } = useBarcodeScanner(handleDetected);
 
-  /** Kill the camera stream by stopping all tracks on the video element. */
-  const killCamera = () => {
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => {
-        track.stop();
-        console.log("[BarcodeScanner] ✅ Killed track:", track.kind, track.label);
-      });
-      videoRef.current.srcObject = null;
-    }
-  };
-
   // Start scanning when the overlay mounts
   useEffect(() => {
     if (videoRef.current) {
@@ -60,7 +48,6 @@ export default function BarcodeScanner({
     }
     return () => {
       stopScan();
-      killCamera();
     };
   }, []);
 
@@ -69,7 +56,6 @@ export default function BarcodeScanner({
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         stopScan();
-        killCamera();
         onClose();
       }
     };
@@ -79,7 +65,6 @@ export default function BarcodeScanner({
 
   const handleClose = () => {
     stopScan();
-    killCamera();
     onClose();
   };
 
