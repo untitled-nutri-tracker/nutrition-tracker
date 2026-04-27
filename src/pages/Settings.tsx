@@ -519,7 +519,7 @@ function ApiKeySection() {
                 (!status?.hasKey || isEditing) && (
                   <div className="flex gap-2 mt-2.5 max-sm:flex-col">
                     <input
-                      className="flex-1 min-w-0 px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-[13px] font-mono transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40 placeholder:font-sans"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-[16px] sm:text-[13px] font-mono transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40 placeholder:font-sans"
                       type="password"
                       placeholder={`Paste your ${provider.name} API key…`}
                       value={editingProvider === provider.id ? keyInput : ""}
@@ -529,7 +529,10 @@ function ApiKeySection() {
                       }}
                       onChange={(e) => setKeyInput(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSaveKey(provider);
+                        if (e.key === "Enter") {
+                          handleSaveKey(provider);
+                          (e.currentTarget as HTMLInputElement).blur();
+                        }
                       }}
                     />
                     <button
@@ -550,12 +553,15 @@ function ApiKeySection() {
                   </div>
                   <div className="flex gap-1.5">
                     <input
-                      className="flex-1 min-w-0 px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-xs font-mono transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40 placeholder:font-sans"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-[16px] sm:text-xs font-mono transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40 placeholder:font-sans"
                       type="text"
                       value={ollamaInput}
                       onChange={(e) => setOllamaInput(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") handleOllamaEndpointSave();
+                        if (e.key === "Enter") {
+                          handleOllamaEndpointSave();
+                          (e.currentTarget as HTMLInputElement).blur();
+                        }
                       }}
                       onBlur={handleOllamaEndpointSave}
                       placeholder="http://localhost:11434"
@@ -572,12 +578,15 @@ function ApiKeySection() {
                   </div>
                   <div className="flex gap-1.5">
                     <input
-                      className="flex-1 min-w-0 px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-xs font-mono transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40 placeholder:font-sans"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-[16px] sm:text-xs font-mono transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40 placeholder:font-sans"
                       type="text"
                       value={customEndpointInput}
                       onChange={(e) => setCustomEndpointInput(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") handleCustomEndpointSave();
+                        if (e.key === "Enter") {
+                          handleCustomEndpointSave();
+                          (e.currentTarget as HTMLInputElement).blur();
+                        }
                       }}
                       onBlur={handleCustomEndpointSave}
                       placeholder="https://openrouter.ai/api/v1"
@@ -611,7 +620,7 @@ function ApiKeySection() {
                     Model
                   </div>
                   <select
-                    className="w-full px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-xs cursor-pointer transition-colors focus:border-indigo-500/40 focus:outline-none appearance-none pr-8 bg-no-repeat bg-[right_12px_center]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(255,255,255,0.5)' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E\")" }}
+                    className="w-full px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-[16px] sm:text-xs cursor-pointer transition-colors focus:border-indigo-500/40 focus:outline-none appearance-none pr-8 bg-no-repeat bg-[right_12px_center]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(255,255,255,0.5)' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E\")" }}
                     value={currentModel ?? models[0]?.id ?? ""}
                     onChange={(e) => handleModelSelect(provider.id, e.target.value)}
                   >
@@ -751,7 +760,7 @@ function ApiKeySection() {
                 {(!status?.hasKey || isEditing) && (
                   <div className="flex gap-2 mt-2.5 max-sm:flex-col">
                     <input
-                      className="flex-1 min-w-0 px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-[13px] font-mono transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40 placeholder:font-sans"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-[10px] border border-white/5 bg-white/5 text-white/90 text-[16px] sm:text-[13px] font-mono transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40 placeholder:font-sans"
                       type="password"
                       placeholder={`Paste your ${provider.name} API key…`}
                       value={editingProvider === provider.id ? keyInput : ""}
@@ -761,7 +770,10 @@ function ApiKeySection() {
                       }}
                       onChange={(e) => setKeyInput(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSaveKey(credentialProvider);
+                        if (e.key === "Enter") {
+                          handleSaveKey(credentialProvider);
+                          (e.currentTarget as HTMLInputElement).blur();
+                        }
                       }}
                     />
                     <button

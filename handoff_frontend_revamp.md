@@ -96,6 +96,7 @@ Use this order to avoid rework and combine overlapping layout concerns:
 3. **iOS keyboard behavior hardening third**
    - Confirm no viewport zoom on focus for chat input.
    - Confirm no layout jump when toggling keyboard open/close repeatedly.
+   - Status update: keyboard hardening is now applied in AI Advisor, `/log` search/barcode inputs, and Settings provider inputs/selects (mobile-safe input sizing + Enter-to-blur behavior where appropriate).
 
 4. **Decide /log keyboard accessory strategy (native vs accept) fourth**
    - Preferred: evaluate a native iOS override to hide accessory bar.
