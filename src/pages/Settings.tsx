@@ -68,7 +68,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="page-enter flex w-full flex-col gap-4 px-4 pb-28 pt-4 sm:px-6 md:px-8 md:pb-8 lg:px-10">
+    <div className="page-enter flex w-full flex-col gap-4 px-4 pb-[calc(var(--shell-mobile-content-padding)+1rem)] pt-4 sm:px-6 md:px-8 md:pb-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       {error && (
         <div className="card w-full border-red-400/35 bg-red-500/10">

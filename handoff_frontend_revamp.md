@@ -106,6 +106,7 @@ Use this order to avoid rework and combine overlapping layout concerns:
 5. **Cross-page regression sweep fifth**
    - Re-check FoodSearch, DailyLog, Settings for top clipping and bottom-nav overlap.
    - Record any residual safe-area offsets as follow-up tasks.
+   - Status update: Settings container now uses the shared shell mobile content padding contract (replacing fixed `pb-28`) to prevent bottom nav overlap on tall inset devices.
 
 6. **Only then continue remaining style-debt cleanup**
    - Resume tokenization/inline-style reduction once interaction regressions are closed.
