@@ -72,8 +72,12 @@ export function StackedProgressBar({ data }: { data: ProgressData[] }) {
             {chartData.map((entry, index) => (
               <Cell
                 key={`filled-${index}`}
-                fill={entry.rawPercentage > 115 ? "#f59e0b" : entry.color}
-                style={{ filter: `drop-shadow(0 0 5px ${entry.rawPercentage > 115 ? "#f59e0b" : entry.color}44)` }}
+                fill={entry.rawPercentage > 115 ? "var(--metric-fat)" : entry.color}
+                style={{
+                  filter: entry.rawPercentage > 115
+                    ? "drop-shadow(0 0 5px rgb(245 158 11 / 0.35))"
+                    : "drop-shadow(0 0 5px rgb(255 255 255 / 0.2))",
+                }}
               />
             ))}
           </Bar>

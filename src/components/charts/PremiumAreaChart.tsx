@@ -16,8 +16,8 @@ export interface AreaChartPoint {
 
 export function PremiumAreaChart({ 
   data, 
-  color = "#10b981",
-  gradientColor = "#22d3ee",
+  color = "var(--metric-protein)",
+  gradientColor = "var(--metric-carbs)",
   valueFormatter = (val: number) => val.toString(),
   height = 220 
 }: { 
