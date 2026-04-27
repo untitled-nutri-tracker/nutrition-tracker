@@ -437,10 +437,7 @@ export default function LogFood() {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="ml-auto rounded-[10px] border border-white/10 bg-white/5 px-2.5 py-[7px] text-xs text-white/90 max-sm:ml-0 max-sm:w-full max-sm:min-h-[44px]"
-            style={{
-              colorScheme: "dark",
-            }}
+            className="ml-auto rounded-[10px] border border-white/10 bg-white/5 px-2.5 py-[7px] text-xs text-white/90 [color-scheme:dark] max-sm:ml-0 max-sm:w-full max-sm:min-h-[44px]"
           />
         </div>
       </div>
@@ -465,8 +462,8 @@ export default function LogFood() {
             id="food-search-btn"
             onClick={handleTextSearch}
             disabled={loading || !query.trim()}
-            className="inline-flex items-center justify-center gap-2 max-sm:min-h-[44px]"
-            style={{ ...buttonStyle, opacity: loading || !query.trim() ? 0.6 : 1 }}
+            className="inline-flex items-center justify-center gap-2 disabled:opacity-60 max-sm:min-h-[44px]"
+            style={buttonStyle}
           >
             <MagnifyingGlass size={16} weight="bold" />
             <span>{loading ? "Searching…" : "Search"}</span>
@@ -544,10 +541,9 @@ export default function LogFood() {
             id="barcode-search-btn"
             onClick={handleBarcodeSearch}
             disabled={loading || !barcodeIsReady}
-            className="inline-flex items-center justify-center gap-2 max-sm:min-h-[44px]"
+            className="inline-flex items-center justify-center gap-2 disabled:opacity-50 max-sm:min-h-[44px]"
             style={{
               ...buttonStyle,
-              opacity: loading || !barcodeIsReady ? 0.5 : 1,
               background: barcodeIsReady
                 ? "linear-gradient(135deg, rgba(80,200,120,0.25), rgba(0,209,255,0.10))"
                 : "rgba(255,255,255,0.04)",
