@@ -398,7 +398,11 @@ export default function LogFood() {
 }
 
   function handleKeyDown(e: React.KeyboardEvent, action: () => void) {
-    if (e.key === "Enter") action();
+    if (e.key === "Enter") {
+      e.preventDefault();
+      action();
+      (e.currentTarget as HTMLInputElement).blur();
+    }
   }
 
   return (
@@ -450,7 +454,11 @@ export default function LogFood() {
             onChange={(e) => { setQuery(e.target.value); setHasSearched(false); }}
             onKeyDown={(e) => handleKeyDown(e, handleTextSearch)}
             placeholder="Search food (e.g. banana, pizza, chicken breast)…"
-            className="max-sm:min-h-[44px]"
+            className="text-[16px] sm:text-[13px] max-sm:min-h-[44px]"
+            enterKeyHint="search"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
             style={inputStyle}
           />
           <button
@@ -481,6 +489,12 @@ export default function LogFood() {
                 placeholder="Enter barcode (e.g. 0049000006346)"
                 inputMode="numeric"
                 maxLength={13}
+                className="text-[16px] sm:text-[13px] max-sm:min-h-[44px]"
+                enterKeyHint="search"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                autoComplete="off"
                 style={{
                   ...inputStyle,
                   fontFamily: '"SF Mono", "Cascadia Mono", "Fira Code", monospace',

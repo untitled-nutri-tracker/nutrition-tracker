@@ -62,6 +62,53 @@ You must completely swap out the existing manual SVG charts in the AI Advisor an
 ### Phase 5: Future Enhancements (Do Not Build Yet)
 - **Global "Quick Log" Bottom Sheet:** Converting the `/log` route into a sliding Bottom Sheet overlay triggered by the `+` button.
 
+### Phase 6: iOS Safe-Area + AI Advisor Interaction Polish (Active)
+The following issues were observed on iOS simulator/device and should be treated as high-priority polish defects:
+
+1. **Top notch / Dynamic Island overlap still occurs**
+   - Ensure mobile content starts below `env(safe-area-inset-top)` and does not render under the notch on all pages.
+   - Keep desktop behavior unchanged.
+
+2. **Bottom nav sits slightly too high**
+   - Move mobile pill nav closer to the physical bottom edge while still respecting `env(safe-area-inset-bottom)`.
+   - Keep tappable area and gesture safety intact.
+
+3. **AI Advisor keyboard/focus scroll glitch**
+   - On focusing the AI chat textbox, avoid whole-page scroll jumps.
+   - Prevent iOS input-focus zoom side effects (small font-size textareas can trigger this).
+
+4. **AI Advisor composer vertical position**
+   - Reduce excessive gap between chat composer and bottom nav on mobile.
+   - Maintain legible spacing with the nav and safe-area insets.
+
+## Updated Ordered Next Steps
+Use this order to avoid rework and combine overlapping layout concerns:
+
+1. **Shell-safe-area contract first**
+   - Finalize and verify top and bottom safe-area CSS variables in `AppShell`.
+   - Validate all primary routes (`/`, `/log`, `/insights`, `/ai`, `/settings`) in iPhone simulator.
+
+2. **AI Advisor layout stabilization second (overlaps with Step 1)**
+   - Keep outer shell from becoming the active scroll container on AI route.
+   - Keep messages panel as the intentional scroll area.
+   - Reposition composer and adjust bottom padding to align with nav.
+
+3. **iOS keyboard behavior hardening third**
+   - Confirm no viewport zoom on focus for chat input.
+   - Confirm no layout jump when toggling keyboard open/close repeatedly.
+
+4. **Decide /log keyboard accessory strategy (native vs accept) fourth**
+   - Preferred: evaluate a native iOS override to hide accessory bar.
+   - Fallback: accept platform toolbar and optimize focus flow so arrows are not disruptive.
+   - Status update: fallback polish is implemented in `/log` (search/barcode Enter now triggers action + blur, iOS keyboard hints/autocorrect settings tightened, and mobile input sizing aligned to avoid zoom-triggered friction).
+
+5. **Cross-page regression sweep fifth**
+   - Re-check FoodSearch, DailyLog, Settings for top clipping and bottom-nav overlap.
+   - Record any residual safe-area offsets as follow-up tasks.
+
+6. **Only then continue remaining style-debt cleanup**
+   - Resume tokenization/inline-style reduction once interaction regressions are closed.
+
 ---
 
 ## Technical Constraints & Guardrails
