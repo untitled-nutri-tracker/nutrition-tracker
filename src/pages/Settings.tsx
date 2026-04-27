@@ -533,19 +533,18 @@ function ApiKeySection() {
                       }}
                     />
                     <button
-                      className="px-4 py-2 rounded-[10px] border border-emerald-500/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 text-white/90 font-semibold text-[13px] whitespace-nowrap hover:from-emerald-500/30 hover:to-emerald-500/15 transition-all max-sm:w-full"
+                      className="px-4 py-2 rounded-[10px] border border-emerald-500/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 text-white/90 font-semibold text-[13px] whitespace-nowrap hover:from-emerald-500/30 hover:to-emerald-500/15 transition-all disabled:opacity-60 max-sm:w-full"
                       onClick={() => handleSaveKey(provider)}
                       disabled={savingKey || !keyInput.trim()}
-                      style={{ opacity: savingKey || !keyInput.trim() ? 0.6 : 1 }}
                     >
                       {savingKey ? "Saving…" : "Save"}
                     </button>
                   </div>
                 )}
 
-              {/* Ollama endpoint config */}
-              {!provider.requiresKey && provider.id === "ollama" && (
-                <div className="mt-3">
+                {/* Ollama endpoint config */}
+                {!provider.requiresKey && provider.id === "ollama" && (
+                  <div className="mt-3">
                   <div className="text-[11px] text-white/40 mb-1.5 font-semibold tracking-wide">
                     Endpoint URL
                   </div>
@@ -734,9 +733,8 @@ function ApiKeySection() {
                     <span>{status.preview}</span>
                     <div className="flex gap-1.5">
                       <button
-                        className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-white/60 text-[11px] hover:bg-red-500/20 transition-all cursor-pointer"
+                        className="px-3 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-white/60 text-[11px] hover:bg-indigo-500/20 transition-all cursor-pointer"
                         onClick={() => setEditingProvider(provider.id)}
-                        style={{ borderColor: "rgba(124,92,255,0.3)", background: "rgba(124,92,255,0.08)" }}
                       >
                         Change
                       </button>
@@ -767,10 +765,9 @@ function ApiKeySection() {
                       }}
                     />
                     <button
-                      className="px-4 py-2 rounded-[10px] border border-emerald-500/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 text-white/90 font-semibold text-[13px] whitespace-nowrap hover:from-emerald-500/30 hover:to-emerald-500/15 transition-all max-sm:w-full"
+                      className="px-4 py-2 rounded-[10px] border border-emerald-500/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 text-white/90 font-semibold text-[13px] whitespace-nowrap hover:from-emerald-500/30 hover:to-emerald-500/15 transition-all disabled:opacity-60 max-sm:w-full"
                       onClick={() => handleSaveKey(credentialProvider)}
                       disabled={savingKey || !keyInput.trim()}
-                      style={{ opacity: savingKey || !keyInput.trim() ? 0.6 : 1 }}
                     >
                       {savingKey ? "Saving…" : "Save"}
                     </button>
