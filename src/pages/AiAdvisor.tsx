@@ -1031,7 +1031,7 @@ export default function AiAdvisor() {
               maskSize: "100% 100%",
             }}
           >
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-2.5 pb-36 sm:pb-40">
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-2.5 pb-28 sm:pb-36">
 
         {/* Quick prompts (only when empty) */}
         {messages.length === 0 && (
@@ -1283,7 +1283,7 @@ export default function AiAdvisor() {
           </div>
         </div>
         {!isControlsOpen && (
-          <div className="absolute left-0 right-0 z-20 p-4 max-sm:p-3 bottom-[var(--shell-mobile-nav-offset)] md:bottom-0">
+          <div className="absolute left-0 right-0 z-20 bottom-[calc(var(--shell-mobile-nav-offset)-0.25rem)] p-2.5 pt-1.5 max-sm:px-2 max-sm:pb-2 md:bottom-0 md:p-4">
             <div className="mx-auto w-full max-w-4xl">
               <div className="relative flex gap-2 items-end px-3.5 py-3 rounded-[22px] border border-white/10 bg-[#1e1e2a]/95 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] max-sm:px-3 max-sm:py-2.5">
                 <textarea
@@ -1293,7 +1293,7 @@ export default function AiAdvisor() {
                   onKeyDown={handleKeyDown}
                   placeholder="Ask about your nutrition…"
                   rows={1}
-                  className="flex-1 min-w-0 px-3 py-2.5 rounded-[10px] border border-white/[0.08] bg-white/5 text-white/90 resize-none text-[13px] font-[inherit] leading-relaxed max-h-[120px] transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40"
+                  className="flex-1 min-w-0 px-3 py-2.5 rounded-[10px] border border-white/[0.08] bg-white/5 text-white/90 resize-none text-[16px] sm:text-[13px] font-[inherit] leading-relaxed max-h-[120px] transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40"
                 />
                 <button
                   onClick={() => sendQuestion(input)}

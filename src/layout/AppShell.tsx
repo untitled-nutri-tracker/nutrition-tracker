@@ -106,14 +106,16 @@ export default function AppShell() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { session, closeDatabase } = useDatabaseSession();
+  const isAiRoute = pathname.startsWith("/ai");
   
   // Track if we've mounted to prevent hydration mismatch animations
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   const shellStyles = {
-    "--shell-mobile-nav-offset": "calc(env(safe-area-inset-bottom) + 0.5rem)",
+    "--shell-mobile-nav-offset": "calc(env(safe-area-inset-bottom) + 0.2rem)",
     "--shell-mobile-content-padding": "calc(6rem + env(safe-area-inset-bottom))",
+    "--shell-mobile-top-inset": "max(env(safe-area-inset-top), 0.5rem)",
   } as CSSProperties;
 
   return (
@@ -156,7 +158,7 @@ export default function AppShell() {
       </aside>
 
       {/* ── MAIN CONTENT AREA ───────────────────────────────────────── */}
-      <section className="relative flex h-full min-w-0 flex-1 flex-col">
+      <section className="relative flex h-full min-w-0 flex-1 flex-col pt-[var(--shell-mobile-top-inset)] md:pt-0">
         <header className="sticky top-0 z-10 hidden items-center justify-between border-b border-white/6 bg-[#12121A]/88 px-8 py-5 backdrop-blur-xl md:flex">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-white">{title}</h1>
@@ -167,7 +169,7 @@ export default function AppShell() {
           </div>
         </header>
 
-        <main className="relative flex flex-1 flex-col overflow-x-hidden overflow-y-auto scroll-smooth pb-[var(--shell-mobile-content-padding)] md:pb-0">
+        <main className={`relative flex flex-1 flex-col overflow-x-hidden ${isAiRoute ? "overflow-y-hidden" : "overflow-y-auto"} scroll-smooth pb-[var(--shell-mobile-content-padding)] md:pb-0`}>
           <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col">
             <AnimatePresence mode="wait">
               <motion.div
