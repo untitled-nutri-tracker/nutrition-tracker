@@ -88,7 +88,7 @@ export default function BarcodeScanner({
           {/* Success flash */}
           {showFlash && <div className="absolute inset-0 bg-emerald-400/25 [animation:success-flash_0.5s_ease-out_forwards] pointer-events-none" />}
 
-          <div className="absolute left-1/2 -translate-x-1/2 top-[calc(env(safe-area-inset-top)+18px)] w-max max-w-[min(520px,calc(100vw-32px))] rounded-lg px-2.5 py-2 bg-black/55 text-white/90 text-xs text-center">
+          <div className="absolute left-1/2 -translate-x-1/2 top-[calc(env(safe-area-inset-top)+18px)] w-max max-w-[min(520px,calc(100vw-32px))] rounded-lg px-2.5 py-2 bg-card/80 text-muted text-xs text-center">
             Center the barcode in frame
           </div>
         </div>
@@ -97,7 +97,7 @@ export default function BarcodeScanner({
           <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
             {devices.length > 1 && (
               <select
-                className="px-3 py-2 rounded-[10px] border border-white/10 bg-white/5 text-white/90 text-xs max-w-[220px]"
+                className="px-3 py-2 rounded-[10px] border border-subtle bg-white/5 text-muted text-xs max-w-[220px]"
                 value={selectedDeviceId ?? ""}
                 onChange={(e) => selectDevice(e.target.value)}
               >
@@ -110,19 +110,19 @@ export default function BarcodeScanner({
             )}
 
             <button
-              className="px-5 py-2.5 rounded-xl border border-red-500/35 bg-red-500/12 text-white font-semibold text-sm hover:bg-red-500/22 transition-colors cursor-pointer"
+              className="px-5 py-2.5 rounded-xl border border-red-500/35 bg-red-500/12 text-primary font-semibold text-sm hover:bg-red-500/22 transition-colors cursor-pointer"
               onClick={handleClose}
             >
               Close
             </button>
           </div>
 
-          <div className="mt-3 text-xs text-white/50 text-center">
+          <div className="mt-3 text-xs text-muted text-center">
             Hold steady until a barcode is detected · Press ESC to cancel
           </div>
 
           {error && (
-            <div className="mt-2 px-3.5 py-2.5 rounded-[10px] border border-red-500/35 bg-red-500/10 text-sm text-white/90">
+            <div className="mt-2 px-3.5 py-2.5 rounded-[10px] border border-red-500/35 bg-red-500/10 text-sm text-muted">
               {error}
             </div>
           )}

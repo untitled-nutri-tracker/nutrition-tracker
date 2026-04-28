@@ -798,7 +798,7 @@ export default function AiAdvisor() {
       {(!isOnline && selectedProvider !== "ollama") && (
         <div className="shrink-0 mx-4 mt-4 mb-0 p-3.5 rounded-[18px] border border-amber-500/30 bg-amber-500/10 backdrop-blur-md sm:mx-5 md:mx-6">
           <div className="font-semibold">You're offline</div>
-          <div className="mt-1.5 text-white/65">
+          <div className="mt-1.5 text-muted">
             Cloud AI advice requires an internet connection. Switch to <strong>Ollama (Local)</strong> or connect to the
             network to continue.
           </div>
@@ -806,10 +806,10 @@ export default function AiAdvisor() {
       )}
 
       {/* Toolbar */}
-      <div className="m-4 shrink-0 flex flex-wrap items-center justify-between gap-2 rounded-[18px] border border-white/10 bg-[#1e1e2a]/90 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] max-sm:m-3 max-sm:flex-col max-sm:items-start max-sm:px-3 max-sm:py-2">
+      <div className="m-4 shrink-0 flex flex-wrap items-center justify-between gap-2 rounded-[18px] border border-subtle bg-[#1e1e2a]/90 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] max-sm:m-3 max-sm:flex-col max-sm:items-start max-sm:px-3 max-sm:py-2">
         <div className="flex items-center gap-1 flex-wrap min-w-0">
           <button
-            className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/14 bg-white/5 text-white/80 transition-all hover:-translate-y-px hover:border-white/20 hover:text-white"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-subtle bg-white/5 text-muted transition-all hover:-translate-y-px hover:border-subtle hover:text-primary"
             onClick={() => setIsControlsOpen((prev) => !prev)}
             title="Open chat controls"
             aria-label="Open chat controls"
@@ -834,7 +834,7 @@ export default function AiAdvisor() {
         <div className="flex items-center gap-1 shrink-0 max-sm:w-full">
           {messages.length > 0 && (
             <button
-              className="bg-indigo-500/10 border border-indigo-500/20 text-white/90 px-2.5 py-1 rounded-md cursor-pointer flex items-center transition-all hover:bg-indigo-500/15 hover:border-indigo-500/40 hover:-translate-y-px"
+              className="bg-indigo-500/10 border border-indigo-500/20 text-muted px-2.5 py-1 rounded-md cursor-pointer flex items-center transition-all hover:bg-indigo-500/15 hover:border-indigo-500/40 hover:-translate-y-px"
               onClick={startNewChat}
               title="New Chat"
             >
@@ -844,7 +844,7 @@ export default function AiAdvisor() {
           )}
 
           <button
-            className={`border px-2.5 py-1 rounded-md cursor-pointer flex items-center transition-all hover:-translate-y-px ${isGroceryOpen ? "border-emerald-500/40 bg-emerald-500/15 text-white" : "border-indigo-500/20 bg-indigo-500/10 text-white/90 hover:bg-indigo-500/15 hover:border-indigo-500/40"}`}
+            className={`border px-2.5 py-1 rounded-md cursor-pointer flex items-center transition-all hover:-translate-y-px ${isGroceryOpen ? "border-emerald-500/40 bg-emerald-500/15 text-primary" : "border-indigo-500/20 bg-indigo-500/10 text-muted hover:bg-indigo-500/15 hover:border-indigo-500/40"}`}
             onClick={() => setIsGroceryOpen(!isGroceryOpen)}
             title="Toggle Grocery List"
           >
@@ -871,11 +871,11 @@ export default function AiAdvisor() {
           >
             <div className="flex justify-between items-start gap-2.5 px-5 py-4 border-b border-white/[0.07] sticky top-0 z-[2] bg-gradient-to-b from-[#1a1e29]/98 to-[#1a1e29]/93 max-sm:px-4 max-sm:py-3">
               <div>
-                <div className="text-base font-[800] text-white/95 tracking-[0.01em] max-sm:text-[15px]">Chat Controls</div>
-                <div className="mt-1 text-sm leading-relaxed text-white/80 max-sm:text-[11px]">Adjust advisor settings and jump between sessions.</div>
+                <div className="text-base font-[800] text-muted tracking-[0.01em] max-sm:text-[15px]">Chat Controls</div>
+                <div className="mt-1 text-sm leading-relaxed text-muted max-sm:text-[11px]">Adjust advisor settings and jump between sessions.</div>
               </div>
               <button
-                className="border border-white/25 bg-white/10 text-white/95 rounded-[10px] w-8 h-8 cursor-pointer text-[19px] leading-none hover:text-white hover:border-blue-300/60 hover:bg-blue-300/15"
+                className="border border-subtle bg-white/10 text-muted rounded-[10px] w-8 h-8 cursor-pointer text-[19px] leading-none hover:text-primary hover:border-blue-300/60 hover:bg-blue-300/15"
                 onClick={() => setIsControlsOpen(false)}
                 title="Close controls"
               >
@@ -884,12 +884,12 @@ export default function AiAdvisor() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 pt-5 pb-3 flex flex-col gap-6 max-sm:px-4 max-sm:pt-4">
-              <div className="text-xs font-bold text-white/80 uppercase tracking-[0.08em]">Goal</div>
+              <div className="text-xs font-bold text-muted uppercase tracking-[0.08em]">Goal</div>
               <div className="flex flex-wrap gap-2 max-sm:gap-1.5">
                 {GOAL_OPTIONS.map((option) => (
                   <button
                     key={option.value}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold cursor-pointer border transition-all hover:border-blue-300/64 hover:bg-blue-300/18 hover:-translate-y-px max-sm:text-[11px] max-sm:px-2.5 max-sm:py-2 ${goal === option.value ? "border-blue-400/78 bg-gradient-to-br from-indigo-400/34 to-sky-400/26 text-white" : "border-white/[0.26] bg-white/10 text-white/80"}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold cursor-pointer border transition-all hover:border-blue-300/64 hover:bg-blue-300/18 hover:-translate-y-px max-sm:text-[11px] max-sm:px-2.5 max-sm:py-2 ${goal === option.value ? "border-blue-400/78 bg-gradient-to-br from-indigo-400/34 to-sky-400/26 text-primary" : "border-white/[0.26] bg-white/10 text-muted"}`}
                     onClick={() => {
                       localStorage.setItem("nutrilog_goal", option.value);
                       setGoal(option.value);
@@ -902,12 +902,12 @@ export default function AiAdvisor() {
             </div>
 
             <div className="px-5 py-3 flex flex-col gap-6 max-sm:px-4">
-              <div className="text-xs font-bold text-white/80 uppercase tracking-[0.08em]">Context Window</div>
+              <div className="text-xs font-bold text-muted uppercase tracking-[0.08em]">Context Window</div>
               <div className="flex flex-wrap gap-2 max-sm:gap-1.5">
                 {CONTEXT_OPTIONS.map((option) => (
                   <button
                     key={option.value}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold cursor-pointer border transition-all hover:border-blue-300/64 hover:bg-blue-300/18 hover:-translate-y-px max-sm:text-[11px] max-sm:px-2.5 max-sm:py-2 ${contextDays === option.value ? "border-blue-400/78 bg-gradient-to-br from-indigo-400/34 to-sky-400/26 text-white" : "border-white/[0.26] bg-white/10 text-white/80"}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold cursor-pointer border transition-all hover:border-blue-300/64 hover:bg-blue-300/18 hover:-translate-y-px max-sm:text-[11px] max-sm:px-2.5 max-sm:py-2 ${contextDays === option.value ? "border-blue-400/78 bg-gradient-to-br from-indigo-400/34 to-sky-400/26 text-primary" : "border-white/[0.26] bg-white/10 text-muted"}`}
                     onClick={() => setContextDays(option.value)}
                   >
                     {option.label}
@@ -917,9 +917,9 @@ export default function AiAdvisor() {
             </div>
 
             <div className="flex flex-col gap-3 px-5 pb-5 max-sm:px-4 max-sm:pb-4">
-              <div className="text-xs font-bold text-white/80 uppercase tracking-[0.08em]">Chat History</div>
+              <div className="text-xs font-bold text-muted uppercase tracking-[0.08em]">Chat History</div>
               <input
-                className="w-full rounded-[10px] border border-white/[0.34] bg-white/10 text-white/95 text-xs px-2.5 py-2 outline-none focus:border-blue-400/82 focus:shadow-[0_0_0_3px_rgba(130,162,255,0.2)] placeholder:text-white/60"
+                className="w-full rounded-[10px] border border-white/[0.34] bg-white/10 text-muted text-xs px-2.5 py-2 outline-none focus:border-blue-400/82 focus:shadow-[0_0_0_3px_rgba(130,162,255,0.2)] placeholder:text-muted"
                 type="search"
                 placeholder="Search sessions..."
                 value={controlsSearch}
@@ -927,7 +927,7 @@ export default function AiAdvisor() {
               />
               <div className="min-h-[120px] flex-1 overflow-y-auto flex flex-col gap-2 pr-1 max-sm:min-h-[180px]">
                 {filteredSessions.length === 0 ? (
-                  <div className="border border-dashed border-white/[0.35] rounded-xl p-3 text-white/80 text-xs">No saved sessions yet. Start a chat to create one.</div>
+                  <div className="border border-dashed border-white/[0.35] rounded-xl p-3 text-muted text-xs">No saved sessions yet. Start a chat to create one.</div>
                 ) : (
                   filteredSessions.map((session) => {
                     const isActive = activeSessionId === session.id;
@@ -941,7 +941,7 @@ export default function AiAdvisor() {
                         {isRenaming ? (
                           <div className="flex items-center gap-1.5 max-sm:flex-wrap">
                             <input
-                              className="flex-1 min-w-0 max-sm:w-full rounded-lg border border-white/[0.34] bg-white/10 text-white/95 text-xs px-2.5 py-1.5 focus:outline-none focus:border-blue-400/82"
+                              className="flex-1 min-w-0 max-sm:w-full rounded-lg border border-white/[0.34] bg-white/10 text-muted text-xs px-2.5 py-1.5 focus:outline-none focus:border-blue-400/82"
                               value={renameDraft}
                               onChange={(e) => setRenameDraft(e.target.value)}
                               onKeyDown={(e) => {
@@ -958,14 +958,14 @@ export default function AiAdvisor() {
                               autoFocus
                             />
                             <button
-                              className="border border-white/[0.34] bg-white/10 text-white/95 rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
+                              className="border border-white/[0.34] bg-white/10 text-muted rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
                               onClick={() => void saveRenamedSession(session.id)}
                               disabled={isPending || !renameDraft.trim()}
                             >
                               Save
                             </button>
                             <button
-                              className="border border-white/[0.34] bg-white/10 text-white/80 rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
+                              className="border border-white/[0.34] bg-white/10 text-muted rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
                               onClick={cancelRenameSession}
                               disabled={isPending}
                             >
@@ -984,12 +984,12 @@ export default function AiAdvisor() {
                               }}
                               disabled={isPending}
                             >
-                              <div className="text-xs text-white/95 font-bold leading-[1.35] max-sm:text-[11px]">{getSessionOptionLabel(session)}</div>
-                              <div className="text-[11px] text-white/80 max-sm:text-[10px]">{getSessionPreview(session)}</div>
+                              <div className="text-xs text-muted font-bold leading-[1.35] max-sm:text-[11px]">{getSessionOptionLabel(session)}</div>
+                              <div className="text-[11px] text-muted max-sm:text-[10px]">{getSessionPreview(session)}</div>
                             </button>
                             <div className="flex gap-1.5 mt-1 max-sm:flex-wrap">
                               <button
-                                className="border border-white/[0.34] bg-white/10 text-white/80 rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
+                                className="border border-white/[0.34] bg-white/10 text-muted rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
                                 onClick={() => startRenameSession(session)}
                                 disabled={isPending}
                               >
@@ -1036,9 +1036,9 @@ export default function AiAdvisor() {
         {/* Quick prompts (only when empty) */}
         {messages.length === 0 && (
           <div className="flex min-h-[55vh] flex-col items-center justify-center text-center px-1 py-10 gap-2">
-            <ChatCircleDots size={38} weight="duotone" className="mb-1 text-white/60" />
-            <div className="text-lg font-bold text-white/90">Start a conversation</div>
-            <div className="text-sm text-white/40 max-w-[400px] mb-3">
+            <ChatCircleDots size={38} weight="duotone" className="mb-1 text-muted" />
+            <div className="text-lg font-bold text-muted">Start a conversation</div>
+            <div className="text-sm text-muted max-w-[400px] mb-3">
               Ask anything about your nutrition, or try one of these:
             </div>
             <div className="flex gap-2 flex-wrap justify-center max-w-[600px] max-sm:gap-1.5">
@@ -1047,7 +1047,7 @@ export default function AiAdvisor() {
                   key={qp.label}
                   onClick={() => sendQuestion(qp.prompt)}
                   disabled={loading}
-                  className="px-4 py-2.5 rounded-xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/15 to-cyan-500/10 text-white/90 cursor-pointer text-sm font-semibold transition-all hover:border-indigo-500/50 hover:from-indigo-500/25 hover:to-cyan-500/15 hover:-translate-y-px disabled:opacity-50 disabled:cursor-wait max-sm:text-xs max-sm:px-3 max-sm:py-2 max-sm:flex-auto max-sm:text-center max-sm:min-h-[44px]"
+                  className="px-4 py-2.5 rounded-xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/15 to-cyan-500/10 text-muted cursor-pointer text-sm font-semibold transition-all hover:border-indigo-500/50 hover:from-indigo-500/25 hover:to-cyan-500/15 hover:-translate-y-px disabled:opacity-50 disabled:cursor-wait max-sm:text-xs max-sm:px-3 max-sm:py-2 max-sm:flex-auto max-sm:text-center max-sm:min-h-[44px]"
                 >
                   {qp.label}
                 </button>
@@ -1058,7 +1058,7 @@ export default function AiAdvisor() {
 
         {/* Loading session history */}
         {sessionLoading && (
-          <div className="mt-10 flex items-center justify-center gap-2 text-[13px] text-white/45">
+          <div className="mt-10 flex items-center justify-center gap-2 text-[13px] text-muted">
             <SpinnerGap size={17} weight="bold" className="animate-spin" />
             <span>Loading chat history...</span>
           </div>
@@ -1197,7 +1197,7 @@ export default function AiAdvisor() {
                 : "self-end border-cyan-500/15 [border-right:3px_solid_rgba(0,209,255,0.35)] bg-[rgba(0,209,255,0.04)]"
             }`}
           >
-            <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-white/40">
+            <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-muted">
               {msg.role === "user" ? "You" : (
                 <>
                   <span className="inline-flex items-center gap-1.5">
@@ -1209,14 +1209,14 @@ export default function AiAdvisor() {
                       {msg.provider}
                     </span>
                   )}
-                  <span className="rounded-md border border-white/10 bg-white/5 px-[7px] py-[2px] text-[10px] text-white/45">
+                  <span className="rounded-md border border-subtle bg-white/5 px-[7px] py-[2px] text-[10px] text-muted">
                     AI Generated
                   </span>
                 </>
               )}
             </div>
             {msg.role === "assistant" ? (
-              <div className="prose prose-invert prose-sm max-w-none text-[14px] leading-[1.7] text-white/90">
+              <div className="prose prose-invert prose-sm max-w-none text-[14px] leading-[1.7] text-muted">
                 {contentElements.length > 0 ? contentElements : <ReactMarkdown>{msg.content}</ReactMarkdown>}
               </div>
             ) : (
@@ -1230,12 +1230,12 @@ export default function AiAdvisor() {
               <div className="mt-2.5">
                 <button
                   onClick={() => setShowNlog(showNlog === i ? null : i)}
-                  className="bg-transparent border-0 text-white/40 text-[11px] cursor-pointer underline p-0 transition-colors hover:text-white/60"
+                  className="bg-transparent border-0 text-muted text-[11px] cursor-pointer underline p-0 transition-colors hover:text-muted"
                 >
                   {showNlog === i ? "Hide .nlog data" : "Show .nlog data sent to AI"}
                 </button>
                 {showNlog === i && (
-                  <pre className="mt-1.5 p-2.5 rounded-lg bg-black/30 text-[11px] overflow-auto max-h-[200px] text-white/60 border border-white/5">
+                  <pre className="mt-1.5 p-2.5 rounded-lg bg-card/80 text-[11px] overflow-auto max-h-[200px] text-muted border border-subtle">
                     {msg.nlogData}
                   </pre>
                 )}
@@ -1243,13 +1243,13 @@ export default function AiAdvisor() {
             )}
 
             {msg.tokens !== undefined && msg.tokens > 0 && (
-              <div className="mt-1.5 flex items-center gap-2 text-[10px] text-white/40">
+              <div className="mt-1.5 flex items-center gap-2 text-[10px] text-muted">
                 <span className="inline-flex items-center gap-1">
                   <Lightning size={12} weight="fill" />
                   {msg.tokens} tokens
                 </span>
                 {msg.provider && (
-                  <span className="text-white/45">· via {msg.provider}</span>
+                  <span className="text-muted">· via {msg.provider}</span>
                 )}
               </div>
             )}
@@ -1260,11 +1260,11 @@ export default function AiAdvisor() {
         {/* Loading indicator */}
         {loading && (
           <div className="w-fit max-w-[calc(100%-0.5rem)] sm:max-w-[85%] self-start [animation:fadeSlideUp_0.3s_cubic-bezier(0.16,1,0.3,1)_forwards] rounded-2xl px-4 py-3.5 border border-indigo-500/20 [border-left:3px_solid_rgba(124,92,255,0.45)] bg-[rgba(124,92,255,0.05)] backdrop-blur-sm">
-              <div className="flex items-center gap-2.5 text-sm text-white/80">
+              <div className="flex items-center gap-2.5 text-sm text-muted">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="[animation:spin_1s_linear_infinite] text-indigo-400 shrink-0">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
-                <span className="[animation:pulse_2s_ease-in-out_infinite] text-white/60">
+                <span className="[animation:pulse_2s_ease-in-out_infinite] text-muted">
                   Consulting NutriLog AI…
                 </span>
               </div>
@@ -1285,7 +1285,7 @@ export default function AiAdvisor() {
         {!isControlsOpen && (
           <div className="absolute left-0 right-0 z-20 bottom-[calc(var(--shell-mobile-nav-offset)-0.25rem)] p-2.5 pt-1.5 max-sm:px-2 max-sm:pb-2 md:bottom-0 md:p-4">
             <div className="mx-auto w-full max-w-4xl">
-              <div className="relative flex gap-2 items-end px-3.5 py-3 rounded-[22px] border border-white/10 bg-[#1e1e2a]/95 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] max-sm:px-3 max-sm:py-2.5">
+              <div className="relative flex gap-2 items-end px-3.5 py-3 rounded-[22px] border border-subtle bg-[#1e1e2a]/95 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] max-sm:px-3 max-sm:py-2.5">
                 <textarea
                   ref={textareaRef}
                   value={input}
@@ -1293,12 +1293,12 @@ export default function AiAdvisor() {
                   onKeyDown={handleKeyDown}
                   placeholder="Ask about your nutrition…"
                   rows={1}
-                  className="flex-1 min-w-0 px-3 py-2.5 rounded-[10px] border border-white/[0.08] bg-white/5 text-white/90 resize-none text-[16px] sm:text-[13px] font-[inherit] leading-relaxed max-h-[120px] transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-white/40"
+                  className="flex-1 min-w-0 px-3 py-2.5 rounded-[10px] border border-white/[0.08] bg-white/5 text-muted resize-none text-[16px] sm:text-[13px] font-[inherit] leading-relaxed max-h-[120px] transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-muted"
                 />
                 <button
                   onClick={() => sendQuestion(input)}
                   disabled={loading || !input.trim()}
-                  className="px-5 py-2.5 rounded-[10px] border border-indigo-500/35 bg-gradient-to-br from-indigo-500/25 to-cyan-500/10 text-white/90 cursor-pointer font-semibold text-[13px] whitespace-nowrap transition-all hover:from-indigo-500/35 hover:to-cyan-500/18 disabled:opacity-50 disabled:cursor-default max-sm:px-4 max-sm:py-3 max-sm:min-h-[44px]"
+                  className="px-5 py-2.5 rounded-[10px] border border-indigo-500/35 bg-gradient-to-br from-indigo-500/25 to-cyan-500/10 text-muted cursor-pointer font-semibold text-[13px] whitespace-nowrap transition-all hover:from-indigo-500/35 hover:to-cyan-500/18 disabled:opacity-50 disabled:cursor-default max-sm:px-4 max-sm:py-3 max-sm:min-h-[44px]"
                 >
                   {loading ? "…" : "Send"}
                 </button>
@@ -1310,15 +1310,15 @@ export default function AiAdvisor() {
 
         {/* Sliding Grocery List Panel */}
         {isGroceryOpen && (
-          <div className="absolute right-3 top-3 bottom-[calc(var(--shell-mobile-content-padding)+0.5rem)] z-30 flex w-[min(360px,calc(100%-1.5rem))] max-w-sm flex-col rounded-2xl border border-white/10 bg-[#14161e]/95 p-3 shadow-[0_18px_44px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:static lg:ml-3 lg:mb-0 lg:w-[320px] lg:max-w-none lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:border-white/5 lg:bg-[#14161e]/95 lg:p-4 lg:shadow-none">
-            <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-2.5">
+          <div className="absolute right-3 top-3 bottom-[calc(var(--shell-mobile-content-padding)+0.5rem)] z-30 flex w-[min(360px,calc(100%-1.5rem))] max-w-sm flex-col rounded-2xl border border-subtle bg-[#14161e]/95 p-3 shadow-[0_18px_44px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:static lg:ml-3 lg:mb-0 lg:w-[320px] lg:max-w-none lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:border-subtle lg:bg-[#14161e]/95 lg:p-4 lg:shadow-none">
+            <div className="mb-3 flex items-center justify-between border-b border-subtle pb-2.5">
               <span className="inline-flex items-center gap-1.5 text-[14px] font-bold text-emerald-400">
                 <Basket size={15} weight="duotone" />
                 Smart Grocery List
               </span>
               <button
                 onClick={clearGroceryList}
-                className="border-0 bg-transparent text-[10px] uppercase tracking-[0.05em] text-white/55 transition-colors hover:text-white/80"
+                className="border-0 bg-transparent text-[10px] uppercase tracking-[0.05em] text-muted transition-colors hover:text-muted"
               >
                 Clear All
               </button>
@@ -1326,16 +1326,16 @@ export default function AiAdvisor() {
 
             <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
               {groceryList.length === 0 ? (
-                <div className="mt-10 text-center text-[12px] text-white/50">
+                <div className="mt-10 text-center text-[12px] text-muted">
                   Your grocery list is empty. Ask the AI to build one for you!
                 </div>
               ) : (
                 groceryList.map((item) => (
-                  <div key={item} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/25 px-3 py-2">
-                    <span className="text-[13px] text-white/90">{item}</span>
+                  <div key={item} className="flex items-center justify-between rounded-lg border border-subtle bg-card/80 px-3 py-2">
+                    <span className="text-[13px] text-muted">{item}</span>
                     <button
                       onClick={() => removeGroceryItem(item)}
-                      className="border-0 bg-transparent text-[16px] leading-none text-white/55 transition-colors hover:text-white/85"
+                      className="border-0 bg-transparent text-[16px] leading-none text-muted transition-colors hover:text-muted"
                     >
                       ×
                     </button>

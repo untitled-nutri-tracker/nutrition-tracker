@@ -126,14 +126,14 @@ function BentoCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-white/5 bg-zinc-900/90 p-5 md:p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+    <section className="rounded-3xl border border-subtle bg-card/80 p-5 md:p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
       <header className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.16em] text-white/45">Insights</div>
-          <h3 className="mt-1 text-base font-semibold tracking-tight text-white">{title}</h3>
-          {subtitle ? <p className="mt-1 text-xs text-white/50">{subtitle}</p> : null}
+          <div className="text-[11px] uppercase tracking-[0.16em] opacity-70">Insights</div>
+          <h3 className="mt-1 text-base font-semibold tracking-tight text-primary">{title}</h3>
+          {subtitle ? <p className="mt-1 text-xs opacity-70">{subtitle}</p> : null}
         </div>
-        {icon ? <div className="rounded-2xl border border-white/10 bg-white/5 p-2.5 text-white/75">{icon}</div> : null}
+        {icon ? <div className="rounded-2xl border border-subtle bg-primary/5 p-2.5 opacity-70">{icon}</div> : null}
       </header>
       {children}
     </section>
@@ -157,18 +157,18 @@ function HealthNudgeCard({ data, targets }: { data: DayData[]; targets: Targets 
 
   const toneClass =
     overCalorieDays >= 2
-      ? "border-rose-300/25 bg-rose-300/8"
+      ? "border-red-500/20 bg-red-500/10 dark:border-red-400/20 dark:bg-red-400/10 text-red-900 dark:text-red-200"
       : lowProteinDays >= 2 || missingLogDays >= 2
-        ? "border-amber-300/25 bg-amber-300/8"
-        : "border-emerald-300/25 bg-emerald-300/8";
+        ? "border-amber-500/20 bg-amber-500/10 text-amber-900 dark:border-amber-300/20 dark:bg-amber-300/10 dark:text-amber-200"
+        : "border-emerald-500/20 bg-emerald-500/10 text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200";
 
   return (
     <div className={`rounded-2xl border px-4 py-3 ${toneClass}`}>
       <div className="flex items-start gap-2.5">
-        <WarningCircle size={18} weight="duotone" className="mt-0.5 text-white/80" />
+        <WarningCircle size={18} weight="duotone" className="mt-0.5 opacity-70" />
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-white/65">Health Nudge</div>
-          <p className="mt-1 text-sm text-white/85">{alertMessage}</p>
+          <div className="text-xs font-semibold uppercase tracking-[0.12em] opacity-70">Health Nudge</div>
+          <p className="mt-1 text-sm opacity-70">{alertMessage}</p>
         </div>
       </div>
     </div>
@@ -295,7 +295,7 @@ export default function Insights() {
   if (loading) {
     return (
       <div className="page-enter flex h-full items-center justify-center px-4 pb-28 pt-5 md:px-8 md:pb-8">
-        <div className="rounded-3xl border border-white/5 bg-zinc-900/80 px-6 py-5 text-sm text-white/60">Loading insights dashboard...</div>
+        <div className="rounded-3xl border border-subtle bg-card/80 px-6 py-5 text-sm opacity-70">Loading insights dashboard...</div>
       </div>
     );
   }
@@ -306,19 +306,19 @@ export default function Insights() {
         <ProfileSummaryCard />
       </div>
 
-      <div className="pop-in flex items-center justify-between gap-3 rounded-3xl border border-white/5 bg-zinc-900/85 px-4 py-3.5 md:px-5 md:py-4">
+      <div className="pop-in flex items-center justify-between gap-3 rounded-3xl border border-subtle bg-card/80 px-4 py-3.5 md:px-5 md:py-4">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.16em] text-white/45">Nutrition Cockpit</div>
-          <h2 className="mt-1 text-xl font-semibold tracking-tight text-white">Performance Overview</h2>
+          <div className="text-[11px] uppercase tracking-[0.16em] opacity-70">Nutrition Cockpit</div>
+          <h2 className="mt-1 text-xl font-semibold tracking-tight text-primary">Performance Overview</h2>
         </div>
-        <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 p-1">
+        <div className="flex items-center gap-1.5 rounded-full border border-subtle bg-primary/5 p-1">
           {([7, 14, 30] as const).map((r) => (
             <button
               key={r}
               className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                 range === r
                   ? "bg-white text-zinc-900"
-                  : "text-white/65 hover:bg-white/10 hover:text-white"
+                  : "opacity-70 hover:bg-primary/5 hover:text-primary"
               }`}
               onClick={() => setRange(r)}
               type="button"
@@ -330,27 +330,27 @@ export default function Insights() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        <div className="rounded-3xl border border-white/5 bg-zinc-900/88 p-4">
-          <div className="flex items-center gap-2 text-white/55"><CalendarCheck size={16} weight="duotone" /> Consistency</div>
-          <div className="mt-2 font-mono text-3xl font-semibold text-white">{stats.loggedPct}%</div>
-          <div className="mt-1 text-xs text-white/45">days logged</div>
+        <div className="rounded-3xl border border-subtle bg-card/80 p-4">
+          <div className="flex items-center gap-2 opacity-70"><CalendarCheck size={16} weight="duotone" /> Consistency</div>
+          <div className="mt-2 font-mono text-3xl font-semibold text-primary">{stats.loggedPct}%</div>
+          <div className="mt-1 text-xs opacity-70">days logged</div>
         </div>
-        <div className="rounded-3xl border border-white/5 bg-zinc-900/88 p-4">
-          <div className="flex items-center gap-2 text-white/55"><Flame size={16} weight="duotone" /> Active Streak</div>
-          <div className="mt-2 font-mono text-3xl font-semibold text-white">{stats.streak}</div>
-          <div className="mt-1 text-xs text-white/45">consecutive days</div>
+        <div className="rounded-3xl border border-subtle bg-card/80 p-4">
+          <div className="flex items-center gap-2 opacity-70"><Flame size={16} weight="duotone" /> Active Streak</div>
+          <div className="mt-2 font-mono text-3xl font-semibold text-primary">{stats.streak}</div>
+          <div className="mt-1 text-xs opacity-70">consecutive days</div>
         </div>
-        <div className="rounded-3xl border border-white/5 bg-zinc-900/88 p-4">
-          <div className="flex items-center gap-2 text-white/55"><TrendUp size={16} weight="duotone" /> Avg Calories</div>
-          <div className="mt-2 font-mono text-3xl font-semibold text-white">{Math.round(stats.avgCalories)}</div>
-          <div className="mt-1 text-xs text-white/45">kcal / day</div>
+        <div className="rounded-3xl border border-subtle bg-card/80 p-4">
+          <div className="flex items-center gap-2 opacity-70"><TrendUp size={16} weight="duotone" /> Avg Calories</div>
+          <div className="mt-2 font-mono text-3xl font-semibold text-primary">{Math.round(stats.avgCalories)}</div>
+          <div className="mt-1 text-xs opacity-70">kcal / day</div>
         </div>
-        <div className="rounded-3xl border border-white/5 bg-zinc-900/88 p-4">
-          <div className="flex items-center gap-2 text-white/55"><ChartLineUp size={16} weight="duotone" /> Target Match</div>
-          <div className="mt-2 font-mono text-3xl font-semibold text-white">
+        <div className="rounded-3xl border border-subtle bg-card/80 p-4">
+          <div className="flex items-center gap-2 opacity-70"><ChartLineUp size={16} weight="duotone" /> Target Match</div>
+          <div className="mt-2 font-mono text-3xl font-semibold text-primary">
             {Math.round((Math.min(stats.avgCalories / Math.max(targets.calories, 1), 1.25) / 1.25) * 100)}%
           </div>
-          <div className="mt-1 text-xs text-white/45">calorie alignment</div>
+          <div className="mt-1 text-xs opacity-70">calorie alignment</div>
         </div>
       </div>
 
@@ -393,20 +393,20 @@ export default function Insights() {
       {bmiMeta ? (
         <BentoCard title="Body Metrics" subtitle="Profile-based baseline checks" icon={<Heart size={18} weight="duotone" />}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/8 bg-white/5 p-3.5">
-              <div className="text-[11px] uppercase tracking-[0.14em] text-white/45">BMI</div>
-              <div className="mt-1.5 font-mono text-3xl text-white">{bmiMeta.bmi.toFixed(1)}</div>
+            <div className="rounded-2xl border border-subtle bg-primary/5 p-3.5">
+              <div className="text-[11px] uppercase tracking-[0.14em] opacity-70">BMI</div>
+              <div className="mt-1.5 font-mono text-3xl text-primary">{bmiMeta.bmi.toFixed(1)}</div>
               <div className={`mt-1 text-sm font-semibold ${bmiMeta.category.colorClass}`}>{bmiMeta.category.label}</div>
             </div>
-            <div className="rounded-2xl border border-white/8 bg-white/5 p-3.5">
-              <div className="text-[11px] uppercase tracking-[0.14em] text-white/45">Weight</div>
-              <div className="mt-1.5 font-mono text-3xl text-white">{bmiMeta.weightKg.toFixed(1)}</div>
-              <div className="mt-1 text-sm text-white/55">kg</div>
+            <div className="rounded-2xl border border-subtle bg-primary/5 p-3.5">
+              <div className="text-[11px] uppercase tracking-[0.14em] opacity-70">Weight</div>
+              <div className="mt-1.5 font-mono text-3xl text-primary">{bmiMeta.weightKg.toFixed(1)}</div>
+              <div className="mt-1 text-sm opacity-70">kg</div>
             </div>
-            <div className="rounded-2xl border border-white/8 bg-white/5 p-3.5">
-              <div className="text-[11px] uppercase tracking-[0.14em] text-white/45">Height</div>
-              <div className="mt-1.5 font-mono text-3xl text-white">{Math.round(bmiMeta.heightCm)}</div>
-              <div className="mt-1 text-sm text-white/55">cm</div>
+            <div className="rounded-2xl border border-subtle bg-primary/5 p-3.5">
+              <div className="text-[11px] uppercase tracking-[0.14em] opacity-70">Height</div>
+              <div className="mt-1.5 font-mono text-3xl text-primary">{Math.round(bmiMeta.heightCm)}</div>
+              <div className="mt-1 text-sm opacity-70">cm</div>
             </div>
           </div>
         </BentoCard>

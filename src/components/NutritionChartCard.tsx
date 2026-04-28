@@ -31,17 +31,17 @@ export function NutritionChartCard({ data, metric, title }: NutritionChartCardPr
   }));
 
   return (
-    <section className="flex w-full flex-col gap-4 rounded-3xl border border-white/8 bg-[#1c1c22]/92 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-6">
+    <section className="flex w-full flex-col gap-4 rounded-3xl border border-subtle bg-[#1c1c22]/92 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-6">
       <div className="flex justify-between items-start">
         <div>
-          <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">Trend Analysis</h4>
-          <div className="text-lg font-semibold tracking-tight text-white">{title}</div>
+          <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Trend Analysis</h4>
+          <div className="text-lg font-semibold tracking-tight text-primary">{title}</div>
         </div>
         <div className="flex flex-col items-end">
           <div className="bg-clip-text text-3xl font-bold leading-none tracking-tighter text-transparent" style={{ backgroundImage: `linear-gradient(to bottom right, ${color}, ${gradientColor})`}}>
             {Math.round(latestValue)}<span className="text-sm font-medium opacity-70 ml-1">{unit}</span>
           </div>
-          <div className="mt-1 text-xs font-medium text-white/40">Latest</div>
+          <div className="mt-1 text-xs font-medium text-muted">Latest</div>
         </div>
       </div>
 

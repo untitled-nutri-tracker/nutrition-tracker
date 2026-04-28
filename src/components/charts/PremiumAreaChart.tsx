@@ -31,7 +31,7 @@ export function PremiumAreaChart({
 
   if (!data || data.length === 0) {
     return (
-      <div className="flex h-full w-full items-center justify-center text-sm text-white/45" style={{ minHeight: height }}>
+      <div className="flex h-full w-full items-center justify-center text-sm text-muted" style={{ minHeight: height }}>
         No trend data available
       </div>
     );
@@ -40,9 +40,9 @@ export function PremiumAreaChart({
   const renderCustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="-translate-y-2 rounded-2xl border border-white/12 bg-[#1c1c22]/95 px-3 py-2 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
-          <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/55">{label}</div>
-          <div className="flex items-center gap-2 font-mono text-base font-semibold text-white">
+        <div className="-translate-y-2 rounded-2xl border border-subtle bg-[#1c1c22]/95 px-3 py-2 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
+          <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</div>
+          <div className="flex items-center gap-2 font-mono text-base font-semibold text-primary">
             <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }} />
             {valueFormatter(payload[0].value)}
           </div>

@@ -98,13 +98,13 @@ export function MultiMacroTrendCard({ data, metrics, period, targets }: MultiMac
     if (!active || !payload || payload.length === 0) return null;
 
     return (
-      <div className="rounded-2xl border border-white/12 bg-[#1c1c22]/95 px-3 py-2 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/55">{label}</div>
+      <div className="rounded-2xl border border-subtle bg-[#1c1c22]/95 px-3 py-2 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
+        <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</div>
         <div className="space-y-1">
           {payload.map((item: any) => {
             const meta = METRIC_META[item.dataKey as SupportedMetric];
             return (
-              <div key={item.dataKey} className="flex items-center justify-between gap-4 text-xs text-white/80">
+              <div key={item.dataKey} className="flex items-center justify-between gap-4 text-xs text-muted">
                 <span className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: meta.color }} />
                   {meta.label}
@@ -119,21 +119,21 @@ export function MultiMacroTrendCard({ data, metrics, period, targets }: MultiMac
   };
 
   return (
-    <section className="rounded-3xl border border-white/8 bg-[#1c1c22]/92 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-6">
+    <section className="rounded-3xl border border-subtle bg-[#1c1c22]/92 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-6">
       <div className="mb-4">
-        <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">Multi-Macro Trend</h4>
-        <div className="mt-1 text-lg font-semibold tracking-tight text-white">Last {period} adherence to target</div>
-        <div className="mt-1 text-xs text-white/55">
+        <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Multi-Macro Trend</h4>
+        <div className="mt-1 text-lg font-semibold tracking-tight text-primary">Last {period} adherence to target</div>
+        <div className="mt-1 text-xs text-muted">
           100% is the goal line. The shaded band marks the 80-120% target comfort range.
         </div>
       </div>
 
       <div className="mb-3 flex flex-wrap gap-2">
         {series.map((item) => (
-          <div key={item.metric} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/85">
+          <div key={item.metric} className="inline-flex items-center gap-2 rounded-full border border-subtle bg-white/5 px-2.5 py-1 text-[11px] text-muted">
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: METRIC_META[item.metric].color }} />
             <span>{METRIC_META[item.metric].label}</span>
-            <span className="font-mono text-white/65">
+            <span className="font-mono text-muted">
               {Math.round(item.latestActual)}{METRIC_META[item.metric].unit} · {formatPercent(item.latestPercent)}
             </span>
             <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${getMacroZoneTone(item.latestPercent)}`}>
@@ -184,7 +184,7 @@ export function MultiMacroTrendCard({ data, metrics, period, targets }: MultiMac
         </ResponsiveContainer>
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-[11px] text-white/45">
+      <div className="mt-3 flex items-center justify-between text-[11px] text-muted">
         <span>{targets.isPersonalized ? targets.sourceLabel : "Using default targets"}</span>
         <span>{new Date(displayData[displayData.length - 1].periodStart * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
       </div>

@@ -71,7 +71,7 @@ export default function WorkspaceSetupPage() {
   }
 
   return (
-    <div className="flex h-[100dvh] w-full bg-[#0d0d12] text-white/90 overflow-hidden font-sans relative">
+    <div className="flex h-[100dvh] w-full bg-[#0d0d12] text-muted overflow-hidden font-sans relative">
       {/* Background gradients */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-indigo-500/[0.06] rounded-full blur-[120px] -translate-y-1/2" />
@@ -89,7 +89,7 @@ export default function WorkspaceSetupPage() {
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-[0_8px_24px_rgba(99,102,241,0.35)]" />
           <div>
             <div className="text-lg font-bold tracking-tight leading-none">NutriLog</div>
-            <div className="text-xs text-white/35 tracking-wide mt-0.5">Local-first nutrition tracker</div>
+            <div className="text-xs text-muted tracking-wide mt-0.5">Local-first nutrition tracker</div>
           </div>
         </motion.div>
 
@@ -108,7 +108,7 @@ export default function WorkspaceSetupPage() {
                 <h1 className="text-3xl font-bold tracking-tight mb-2 bg-gradient-to-br from-white to-white/60 bg-clip-text text-transparent">
                   Choose a workspace
                 </h1>
-                <p className="text-sm text-white/40 leading-relaxed">
+                <p className="text-sm text-muted leading-relaxed">
                   Your data lives in a local SQLite database. Create a new one or open an existing file.
                 </p>
               </div>
@@ -138,10 +138,10 @@ export default function WorkspaceSetupPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-indigo-400/80 mb-0.5">New Workspace</div>
-                      <div className="font-semibold text-sm text-white/95">Create database</div>
-                      <div className="text-xs text-white/40 mt-0.5 leading-snug">Start fresh with your profile and a new local database file.</div>
+                      <div className="font-semibold text-sm text-muted">Create database</div>
+                      <div className="text-xs text-muted mt-0.5 leading-snug">Start fresh with your profile and a new local database file.</div>
                     </div>
-                    <span className="shrink-0 text-white/20 group-hover:text-white/50 transition-colors ml-auto text-lg">›</span>
+                    <span className="shrink-0 text-muted group-hover:text-muted transition-colors ml-auto text-lg">›</span>
                   </div>
                 </button>
 
@@ -157,10 +157,10 @@ export default function WorkspaceSetupPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-cyan-400/80 mb-0.5">Existing Workspace</div>
-                      <div className="font-semibold text-sm text-white/95">{opening ? "Opening…" : "Open database"}</div>
-                      <div className="text-xs text-white/40 mt-0.5 leading-snug">Browse for an existing NutriLog `.db` file to reconnect.</div>
+                      <div className="font-semibold text-sm text-muted">{opening ? "Opening…" : "Open database"}</div>
+                      <div className="text-xs text-muted mt-0.5 leading-snug">Browse for an existing NutriLog `.db` file to reconnect.</div>
                     </div>
-                    <span className="shrink-0 text-white/20 group-hover:text-white/50 transition-colors ml-auto text-lg">›</span>
+                    <span className="shrink-0 text-muted group-hover:text-muted transition-colors ml-auto text-lg">›</span>
                   </div>
                 </button>
               </div>
@@ -168,30 +168,30 @@ export default function WorkspaceSetupPage() {
               {/* Manual path fallback — shown only if a lastPath exists */}
               {session.lastPath && (
                 <div className="mt-5 px-5 py-4 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-                  <div className="text-xs font-semibold text-white/50 uppercase tracking-widest mb-3">Recent database</div>
-                  <div className="font-mono text-xs text-white/50 mb-3 truncate bg-black/20 px-3 py-2 rounded-lg border border-white/5">
+                  <div className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">Recent database</div>
+                  <div className="font-mono text-xs text-muted mb-3 truncate bg-card/80 px-3 py-2 rounded-lg border border-subtle">
                     {existingPath || session.lastPath}
                   </div>
                   <label className="block mb-2">
-                    <span className="text-[11px] text-white/40 font-semibold uppercase tracking-wide">Path</span>
+                    <span className="text-[11px] text-muted font-semibold uppercase tracking-wide">Path</span>
                     <input
                       value={existingPath}
                       onChange={(e) => setExistingPath(e.target.value)}
                       placeholder="/Users/you/Documents/nutrition.db"
-                      className="mt-1 w-full px-3 py-2 rounded-lg border border-white/[0.08] bg-white/5 text-xs text-white/90 font-mono placeholder:text-white/25 focus:outline-none focus:border-indigo-500/40 transition-colors"
+                      className="mt-1 w-full px-3 py-2 rounded-lg border border-white/[0.08] bg-white/5 text-xs text-muted font-mono placeholder:text-muted focus:outline-none focus:border-indigo-500/40 transition-colors"
                     />
                   </label>
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={handleOpen}
                       disabled={opening || !existingPath.trim()}
-                      className="flex-1 px-3 py-2 rounded-lg border border-white/[0.08] bg-white/5 text-xs font-semibold text-white/70 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 px-3 py-2 rounded-lg border border-white/[0.08] bg-white/5 text-xs font-semibold text-muted hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Open typed path
                     </button>
                     <button
                       onClick={() => setExistingPath(session.lastPath ?? "")}
-                      className="px-3 py-2 rounded-lg border border-white/[0.08] bg-white/5 text-xs font-semibold text-white/50 hover:bg-white/10 transition-colors"
+                      className="px-3 py-2 rounded-lg border border-white/[0.08] bg-white/5 text-xs font-semibold text-muted hover:bg-white/10 transition-colors"
                     >
                       Use last
                     </button>
@@ -210,7 +210,7 @@ export default function WorkspaceSetupPage() {
             >
               <div className="text-center mb-6">
                 <h1 className="text-2xl font-bold tracking-tight mb-1">Initialize your profile</h1>
-                <p className="text-sm text-white/40">After saving, you'll choose where to store the database file.</p>
+                <p className="text-sm text-muted">After saving, you'll choose where to store the database file.</p>
               </div>
 
               {error && (
@@ -238,7 +238,7 @@ export default function WorkspaceSetupPage() {
               <button
                 onClick={() => { setError(null); setMode("menu"); }}
                 type="button"
-                className="mt-4 w-full px-4 py-2.5 rounded-xl border border-white/[0.08] bg-transparent text-sm text-white/40 hover:text-white/70 hover:bg-white/5 transition-all"
+                className="mt-4 w-full px-4 py-2.5 rounded-xl border border-white/[0.08] bg-transparent text-sm text-muted hover:text-muted hover:bg-white/5 transition-all"
               >
                 ← Back
               </button>

@@ -410,7 +410,7 @@ export default function LogFood() {
       {/* Meal type + date selector */}
       <div className="card pop-in max-w-[900px]">
         <div className="text-base font-semibold">Log Food</div>
-        <div className="mt-1 text-xs text-white/45">
+        <div className="mt-1 text-xs text-muted">
           Search for food, scan a barcode, or enter one manually.
         </div>
 
@@ -437,7 +437,7 @@ export default function LogFood() {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="ml-auto rounded-[10px] border border-white/10 bg-white/5 px-2.5 py-[7px] text-xs text-white/90 [color-scheme:dark] max-sm:ml-0 max-sm:w-full max-sm:min-h-[44px]"
+            className="ml-auto rounded-[10px] border border-subtle bg-primary/5 px-2.5 py-[7px] text-xs text-muted [color-scheme:dark] max-sm:ml-0 max-sm:w-full max-sm:min-h-[44px]"
           />
         </div>
       </div>
@@ -686,14 +686,14 @@ export default function LogFood() {
 
           <div className="flex items-center gap-2.5 mt-3.5 flex-wrap">
             <button
-              className="px-4 py-2 rounded-[10px] border border-emerald-500/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 text-white font-semibold text-sm hover:from-emerald-500/30 hover:to-emerald-500/15 disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer"
+              className="px-4 py-2 rounded-[10px] border border-emerald-500/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 text-primary font-semibold text-sm hover:from-emerald-500/30 hover:to-emerald-500/15 disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer"
               onClick={handlePhotoLog}
               disabled={photoLogged}
             >
               {photoLogged ? "✓ Logged" : "📝 Add to Log"}
             </button>
             <button
-              className="px-3.5 py-2 rounded-[10px] border border-white/10 bg-white/5 text-white/60 text-sm cursor-pointer"
+              className="px-3.5 py-2 rounded-[10px] border border-subtle bg-primary/5 text-muted text-sm cursor-pointer"
               onClick={() => {
                 setPhotoEstimate(null);
                 setPhotoLogged(false);
@@ -717,13 +717,13 @@ export default function LogFood() {
               <img
                 src={confirmProduct.image_url}
                 alt={confirmProduct.product_name}
-                className="w-16 h-16 object-cover rounded-xl border border-white/10 shrink-0"
+                className="w-16 h-16 object-cover rounded-xl border border-subtle shrink-0"
               />
             )}
             <div className="flex-1 min-w-0">
               <div className="font-bold text-[15px]">{confirmProduct.product_name}</div>
               {confirmProduct.brands && (
-                <div className="text-xs text-white/40 mt-0.5">
+                <div className="text-xs text-muted mt-0.5">
                   {confirmProduct.brands}
                   {confirmProduct.categories ? ` · ${confirmProduct.categories}` : ""}
                 </div>
@@ -756,7 +756,7 @@ export default function LogFood() {
             </div>
 
             <button
-              className="px-4 py-2 rounded-[10px] border border-emerald-500/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 text-white font-semibold text-sm hover:from-emerald-500/30 hover:to-emerald-500/15 disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer"
+              className="px-4 py-2 rounded-[10px] border border-emerald-500/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 text-primary font-semibold text-sm hover:from-emerald-500/30 hover:to-emerald-500/15 disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer"
               onClick={handleConfirmLog}
               disabled={confirmLogged || confirmLoading}
             >
@@ -764,13 +764,13 @@ export default function LogFood() {
             </button>
 
             <button
-              className="px-3.5 py-2 rounded-[10px] border border-white/10 bg-white/5 text-white/60 text-sm cursor-pointer"
+              className="px-3.5 py-2 rounded-[10px] border border-subtle bg-primary/5 text-muted text-sm cursor-pointer"
               onClick={() => setConfirmProduct(null)}
             >
               Cancel
             </button>
 
-            <label className="flex items-center gap-1.5 text-xs text-white/40 ml-auto cursor-pointer">
+            <label className="flex items-center gap-1.5 text-xs text-muted ml-auto cursor-pointer">
               <input
                 type="checkbox"
                 checked={confirmSaveToFoods}
@@ -859,7 +859,7 @@ export default function LogFood() {
               return (
                 <div
                   key={`${product.barcode}-${i}`}
-                  className="card hover:border-white/20 transition-colors"
+                  className="card hover:border-subtle transition-colors"
                   style={{
                     display: "grid",
                     gridTemplateColumns: product.image_url ? "64px 1fr auto" : "1fr auto",

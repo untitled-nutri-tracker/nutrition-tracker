@@ -34,13 +34,13 @@ export function StackedProgressBar({ data }: { data: ProgressData[] }) {
     if (active && payload && payload.length) {
       const data = payload[0].payload as typeof chartData[0];
       return (
-        <div className="-translate-y-2 rounded-2xl border border-white/12 bg-[#1c1c22]/95 px-3 py-2 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
-          <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/55">
+        <div className="-translate-y-2 rounded-2xl border border-subtle bg-[#1c1c22]/95 px-3 py-2 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
+          <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
             <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: data.color }} />
             {data.name}
           </div>
-          <div className="font-mono text-base font-semibold text-white">
-            {Math.round(data.actual)} <span className="font-sans text-xs text-white/45">/ {Math.round(data.target)}{data.unit}</span>
+          <div className="font-mono text-base font-semibold text-primary">
+            {Math.round(data.actual)} <span className="font-sans text-xs text-muted">/ {Math.round(data.target)}{data.unit}</span>
           </div>
         </div>
       );

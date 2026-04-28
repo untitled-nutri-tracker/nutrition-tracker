@@ -63,20 +63,20 @@ function StreakCard() {
   startDay.setDate(startDay.getDate() - 6);
 
   return (
-    <div className="grid grid-cols-[auto_1fr] items-center gap-4 rounded-2xl border border-indigo-400/25 bg-indigo-500/8 px-4 py-3">
+    <div className="grid grid-cols-[auto_1fr] items-center gap-4 rounded-2xl border border-emerald-400/25 bg-emerald-500/8 px-4 py-3">
       <div className="text-center">
-        <div className={`text-[28px] font-extrabold leading-none ${streak >= 3 ? "text-emerald-400" : streak >= 1 ? "text-amber-300" : "text-white/45"}`}>
+        <div className={`text-[28px] font-extrabold leading-none ${streak >= 3 ? "text-emerald-400" : streak >= 1 ? "text-amber-300" : "text-muted2"}`}>
           {streak}
         </div>
-        <div className="mt-0.5 text-[10px] text-white/45">day streak</div>
-        <div className="mt-1 inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/5 p-1 text-white/80">
+        <div className="mt-0.5 text-[10px] text-muted2">day streak</div>
+        <div className="mt-1 inline-flex items-center justify-center rounded-lg border border-primary/10 bg-primary/5 p-1 text-muted">
           {streak >= 7 ? <Fire size={16} weight="fill" className="text-rose-300" /> : streak >= 3 ? <ShootingStar size={16} weight="fill" className="text-amber-300" /> : <Leaf size={16} weight="fill" className="text-emerald-300" />}
         </div>
       </div>
       <div>
         <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-xs font-bold text-indigo-300/95">Logging Streak</span>
-          <span className="text-[10px] text-white/45">Best: {bestStreak} days</span>
+          <span className="text-xs font-bold text-emerald-300/95">Logging Streak</span>
+          <span className="text-[10px] text-muted2">Best: {bestStreak} days</span>
         </div>
         <div className="grid grid-cols-7 gap-1">
           {weekMap.map((logged, i) => {
@@ -85,8 +85,8 @@ function StreakCard() {
             const label = d.toLocaleDateString('en-US', { weekday: 'narrow' });
             return (
               <div key={i} className="text-center">
-                <div className="mb-0.5 text-[9px] text-white/45">{label}</div>
-                <div className={`mx-auto flex h-6 w-6 items-center justify-center rounded-md border text-[10px] ${logged ? "border-emerald-400/45 bg-emerald-400/70 text-white" : "border-white/10 bg-white/5 text-white/45"}`}>
+                <div className="mb-0.5 text-[9px] text-muted2">{label}</div>
+                <div className={`mx-auto flex h-6 w-6 items-center justify-center rounded-md border text-[10px] ${logged ? "border-emerald-400/45 bg-emerald-400/70 text-primary" : "border-primary/10 bg-primary/5 text-muted2"}`}>
                   {logged ? '✓' : '·'}
                 </div>
               </div>
@@ -162,11 +162,11 @@ function computeScore(totals: { calories: number; proteinG: number; carbsG: numb
 }
 
 function scoreToGrade(score: number) {
-  if (score >= 90) return { letter: 'A', emoji: '🏆', toneClass: 'border-emerald-400/20 bg-emerald-500/8', textClass: 'text-emerald-300' };
-  if (score >= 75) return { letter: 'B', emoji: '💪', toneClass: 'border-emerald-300/20 bg-emerald-400/8', textClass: 'text-emerald-200' };
-  if (score >= 60) return { letter: 'C', emoji: '👍', toneClass: 'border-amber-300/25 bg-amber-400/10', textClass: 'text-amber-300' };
-  if (score >= 40) return { letter: 'D', emoji: '⚠️', toneClass: 'border-orange-300/25 bg-orange-500/10', textClass: 'text-orange-300' };
-  return { letter: 'F', emoji: '🔻', toneClass: 'border-red-400/30 bg-red-500/10', textClass: 'text-red-300' };
+  if (score >= 90) return { letter: '', toneClass: 'border-emerald-400/20 bg-emerald-500/8', textClass: 'text-emerald-300' };
+  if (score >= 75) return { letter: '', toneClass: 'border-emerald-300/20 bg-emerald-400/8', textClass: 'text-emerald-200' };
+  if (score >= 60) return { letter: '', toneClass: 'border-amber-300/25 bg-amber-400/10', textClass: 'text-amber-300' };
+  if (score >= 40) return { letter: '', toneClass: 'border-orange-300/25 bg-orange-500/10', textClass: 'text-orange-300' };
+  return { letter: '', toneClass: 'border-red-400/30 bg-red-500/10', textClass: 'text-red-300' };
 }
 
 function MacroBar({ label, actual, target, unit }: { label: string; actual: number; target: number; unit: string }) {
@@ -176,9 +176,9 @@ function MacroBar({ label, actual, target, unit }: { label: string; actual: numb
     <div className="text-xs">
       <div className="mb-0.5 flex justify-between">
         <span>{label}</span>
-        <span className="text-white/45">{Math.round(actual)}/{target}{unit}</span>
+        <span className="text-muted2">{Math.round(actual)}/{target}{unit}</span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded bg-white/10">
+      <div className="h-1.5 overflow-hidden rounded bg-primary/10">
         <div style={{ width: `${Math.min(pct, 100)}%` }} className={`h-full rounded transition-[width] duration-400 ${barColorClass}`} />
       </div>
     </div>
@@ -193,8 +193,8 @@ function NutriScoreCard({ totals }: { totals: { calories: number; proteinG: numb
     <div className={`grid grid-cols-[auto_1fr] items-center gap-4 rounded-2xl border px-4 py-3.5 ${grade.toneClass}`}>
       <div className="text-center">
         <div className={`text-4xl font-extrabold leading-none ${grade.textClass}`}>{grade.letter}</div>
-        <div className="mt-0.5 text-[11px] text-white/45">{score}/100</div>
-        <div className="mt-1 inline-flex items-center justify-center rounded-md border border-white/10 bg-white/5 p-1">
+        <div className="mt-0.5 text-[11px] text-muted2">{score}/100</div>
+        <div className="mt-1 inline-flex items-center justify-center rounded-md border border-primary/10 bg-primary/5 p-1">
           {score >= 90 ? <Fire size={14} weight="fill" className="text-emerald-300" /> : score >= 60 ? <ShootingStar size={14} weight="fill" className="text-amber-300" /> : <Leaf size={14} weight="fill" className="text-rose-300" />}
         </div>
       </div>
@@ -237,7 +237,11 @@ export default function DailyLog() {
 
   return (
     <div className="page-enter mx-auto flex w-full max-w-[1000px] flex-col gap-4 p-4 pb-[calc(var(--shell-mobile-content-padding)+1rem)] md:p-8 md:pb-8">
-      {showConfetti && <Confetti recycle={false} numberOfPieces={300} style={{ position: 'fixed', left: 0, top: 0, zIndex: 9999, pointerEvents: 'none' }} />}
+      {showConfetti && (
+        <div className="fixed inset-0 z-[9999] pointer-events-none">
+          <Confetti recycle={false} numberOfPieces={300} width={window.innerWidth} height={window.innerHeight} />
+        </div>
+      )}
 
       {/* Profile summary */}
       <div className="pop-in">
@@ -251,8 +255,8 @@ export default function DailyLog() {
 
       {/* Error banner */}
       {error && (
-        <div className="rounded-2xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm text-white/80">
-          <span className="font-semibold text-white/95">Error</span> — {error}
+        <div className="rounded-2xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm text-muted">
+          <span className="font-semibold text-primary">Error</span> — {error}
         </div>
       )}
 
@@ -287,7 +291,7 @@ export default function DailyLog() {
               variant="ghost"
               size="sm"
               onClick={() => setDate(TODAY)}
-              className="border border-indigo-400/35 bg-indigo-500/10 text-indigo-300"
+              className="border border-emerald-400/35 bg-emerald-500/10 text-emerald-300"
             >
               Jump to today
             </Button>
@@ -306,7 +310,7 @@ export default function DailyLog() {
 
       {/* Daily totals bar — only shown when there are entries */}
       {entries.length > 0 && (
-        <div style={totalsGridStyle}>
+        <div className="grid grid-cols-5 gap-2.5">
           <StatCard label="Calories" value={totals.calories} unit="kcal" accent />
           <StatCard label="Protein"  value={totals.proteinG} unit="g" />
           <StatCard label="Carbs"    value={totals.carbsG}   unit="g" />
@@ -361,12 +365,12 @@ export default function DailyLog() {
             {/* Group header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="rounded-lg border border-white/10 bg-white/5 px-1.5 py-1 text-base leading-none">{MEAL_TYPE_ICONS[mt]}</span>
+                <span className="rounded-lg border border-primary/10 bg-primary/5 px-1.5 py-1 text-base leading-none">{MEAL_TYPE_ICONS[mt]}</span>
                 <span className="text-sm font-bold">
                   {MEAL_TYPE_LABELS[mt]}
                 </span>
               </div>
-              <span className="text-xs font-semibold text-white/65">{groupCals} kcal</span>
+              <span className="text-xs font-semibold text-muted2">{groupCals} kcal</span>
             </div>
 
             {/* Entry rows */}
@@ -395,9 +399,3 @@ export default function DailyLog() {
     </div>
   );
 }
-
-const totalsGridStyle: React.CSSProperties = {
-  display:             "grid",
-  gridTemplateColumns: "repeat(5, 1fr)",
-  gap:                 10,
-};

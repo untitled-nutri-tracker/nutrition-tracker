@@ -201,7 +201,7 @@ export default function FoodPhotoScanner({
           style={frameStyle}
         >
           {usePickerCapture ? (
-            <div className="flex items-center justify-center w-full h-full bg-black/72 text-white text-base leading-relaxed text-center p-6">
+            <div className="flex items-center justify-center w-full h-full bg-card/80 text-primary text-base leading-relaxed text-center p-6">
               <div>
                 <div>
                   {permissionBlocked
@@ -211,7 +211,7 @@ export default function FoodPhotoScanner({
                       : "Live camera preview is unavailable here. Choose a food photo from your device."}
                 </div>
                 {permissionBlocked && (
-                  <div className="text-white/74 text-[0.9rem] mt-2">
+                  <div className="text-muted text-[0.9rem] mt-2">
                     Allow NutriLog in System Settings, then retry the live camera.
                   </div>
                 )}
@@ -228,7 +228,7 @@ export default function FoodPhotoScanner({
               className="absolute inset-0 h-full w-full object-cover"
             />
           )}
-          <div className="absolute left-1/2 -translate-x-1/2 top-[calc(env(safe-area-inset-top)+18px)] w-max max-w-[min(520px,calc(100vw-32px))] rounded-lg px-2.5 py-2 bg-black/55 text-white/90 text-xs text-center">
+          <div className="absolute left-1/2 -translate-x-1/2 top-[calc(env(safe-area-inset-top)+18px)] w-max max-w-[min(520px,calc(100vw-32px))] rounded-lg px-2.5 py-2 bg-card/80 text-muted text-xs text-center">
             Place one food item in the frame
           </div>
         </div>
@@ -237,27 +237,27 @@ export default function FoodPhotoScanner({
           <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
             {!usePickerCapture && (
               <button
-                className="px-5 py-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/16 text-white font-semibold text-sm transition-colors cursor-pointer disabled:opacity-55 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/16 text-primary font-semibold text-sm transition-colors cursor-pointer disabled:opacity-55 disabled:cursor-not-allowed"
                 onClick={handleCapture}
                 disabled={!cameraReady}
               >
                 Take Photo
               </button>
             )}
-            <button className="px-5 py-2.5 rounded-xl border border-sky-500/35 bg-sky-500/16 text-white font-semibold text-sm hover:bg-sky-500/24 transition-colors cursor-pointer" onClick={() => fileRef.current?.click()}>
+            <button className="px-5 py-2.5 rounded-xl border border-sky-500/35 bg-sky-500/16 text-primary font-semibold text-sm hover:bg-sky-500/24 transition-colors cursor-pointer" onClick={() => fileRef.current?.click()}>
               {prefersPickerCapture ? "Use Camera" : "Choose Photo"}
             </button>
             {permissionBlocked && (
               <>
-                <button className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 text-white font-semibold text-sm hover:bg-white/16 transition-colors cursor-pointer" onClick={openCameraSettings}>
+                <button className="px-5 py-2.5 rounded-xl border border-subtle bg-white/10 text-primary font-semibold text-sm hover:bg-white/16 transition-colors cursor-pointer" onClick={openCameraSettings}>
                   Open Camera Settings
                 </button>
-                <button className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 text-white font-semibold text-sm hover:bg-white/16 transition-colors cursor-pointer" onClick={retryLivePreview}>
+                <button className="px-5 py-2.5 rounded-xl border border-subtle bg-white/10 text-primary font-semibold text-sm hover:bg-white/16 transition-colors cursor-pointer" onClick={retryLivePreview}>
                   Retry Live Camera
                 </button>
               </>
             )}
-            <button className="px-5 py-2.5 rounded-xl border border-red-500/35 bg-red-500/12 text-white font-semibold text-sm hover:bg-red-500/22 transition-colors cursor-pointer" onClick={handleClose}>
+            <button className="px-5 py-2.5 rounded-xl border border-red-500/35 bg-red-500/12 text-primary font-semibold text-sm hover:bg-red-500/22 transition-colors cursor-pointer" onClick={handleClose}>
               Close
             </button>
             <input
@@ -270,12 +270,12 @@ export default function FoodPhotoScanner({
             />
           </div>
 
-          <div className="mt-3 text-xs text-white/50 text-center">
+          <div className="mt-3 text-xs text-muted text-center">
             Photos are analyzed ephemerally and are not stored by NutriLog.
           </div>
 
           {error && (
-            <div className="mt-2 px-3.5 py-2.5 rounded-[10px] border border-red-500/35 bg-red-500/10 text-sm text-white/90">
+            <div className="mt-2 px-3.5 py-2.5 rounded-[10px] border border-red-500/35 bg-red-500/10 text-sm text-muted">
               {error}
             </div>
           )}

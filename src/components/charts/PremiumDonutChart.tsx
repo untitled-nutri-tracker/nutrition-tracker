@@ -11,7 +11,7 @@ export function PremiumDonutChart({ data, title }: { data: DonutData[]; title?: 
 
   if (total === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-white/40 text-sm">
+      <div className="flex items-center justify-center h-full text-muted text-sm">
         No data available
       </div>
     );
@@ -21,13 +21,13 @@ export function PremiumDonutChart({ data, title }: { data: DonutData[]; title?: 
     if (active && payload && payload.length) {
       const { name, value, color } = payload[0].payload;
       return (
-        <div className="rounded-2xl border border-white/12 bg-[#1c1c22]/95 p-3 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
+        <div className="rounded-2xl border border-subtle bg-[#1c1c22]/95 p-3 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
           <div className="flex items-center gap-2">
             <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-xs font-medium text-white/70">{name}</span>
+            <span className="text-xs font-medium text-muted">{name}</span>
           </div>
-          <div className="mt-1 font-mono text-lg font-semibold text-white">
-            {Math.round(value)}g <span className="text-white/40 text-xs">({Math.round((value / total) * 100)}%)</span>
+          <div className="mt-1 font-mono text-lg font-semibold text-primary">
+            {Math.round(value)}g <span className="text-muted text-xs">({Math.round((value / total) * 100)}%)</span>
           </div>
         </div>
       );
@@ -37,7 +37,7 @@ export function PremiumDonutChart({ data, title }: { data: DonutData[]; title?: 
 
   return (
     <div className="flex h-full w-full flex-col">
-      {title && <h3 className="mb-4 text-sm font-semibold tracking-tight text-white">{title}</h3>}
+      {title && <h3 className="mb-4 text-sm font-semibold tracking-tight text-primary">{title}</h3>}
 
       <div className="relative flex min-h-[180px] flex-1 items-center justify-center">
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -67,8 +67,8 @@ export function PremiumDonutChart({ data, title }: { data: DonutData[]; title?: 
         </ResponsiveContainer>
 
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">Total</span>
-          <span className="font-mono text-2xl font-bold text-white">{Math.round(total)}g</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">Total</span>
+          <span className="font-mono text-2xl font-bold text-primary">{Math.round(total)}g</span>
         </div>
       </div>
 
@@ -76,7 +76,7 @@ export function PremiumDonutChart({ data, title }: { data: DonutData[]; title?: 
         {data.map((item, idx) => (
           <div key={idx} className="flex items-center gap-1.5">
             <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-            <span className="text-xs font-medium text-white/65">{item.name}</span>
+            <span className="text-xs font-medium text-muted">{item.name}</span>
           </div>
         ))}
       </div>
