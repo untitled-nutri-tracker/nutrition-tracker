@@ -7,10 +7,7 @@
  * The hook exposes a single API regardless of platform.
  */
 import { useState, useRef, useCallback, useEffect } from "react";
-import {
-  BrowserMultiFormatReader,
-  BarcodeFormat,
-} from "@zxing/library";
+import type { BrowserMultiFormatReader } from "@zxing/library";
 import { attachCameraStream, stopMediaStream, stopVideoElementStream } from "./cameraSession";
 
 
@@ -108,7 +105,7 @@ export function useBarcodeScanner(
     // 2. Also check the video element as a fallback
     stopVideoElementStream(videoRef.current);
 
-    console.log("[BarcodeScanner] All camera tracks killed");
+    if (import.meta.env.DEV) console.log("[BarcodeScanner] All camera tracks killed");
   }, []);
 
   /* ---- startScan (desktop — manage stream ourselves) ---- */
@@ -137,7 +134,7 @@ export function useBarcodeScanner(
       try {
         // ★ Step 1: Get the camera stream OURSELVES so we own it
         const deviceToUse = selectedDeviceIdRef.current;
-        console.log("[BarcodeScanner] Requesting camera:", deviceToUse || "default");
+        if (import.meta.env.DEV) console.log("[BarcodeScanner] Requesting camera:", deviceToUse || "default");
 
         const constraints: MediaStreamConstraints = {
           video: deviceToUse
@@ -149,9 +146,10 @@ export function useBarcodeScanner(
         const stream = await attachCameraStream(videoEl, constraints);
         streamRef.current = stream; // ★ Store it so we can always kill it
 
-        console.log("[BarcodeScanner] Camera stream active. Tracks:", stream.getTracks().map(t => `${t.kind}:${t.label}:${t.readyState}`));
+        if (import.meta.env.DEV) console.log("[BarcodeScanner] Camera stream active. Tracks:", stream.getTracks().map(t => `${t.kind}:${t.label}:${t.readyState}`));
 
         // ★ Step 3: Start ZXing decode loop on the existing stream
+        const { BrowserMultiFormatReader, BarcodeFormat } = await import("@zxing/library");
         const reader = new BrowserMultiFormatReader();
         readerRef.current = reader;
         setIsScanning(true);
@@ -173,7 +171,7 @@ export function useBarcodeScanner(
           (res, err) => {
             scanAttempts++;
 
-            if (scanAttempts % 60 === 0) {
+            if (scanAttempts % 60 === 0 && import.meta.env.DEV) {
               console.log(`[BarcodeScanner] Scanning... (attempt ${scanAttempts})`);
             }
 
@@ -182,7 +180,7 @@ export function useBarcodeScanner(
                 barcode: res.getText(),
                 format: BarcodeFormat[res.getBarcodeFormat()],
               };
-              console.log("[BarcodeScanner] ✅ DETECTED:", scanResult.barcode, "format:", scanResult.format);
+              if (import.meta.env.DEV) console.log("[BarcodeScanner] ✅ DETECTED:", scanResult.barcode, "format:", scanResult.format);
               setResult(scanResult);
               setIsScanning(false);
               onDetectedRef.current?.(scanResult);
@@ -203,7 +201,7 @@ export function useBarcodeScanner(
           }
         );
 
-        console.log("[BarcodeScanner] Decode loop started");
+        if (import.meta.env.DEV) console.log("[BarcodeScanner] Decode loop started");
       } catch (e: any) {
         const errName = e?.name || "";
         const msg = e?.message ?? String(e);
@@ -277,7 +275,7 @@ export function useBarcodeScanner(
   /* ---- selectDevice ---- */
   const selectDevice = useCallback(
     (deviceId: string) => {
-      console.log("[BarcodeScanner] Switching to device:", deviceId);
+      if (import.meta.env.DEV) console.log("[BarcodeScanner] Switching to device:", deviceId);
       setSelectedDeviceId(deviceId);
       selectedDeviceIdRef.current = deviceId;
 
@@ -302,7 +300,7 @@ export function useBarcodeScanner(
   /* ---- cleanup on unmount ---- */
   useEffect(() => {
     return () => {
-      console.log("[BarcodeScanner] Unmounting — cleaning up");
+      if (import.meta.env.DEV) console.log("[BarcodeScanner] Unmounting — cleaning up");
       if (readerRef.current) {
         try { readerRef.current.reset(); } catch { /* ignore */ }
         readerRef.current = null;

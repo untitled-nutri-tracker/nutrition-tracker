@@ -9,6 +9,16 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
     root: resolve(__dirname),
     plugins: [tailwindcss(), react()],
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    recharts: ['recharts'],
+                    vendor: ['react', 'react-dom', 'framer-motion', '@phosphor-icons/react']
+                }
+            }
+        }
+    },
 
     // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
     //
