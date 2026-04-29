@@ -81,6 +81,10 @@ const THIRTY_DAYS_SECONDS = 30 * 86400;
 
 const DEFAULT_MULTI_METRICS: TrendMetric[] = ["protein", "carbs", "fat"];
 
+function getLocalUtcOffsetMinutes(): number {
+  return -new Date().getTimezoneOffset();
+}
+
 function clampPeriodToDays(period: string): number | null {
   if (period === "30d") return 30;
   if (period === "7d") return 7;
@@ -132,7 +136,7 @@ function TrendDataWidget({ metric, period }: { metric: TrendMetric; period: stri
           start,
           end: now,
           bucket: "DAY",
-          offsetMinutes: new Date().getTimezoneOffset(),
+          offsetMinutes: getLocalUtcOffsetMinutes(),
         });
         setData(result || []);
       } catch (err) {
@@ -190,7 +194,7 @@ function MultiMacroTrendWidget({ period, metrics, goal }: { period: string; metr
             start,
             end: now,
             bucket: "DAY",
-            offsetMinutes: new Date().getTimezoneOffset(),
+            offsetMinutes: getLocalUtcOffsetMinutes(),
           }),
           loadProfile(),
         ]);
@@ -255,7 +259,7 @@ function GoalVsActualWidget({ period, goal }: { period: string; goal: string }) 
             start,
             end: now,
             bucket: "DAY",
-            offsetMinutes: new Date().getTimezoneOffset(),
+            offsetMinutes: getLocalUtcOffsetMinutes(),
           }),
           loadProfile(),
         ]);
@@ -512,29 +516,25 @@ export default function AiAdvisor() {
 
       setMessages((prev) => [...prev, userMsg]);
 
-      const today = new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
       // Load the user's profile for personalized targets
       const profile = await loadProfile();
-      let profileContext = '';
+      let profileContext: string | null = null;
       if (profile) {
-        const goal = localStorage.getItem('nutrilog_goal') || 'maintenance';
         profileContext = `User Profile: ${profile.sex}, ${profile.age} years old, ${profile.heightCm}cm, ${profile.weightKg}kg, activity level: ${profile.activityLevel}, goal: ${goal}.`;
       }
-
-      const contextualQuestion = `${profileContext ? profileContext + '\n' : ''}(System Context: Today is ${today}.)\n\nUser Question: ${trimmedQuestion}`;
 
       const historyPayload = [...messages, userMsg]
         .map(m => ({ role: m.role, content: m.content }))
         .slice(-6);
 
       const result = await invoke<AiResponse>("get_ai_advice", {
-        question: contextualQuestion,
+        question: trimmedQuestion,
         days: contextDays,
         provider: selectedProvider,
         model: selectedModel || null,
         history: historyPayload,
-        offsetMinutes: new Date().getTimezoneOffset(),
+        offsetMinutes: getLocalUtcOffsetMinutes(),
+        profileContext,
       });
 
       let finalAdvice = result.advice;
@@ -913,6 +913,9 @@ export default function AiAdvisor() {
                     {option.label}
                   </button>
                 ))}
+              </div>
+              <div className="ai-controls-helper">
+                Explicit scopes in your question, like "today", "yesterday", or "last 7 days", override the selected window.
               </div>
             </div>
 

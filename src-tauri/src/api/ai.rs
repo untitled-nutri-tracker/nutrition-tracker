@@ -138,6 +138,7 @@ pub async fn ask_llm(
     provider: &LlmProvider,
     model: &str,
     memories_context: &str,
+    offset_minutes: i64,
 ) -> Result<AiResponse, String> {
     // Pre-compute totals from .nlog data so the LLM doesn't hallucinate math
     let summary = compute_summary(nlog_data);
@@ -158,8 +159,9 @@ pub async fn ask_llm(
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs() as i64;
-    let today_str = format_epoch_to_iso(now_secs);
-    let yesterday_str = format_epoch_to_iso(now_secs - 86400);
+    let local_now = now_secs + (offset_minutes * 60);
+    let today_str = format_epoch_to_iso(local_now);
+    let yesterday_str = format_epoch_to_iso(local_now - 86400);
 
     for _ in 0..3 {
         let prompt = if nlog_data.contains("No meals logged") {
