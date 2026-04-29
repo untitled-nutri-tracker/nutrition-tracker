@@ -3,9 +3,13 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import type { AppUserProfile, NutritionTrendPoint } from "../generated/types";
+import { getNutritionTrend } from "../generated/commands";
 import ProfileSummaryCard from "../components/ProfileSummaryCard";
-import { loadEntriesRange, localDateString, loadEntriesByDate } from "../lib/foodLogStore";
-import type { FoodEntry } from "../types/foodLog";
+import { detectNutritionThresholdAlerts } from "../lib/nutritionAlerts";
+import { localDateString } from "../lib/foodLogStore";
+import { getNutritionTargets, type MacroTargets } from "../lib/nutritionTargets";
+import { loadProfile } from "../lib/profileStore";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -24,39 +28,40 @@ interface Targets {
   proteinG: number;
   carbsG: number;
   fatG: number;
+  sourceLabel: string;
+}
+
+interface NudgeAlert {
+  type: 'warning' | 'danger';
+  emoji: string;
+  title: string;
+  message: string;
+  thresholdLabel: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getTargets(): Targets {
-  const goal = localStorage.getItem('nutrilog_goal') || 'maintenance';
-  let cal = 2000, pro = 75, carb = 250, fat = 65;
-  try {
-    const raw = localStorage.getItem('nutrilog.userProfile.v1');
-    if (raw) {
-      const p = JSON.parse(raw);
-      const w = p.weightKg || 70;
-      const actMult: Record<string, number> = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9 };
-      const mult = actMult[p.activityLevel] || 1.55;
-      const bmr = p.sex === 'male'
-        ? 10 * w + 6.25 * (p.heightCm || 170) - 5 * (p.age || 30) + 5
-        : 10 * w + 6.25 * (p.heightCm || 160) - 5 * (p.age || 30) - 161;
-      const tdee = bmr * mult;
-      if (goal === 'weight_loss') { cal = tdee - 400; pro = w * 1.4; }
-      else if (goal === 'muscle_gain') { cal = tdee + 300; pro = w * 1.8; }
-      else { cal = tdee; pro = w * 1.2; }
-      carb = (cal * 0.45) / 4; fat = (cal * 0.25) / 9;
-    }
-  } catch { /* defaults */ }
-  return { calories: Math.round(cal), proteinG: Math.round(pro), carbsG: Math.round(carb), fatG: Math.round(fat) };
+function mapTargets(targets: MacroTargets): Targets {
+  return {
+    calories: targets.calories,
+    proteinG: targets.protein,
+    carbsG: targets.carbs,
+    fatG: targets.fat,
+    sourceLabel: targets.sourceLabel,
+  };
 }
 
-function getProfile() {
-  try {
-    const raw = localStorage.getItem('nutrilog.userProfile.v1');
-    if (raw) return JSON.parse(raw);
-  } catch { /* */ }
-  return null;
+function toDayData(point: NutritionTrendPoint): DayData {
+  const date = new Date(point.periodStart * 1000);
+  return {
+    date: localDateString(date),
+    label: date.toLocaleDateString('en-US', { weekday: 'narrow', day: 'numeric' }),
+    calories: point.totals.caloriesKcal,
+    proteinG: point.totals.proteinG,
+    carbsG: point.totals.totalCarbohydrateG,
+    fatG: point.totals.fatG,
+    entryCount: point.totals.itemCount,
+  };
 }
 
 function computeBMI(weightKg: number, heightCm: number): number {
@@ -81,7 +86,7 @@ function BarChart({ data, dataKey, targetValue, color, label, unit }: {
   label: string;
   unit: string;
 }) {
-  const maxVal = Math.max(...data.map(d => d[dataKey] as number), targetValue) * 1.15;
+  const maxVal = Math.max(...data.map(d => d[dataKey] as number), targetValue, 10) * 1.15;
 
   return (
     <div style={chartCardStyle}>
@@ -105,7 +110,7 @@ function BarChart({ data, dataKey, targetValue, color, label, unit }: {
           const overTarget = val > targetValue * 1.1;
           const barColor = overTarget ? '#f97316' : color;
           return (
-            <g key={i}>
+            <g key={d.date || i}>
               <rect x={x} y={140 - h} width={w} height={h} rx="4" fill={barColor} opacity="0.75" />
               <text x={x + w / 2} y={155} textAnchor="middle" fill="var(--muted2,#888)" fontSize="9">{d.label}</text>
               {val > 0 && <text x={x + w / 2} y={140 - h - 4} textAnchor="middle" fill="var(--muted2,#888)" fontSize="8">{Math.round(val)}</text>}
@@ -178,8 +183,7 @@ function LegendItem({ color, label, value, sub }: { color: string; label: string
   );
 }
 
-function BMICard() {
-  const profile = getProfile();
+function BMICard({ profile }: { profile: AppUserProfile | null }) {
   if (!profile || !profile.weightKg || !profile.heightCm) {
     return (
       <div style={chartCardStyle}>
@@ -232,12 +236,11 @@ function BMICard() {
   );
 }
 
-function ConsistencyCard({ data }: { data: DayData[] }) {
+function ConsistencyCard({ data, targets }: { data: DayData[]; targets: Targets }) {
   const daysWithFood = data.filter(d => d.entryCount > 0).length;
   const totalDays = data.length;
   const pct = totalDays > 0 ? (daysWithFood / totalDays) * 100 : 0;
   const avgCal = totalDays > 0 ? data.reduce((s, d) => s + d.calories, 0) / totalDays : 0;
-  const targets = getTargets();
 
   // Streak (from most recent day backwards)
   let streak = 0;
@@ -269,74 +272,15 @@ function ConsistencyCard({ data }: { data: DayData[] }) {
 
 // ── Proactive Health Nudge ────────────────────────────────────────────────────
 
-interface NudgeAlert {
-  type: 'warning' | 'danger';
-  emoji: string;
-  title: string;
-  message: string;
-}
-
-function HealthNudge() {
-  const [alerts, setAlerts] = useState<NudgeAlert[]>([]);
+function HealthNudge({ alerts, sourceLabel }: { alerts: NudgeAlert[]; sourceLabel: string }) {
   const [dismissed, setDismissed] = useState(() => {
     return !!sessionStorage.getItem(`nutrilog_nudge_${localDateString()}`);
   });
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (dismissed) return;
-
-    async function analyze() {
-      const targets = getTargets();
-      const nudges: NudgeAlert[] = [];
-      const recentDays: { date: string; calories: number; proteinG: number; logged: boolean }[] = [];
-
-      for (let i = 1; i <= 3; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = localDateString(d);
-        const entries = await loadEntriesByDate(dateStr);
-        const cals = entries.reduce((s, e) => s + e.calories, 0);
-        const pro = entries.reduce((s, e) => s + e.proteinG, 0);
-        recentDays.push({ date: dateStr, calories: cals, proteinG: pro, logged: entries.length > 0 });
-      }
-
-      const overCalDays = recentDays.filter(d => d.logged && d.calories > targets.calories * 1.15);
-      if (overCalDays.length >= 2) {
-        nudges.push({
-          type: 'danger', emoji: '⚠️', title: 'Calorie Trend Alert',
-          message: `You've exceeded your calorie target by 15%+ for ${overCalDays.length} of the last 3 days. Consider lighter meals today.`,
-        });
-      }
-
-      const lowProDays = recentDays.filter(d => d.logged && d.proteinG < targets.proteinG * 0.5);
-      if (lowProDays.length >= 2) {
-        nudges.push({
-          type: 'warning', emoji: '🥩', title: 'Low Protein Alert',
-          message: `Protein has been below 50% of target for ${lowProDays.length} days. Add eggs, chicken, or Greek yogurt.`,
-        });
-      }
-
-      const unloggedDays = recentDays.filter(d => !d.logged);
-      if (unloggedDays.length >= 2) {
-        nudges.push({
-          type: 'warning', emoji: '📝', title: 'Logging Gap Detected',
-          message: `You haven't logged meals for ${unloggedDays.length} of the last 3 days. Consistent tracking is key!`,
-        });
-      }
-
-      const underEatDays = recentDays.filter(d => d.logged && d.calories > 0 && d.calories < targets.calories * 0.4);
-      if (underEatDays.length >= 2) {
-        nudges.push({
-          type: 'danger', emoji: '🔻', title: 'Under-Eating Alert',
-          message: `Intake below 40% of target for ${underEatDays.length} days. Severe restriction can harm metabolism.`,
-        });
-      }
-
-      setAlerts(nudges);
-    }
-    analyze();
-  }, [dismissed]);
+    setDismissed(!!sessionStorage.getItem(`nutrilog_nudge_${localDateString()}`));
+  }, [alerts.length]);
 
   function handleDismiss() {
     setDismissed(true);
@@ -345,16 +289,21 @@ function HealthNudge() {
 
   if (dismissed || alerts.length === 0) return null;
 
+  const primaryType = alerts.some(a => a.type === 'danger') ? 'danger' : 'warning';
+
   return (
     <div style={{
-      border: alerts[0].type === 'danger' ? '1px solid rgba(239,68,68,0.35)' : '1px solid rgba(251,191,36,0.35)',
-      background: alerts[0].type === 'danger' ? 'rgba(239,68,68,0.06)' : 'rgba(251,191,36,0.06)',
+      border: primaryType === 'danger' ? '1px solid rgba(239,68,68,0.35)' : '1px solid rgba(251,191,36,0.35)',
+      background: primaryType === 'danger' ? 'rgba(239,68,68,0.06)' : 'rgba(251,191,36,0.06)',
       borderRadius: 14, padding: '14px 16px',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 20 }}>🤖</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: alerts[0].type === 'danger' ? '#ef4444' : '#fbbf24' }}>AI Health Nudge</span>
+          <span style={{ fontSize: 20 }}>🚨</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: primaryType === 'danger' ? '#ef4444' : '#fbbf24' }}>Nutrition Threshold Alerts</div>
+            <div style={{ fontSize: 10, color: 'var(--muted2)' }}>Using {sourceLabel.toLowerCase()}</div>
+          </div>
         </div>
         <button onClick={handleDismiss} style={{ background: 'none', border: 'none', color: 'var(--muted2)', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}>✕</button>
       </div>
@@ -364,6 +313,7 @@ function HealthNudge() {
             <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{a.emoji}</span>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 2 }}>{a.title}</div>
+              <div style={{ fontSize: 10, color: a.type === 'danger' ? '#fca5a5' : '#fde68a', marginBottom: 2 }}>{a.thresholdLabel}</div>
               <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>{a.message}</div>
             </div>
           </div>
@@ -383,51 +333,72 @@ function HealthNudge() {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function Insights() {
+  const goal = localStorage.getItem('nutrilog_goal') || 'maintenance';
   const [range, setRange] = useState<7 | 14 | 30>(7);
   const [dayData, setDayData] = useState<DayData[]>([]);
+  const [targets, setTargets] = useState<Targets>(() => mapTargets(getNutritionTargets(null, goal)));
+  const [alerts, setAlerts] = useState<NudgeAlert[]>([]);
+  const [profile, setProfile] = useState<AppUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
       setLoading(true);
-      const endStr = localDateString();
-      const startD = new Date();
-      startD.setDate(startD.getDate() - (range - 1));
-      const startStr = localDateString(startD);
+      setError(null);
 
-      const rangeData = await loadEntriesRange(startStr, endStr);
-      console.log('[Insights] Range:', startStr, '→', endStr, 'Keys:', Object.keys(rangeData));
-      const days: DayData[] = [];
+      const endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      const startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+      startDate.setDate(startDate.getDate() - (range - 1));
 
-      // Iterate using local-midnight dates to avoid timezone drift
-      const cur = new Date(startStr + "T12:00:00"); // noon to avoid DST edge
-      const endD = new Date(endStr + "T12:00:00");
-      while (cur <= endD) {
-        const dateStr = localDateString(cur);
-        const entries = rangeData[dateStr] || [];
-        if (entries.length > 0) {
-          console.log(`[Insights] ${dateStr}: ${entries.length} entries, cals:`, entries.reduce((s: number, e: FoodEntry) => s + e.calories, 0));
-        }
-        days.push({
-          date: dateStr,
-          label: cur.toLocaleDateString('en-US', { weekday: 'narrow', day: 'numeric' }),
-          calories: entries.reduce((s: number, e: FoodEntry) => s + e.calories, 0),
-          proteinG: entries.reduce((s: number, e: FoodEntry) => s + e.proteinG, 0),
-          carbsG: entries.reduce((s: number, e: FoodEntry) => s + e.carbsG, 0),
-          fatG: entries.reduce((s: number, e: FoodEntry) => s + e.fatG, 0),
-          entryCount: entries.length,
-        });
-        cur.setDate(cur.getDate() + 1);
+      try {
+        const [trend, loadedProfile] = await Promise.all([
+          getNutritionTrend({
+            start: Math.floor(startDate.getTime() / 1000),
+            end: Math.floor(endDate.getTime() / 1000),
+            bucket: 'DAY',
+            offsetMinutes: new Date().getTimezoneOffset(),
+          }),
+          loadProfile(),
+        ]);
+
+        if (cancelled) return;
+
+        const rawTargets = getNutritionTargets(loadedProfile, goal);
+        const days = (trend || []).map(toDayData);
+        const nudges = detectNutritionThresholdAlerts(trend || [], rawTargets, {
+          windowDays: 3,
+          excludeToday: true,
+        }).map(alert => ({
+          type: alert.severity,
+          emoji: alert.emoji,
+          title: alert.title,
+          message: alert.message,
+          thresholdLabel: alert.thresholdLabel,
+        }));
+
+        setTargets(mapTargets(rawTargets));
+        setProfile(loadedProfile);
+        setDayData(days);
+        setAlerts(nudges);
+      } catch (err) {
+        if (cancelled) return;
+        setDayData([]);
+        setAlerts([]);
+        setProfile(null);
+        setTargets(mapTargets(getNutritionTargets(null, goal)));
+        setError(err instanceof Error ? err.message : 'Could not load nutrition insights right now.');
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      console.log('[Insights] Final day data:', days.filter(d => d.entryCount > 0));
-      setDayData(days);
-      setLoading(false);
     }
     load();
-  }, [range]);
-
-  const targets = getTargets();
+    return () => { cancelled = true; };
+  }, [goal, range]);
 
   return (
     <div className="page-enter" style={{ display: "grid", gap: 14, maxWidth: 900 }}>
@@ -435,7 +406,7 @@ export default function Insights() {
         <ProfileSummaryCard />
       </div>
 
-      <HealthNudge />
+      <HealthNudge alerts={alerts} sourceLabel={targets.sourceLabel} />
 
       {/* Header with range selector */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -458,17 +429,28 @@ export default function Insights() {
         </div>
       </div>
 
+      {error && (
+        <div style={{
+          ...chartCardStyle,
+          border: '1px solid rgba(239,68,68,0.35)',
+          background: 'rgba(239,68,68,0.08)',
+          color: '#fecaca',
+        }}>
+          {error}
+        </div>
+      )}
+
       {loading ? (
         <div style={chartCardStyle}>
-          <div style={{ color: 'var(--muted)', fontSize: 13 }}>Loading insights…</div>
+          <div style={{ color: 'var(--muted)', fontSize: 13 }}>Loading insights...</div>
         </div>
       ) : (
         <>
           {/* BMI & Body Metrics */}
-          <BMICard />
+          <BMICard profile={profile} />
 
           {/* Consistency */}
-          <ConsistencyCard data={dayData} />
+          <ConsistencyCard data={dayData} targets={targets} />
 
           {/* Calorie Chart */}
           <BarChart data={dayData} dataKey="calories" targetValue={targets.calories} color="#8b5cf6" label="Daily Calories" unit=" kcal" />
