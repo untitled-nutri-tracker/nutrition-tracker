@@ -8,12 +8,16 @@ import {
   ShieldCheck,
   TrendUp,
   WarningCircle,
+  ChartPieSlice,
 } from "@phosphor-icons/react";
 import ProfileSummaryCard from "../components/ProfileSummaryCard";
 import { PremiumAreaChart } from "../components/charts/PremiumAreaChart";
 import { PremiumDonutChart } from "../components/charts/PremiumDonutChart";
 import { StackedProgressBar } from "../components/charts/StackedProgressBar";
+import { MacroTrendChart } from "../components/charts/MacroTrendChart";
+import { MealDistributionChart, type MealDistributionData } from "../components/charts/MealDistributionChart";
 import { getDailyNutritionTotals, getNutritionTrend } from "../generated/commands";
+import { localDateString, loadEntriesRange } from "../lib/foodLogStore";
 import type { NutritionTotals, NutritionTrendPoint } from "../generated/types";
 
 interface DayData {
@@ -178,6 +182,7 @@ function HealthNudgeCard({ data, targets }: { data: DayData[]; targets: Targets 
 export default function Insights() {
   const [range, setRange] = useState<7 | 14 | 30>(30);
   const [dayData, setDayData] = useState<DayData[]>([]);
+  const [mealDistribution, setMealDistribution] = useState<MealDistributionData[]>([]);
   const [dailyTotals, setDailyTotals] = useState<NutritionTotals | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -190,7 +195,14 @@ export default function Insights() {
         const start = now - (range - 1) * 86400;
         const offsetMinutes = new Date().getTimezoneOffset();
 
-        const [trend, todayTotals] = await Promise.all([
+        const endDateObj = new Date();
+        const startDateObj = new Date();
+        startDateObj.setDate(startDateObj.getDate() - (range - 1));
+        
+        const startDateStr = localDateString(startDateObj);
+        const endDateStr = localDateString(endDateObj);
+
+        const [trend, todayTotals, entriesRangeMap] = await Promise.all([
           getNutritionTrend({
             start,
             end: now,
@@ -201,6 +213,7 @@ export default function Insights() {
             anchor: now,
             offsetMinutes,
           }),
+          loadEntriesRange(startDateStr, endDateStr),
         ]);
 
         const days: DayData[] = (trend || []).map((point: NutritionTrendPoint) => {
@@ -216,7 +229,30 @@ export default function Insights() {
           };
         });
 
+        const mealData = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
+        let totalCalories = 0;
+
+        Object.values(entriesRangeMap).forEach((entries) => {
+          entries.forEach((entry) => {
+            const mt = entry.mealType.toLowerCase();
+            if (mt === "breakfast") mealData.breakfast += entry.calories;
+            else if (mt === "lunch") mealData.lunch += entry.calories;
+            else if (mt === "dinner") mealData.dinner += entry.calories;
+            else mealData.snack += entry.calories;
+            
+            totalCalories += entry.calories;
+          });
+        });
+
+        const mDist: MealDistributionData[] = [
+          { name: "Breakfast", calories: mealData.breakfast, percentage: totalCalories > 0 ? (mealData.breakfast / totalCalories) * 100 : 0 },
+          { name: "Lunch", calories: mealData.lunch, percentage: totalCalories > 0 ? (mealData.lunch / totalCalories) * 100 : 0 },
+          { name: "Dinner", calories: mealData.dinner, percentage: totalCalories > 0 ? (mealData.dinner / totalCalories) * 100 : 0 },
+          { name: "Snacks", calories: mealData.snack, percentage: totalCalories > 0 ? (mealData.snack / totalCalories) * 100 : 0 },
+        ];
+
         setDayData(days);
+        setMealDistribution(mDist);
         setDailyTotals(todayTotals);
       } catch (err) {
         console.error("Failed to load insights data:", err);
@@ -235,10 +271,10 @@ export default function Insights() {
   const stats = useMemo(() => {
     const totalDays = dayData.length || 1;
     const loggedDays = dayData.filter((d) => d.entryCount > 0).length;
-    const avgCalories = dayData.reduce((sum, d) => sum + d.calories, 0) / totalDays;
-    const avgProtein = dayData.reduce((sum, d) => sum + d.proteinG, 0) / totalDays;
-    const avgCarbs = dayData.reduce((sum, d) => sum + d.carbsG, 0) / totalDays;
-    const avgFat = dayData.reduce((sum, d) => sum + d.fatG, 0) / totalDays;
+    const avgCalories = Math.round(dayData.reduce((sum, d) => sum + d.calories, 0) / totalDays);
+    const avgProtein = Math.round(dayData.reduce((sum, d) => sum + d.proteinG, 0) / totalDays);
+    const avgCarbs = Math.round(dayData.reduce((sum, d) => sum + d.carbsG, 0) / totalDays);
+    const avgFat = Math.round(dayData.reduce((sum, d) => sum + d.fatG, 0) / totalDays);
 
     let streak = 0;
     for (let i = dayData.length - 1; i >= 0; i -= 1) {
@@ -263,9 +299,9 @@ export default function Insights() {
 
   const donutData = useMemo(
     () => [
-      { name: "Protein", value: dailyTotals?.proteinG ?? 0, color: METRIC_COLORS.protein },
-      { name: "Carbs", value: dailyTotals?.totalCarbohydrateG ?? 0, color: METRIC_COLORS.carbs },
-      { name: "Fat", value: dailyTotals?.fatG ?? 0, color: METRIC_COLORS.fat },
+      { name: "Protein", value: Math.round(dailyTotals?.proteinG ?? 0), color: METRIC_COLORS.protein },
+      { name: "Carbs", value: Math.round(dailyTotals?.totalCarbohydrateG ?? 0), color: METRIC_COLORS.carbs },
+      { name: "Fat", value: Math.round(dailyTotals?.fatG ?? 0), color: METRIC_COLORS.fat },
     ],
     [dailyTotals?.fatG, dailyTotals?.proteinG, dailyTotals?.totalCarbohydrateG],
   );
@@ -370,6 +406,29 @@ export default function Insights() {
 
       <div className="grid gap-4 md:grid-cols-2 md:gap-5">
         <BentoCard
+          title="Macro Trend"
+          subtitle={`Rolling ${range}-day view of your macro splits`}
+          icon={<ChartLineUp size={18} weight="duotone" />}
+        >
+          <MacroTrendChart
+            data={dayData}
+            height={220}
+          />
+        </BentoCard>
+
+        <BentoCard
+          title="Meal Distribution"
+          subtitle={`Calorie breakdown over the last ${range} days`}
+          icon={<ChartPieSlice size={18} weight="duotone" />}
+        >
+          <div className="h-[220px]">
+            <MealDistributionChart data={mealDistribution} />
+          </div>
+        </BentoCard>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 md:gap-5">
+        <BentoCard
           title="Macro Distribution"
           subtitle="Today's macro split from daily totals"
           icon={<Barbell size={18} weight="duotone" />}
@@ -392,21 +451,21 @@ export default function Insights() {
 
       {bmiMeta ? (
         <BentoCard title="Body Metrics" subtitle="Profile-based baseline checks" icon={<Heart size={18} weight="duotone" />}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-subtle bg-primary/5 p-3.5">
-              <div className="text-[11px] uppercase tracking-[0.14em] opacity-70">BMI</div>
-              <div className="mt-1.5 font-mono text-3xl text-primary">{bmiMeta.bmi.toFixed(1)}</div>
-              <div className={`mt-1 text-sm font-semibold ${bmiMeta.category.colorClass}`}>{bmiMeta.category.label}</div>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            <div className="rounded-xl border border-subtle bg-primary/5 px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-[0.14em] opacity-70">BMI</div>
+              <div className="mt-1 font-mono text-2xl font-semibold text-primary">{bmiMeta.bmi.toFixed(1)}</div>
+              <div className={`mt-0.5 text-xs font-semibold ${bmiMeta.category.colorClass}`}>{bmiMeta.category.label}</div>
             </div>
-            <div className="rounded-2xl border border-subtle bg-primary/5 p-3.5">
-              <div className="text-[11px] uppercase tracking-[0.14em] opacity-70">Weight</div>
-              <div className="mt-1.5 font-mono text-3xl text-primary">{bmiMeta.weightKg.toFixed(1)}</div>
-              <div className="mt-1 text-sm opacity-70">kg</div>
+            <div className="rounded-xl border border-subtle bg-primary/5 px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-[0.14em] opacity-70">Weight</div>
+              <div className="mt-1 font-mono text-2xl font-semibold text-primary">{bmiMeta.weightKg.toFixed(1)}</div>
+              <div className="mt-0.5 text-xs opacity-70">kg</div>
             </div>
-            <div className="rounded-2xl border border-subtle bg-primary/5 p-3.5">
-              <div className="text-[11px] uppercase tracking-[0.14em] opacity-70">Height</div>
-              <div className="mt-1.5 font-mono text-3xl text-primary">{Math.round(bmiMeta.heightCm)}</div>
-              <div className="mt-1 text-sm opacity-70">cm</div>
+            <div className="rounded-xl border border-subtle bg-primary/5 px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-[0.14em] opacity-70">Height</div>
+              <div className="mt-1 font-mono text-2xl font-semibold text-primary">{Math.round(bmiMeta.heightCm)}</div>
+              <div className="mt-0.5 text-xs opacity-70">cm</div>
             </div>
           </div>
         </BentoCard>

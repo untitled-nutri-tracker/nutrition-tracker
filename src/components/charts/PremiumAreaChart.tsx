@@ -67,25 +67,29 @@ export function PremiumAreaChart({
             </linearGradient>
           </defs>
           
-          <CartesianGrid strokeDasharray="3 4" stroke="rgba(255,255,255,0.05)" vertical={false} />
+          <CartesianGrid strokeDasharray="3 4" stroke="var(--border-subtle)" vertical={false} />
           
           <XAxis 
             dataKey="date" 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 500 }}
+            tick={{ fill: 'var(--text-muted2)', fontSize: 10, fontWeight: 500 }}
             tickMargin={12}
             minTickGap={20}
           />
           
           <YAxis 
-            hide 
             domain={["dataMin - (dataMax - dataMin) * 0.1", "auto"]} 
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: "var(--text-muted)", fontSize: 10, fontWeight: 500 }}
+            tickFormatter={(val) => Math.round(val).toString()}
+            width={35}
           />
           
           <Tooltip 
             content={renderCustomTooltip} 
-            cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1, strokeDasharray: '4 4' }} 
+            cursor={{ stroke: 'var(--border-subtle)', strokeWidth: 1, strokeDasharray: '4 4' }} 
           />
           
           <Area

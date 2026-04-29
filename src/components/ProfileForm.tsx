@@ -39,18 +39,21 @@ export default function ProfileForm(props: {
 
   const [name, setName] = useState(initial?.name ?? "");
   const [sex, setSex] = useState<Sex>(initial?.sex ?? "male");
-  const [age, setAge] = useState<number>(initial?.age ?? 25);
-  const [heightCm, setHeightCm] = useState<number>(initial?.heightCm ?? 175);
-  const [weightKg, setWeightKg] = useState<number>(initial?.weightKg ?? 75);
+  const [age, setAge] = useState<number | "">(initial?.age ?? 25);
+  const [heightCm, setHeightCm] = useState<number | "">(initial?.heightCm ?? 175);
+  const [weightKg, setWeightKg] = useState<number | "">(initial?.weightKg ?? 75);
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(
     initial?.activityLevel ?? "moderate"
   );
 
   const validation = useMemo(() => {
     const errs: string[] = [];
-    if (age < 10 || age > 100) errs.push("Age should be between 10 and 100.");
-    if (heightCm < 120 || heightCm > 230) errs.push("Height should be 120–230 cm.");
-    if (weightKg < 35 || weightKg > 250) errs.push("Weight should be 35–250 kg.");
+    const a = typeof age === "number" ? age : 0;
+    const h = typeof heightCm === "number" ? heightCm : 0;
+    const w = typeof weightKg === "number" ? weightKg : 0;
+    if (a < 10 || a > 100) errs.push("Age should be between 10 and 100.");
+    if (h < 120 || h > 230) errs.push("Height should be 120–230 cm.");
+    if (w < 35 || w > 250) errs.push("Weight should be 35–250 kg.");
     return { ok: errs.length === 0, errs };
   }, [age, heightCm, weightKg]);
 
@@ -62,9 +65,9 @@ export default function ProfileForm(props: {
       updatedAt: nowIso(),
       name: name.trim() ? name.trim() : undefined,
       sex,
-      age: Math.round(clampNumber(age, 10, 100)),
-      heightCm: Math.round(clampNumber(heightCm, 120, 230)),
-      weightKg: Math.round(clampNumber(weightKg, 35, 250)),
+      age: Math.round(clampNumber(Number(age), 10, 100)),
+      heightCm: Math.round(clampNumber(Number(heightCm), 120, 230)),
+      weightKg: Math.round(clampNumber(Number(weightKg), 35, 250)),
       activityLevel,
     };
     await onSave(next);
@@ -106,7 +109,7 @@ export default function ProfileForm(props: {
             <input
               type="number"
               value={age}
-              onChange={(e) => setAge(Number(e.target.value))}
+              onChange={(e) => setAge(e.target.value === "" ? "" : Number(e.target.value))}
               style={inputStyle}
               min={10}
               max={100}
@@ -120,7 +123,7 @@ export default function ProfileForm(props: {
             <input
               type="number"
               value={heightCm}
-              onChange={(e) => setHeightCm(Number(e.target.value))}
+              onChange={(e) => setHeightCm(e.target.value === "" ? "" : Number(e.target.value))}
               style={inputStyle}
               min={120}
               max={230}
@@ -132,7 +135,7 @@ export default function ProfileForm(props: {
             <input
               type="number"
               value={weightKg}
-              onChange={(e) => setWeightKg(Number(e.target.value))}
+              onChange={(e) => setWeightKg(e.target.value === "" ? "" : Number(e.target.value))}
               style={inputStyle}
               min={35}
               max={250}

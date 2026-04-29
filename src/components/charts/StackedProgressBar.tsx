@@ -54,7 +54,7 @@ export function StackedProgressBar({ data }: { data: ProgressData[] }) {
         <BarChart
           layout="vertical"
           data={chartData}
-          margin={{ top: 0, right: 10, left: -20, bottom: 0 }}
+          margin={{ top: 0, right: 15, left: -10, bottom: 0 }}
           barSize={12}
         >
           <XAxis type="number" hide domain={[0, 120]} />
@@ -63,10 +63,28 @@ export function StackedProgressBar({ data }: { data: ProgressData[] }) {
             type="category"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 500 }}
+            tick={{ fill: "var(--text-primary)", fontSize: 11, fontWeight: 500, opacity: 0.8 }}
             width={70}
           />
-          <Tooltip cursor={{ fill: "rgba(255,255,255,0.03)" }} content={renderCustomTooltip} />
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            dataKey="name"
+            type="category"
+            axisLine={false}
+            tickLine={false}
+            width={75}
+            tick={({ x, y, payload }) => {
+              const item = chartData.find((d) => d.name === payload.value);
+              if (!item) return null;
+              return (
+                <text x={Number(x) + 5} y={y} dy={3} fill="var(--text-primary)" fontSize={11} fontWeight={600} textAnchor="start">
+                  {Math.round(item.actual)}<tspan fill="var(--text-muted2)">/{Math.round(item.target)}</tspan>
+                </text>
+              );
+            }}
+          />
+          <Tooltip cursor={{ fill: "var(--text-primary)", opacity: 0.03 }} content={renderCustomTooltip} />
 
           <Bar dataKey="filled" stackId="progress" radius={[6, 0, 0, 6]} animationDuration={800}>
             {chartData.map((entry, index) => (
@@ -84,7 +102,7 @@ export function StackedProgressBar({ data }: { data: ProgressData[] }) {
 
           <Bar dataKey="remaining" stackId="progress" radius={[0, 6, 6, 0]} animationDuration={800}>
             {chartData.map((_, index) => (
-              <Cell key={`remaining-${index}`} fill="rgba(255,255,255,0.08)" />
+              <Cell key={`remaining-${index}`} fill="var(--text-primary)" style={{ opacity: 0.08 }} />
             ))}
           </Bar>
         </BarChart>

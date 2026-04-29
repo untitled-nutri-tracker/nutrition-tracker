@@ -358,7 +358,7 @@ export default function DailyLog() {
       {!loading && MEAL_TYPE_ORDER.map((mt) => {
         const group = grouped[mt];
         if (group.length === 0) return null;
-        const groupCals = group.reduce((sum, e) => sum + e.calories, 0);
+        const groupCals = Math.round(group.reduce((sum, e) => sum + e.calories, 0));
 
         return (
           <div key={mt} className="card pop-in">

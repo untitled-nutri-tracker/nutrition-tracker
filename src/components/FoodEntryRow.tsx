@@ -22,13 +22,13 @@ export default function FoodEntryRow({ entry, onDelete, deleting }: Props) {
           {entry.brand && <span>{entry.brand} · </span>}
           {entry.servingDesc && <span>{entry.servingDesc} · </span>}
           <span className="rounded-md border border-subtle bg-primary/5 px-[5px] py-[1px]">
-            {entry.proteinG}g protein
+            {Math.round(entry.proteinG)}g protein
           </span>
           <span className="rounded-md border border-subtle bg-primary/5 px-[5px] py-[1px]">
-            {entry.carbsG}g carbs
+            {Math.round(entry.carbsG)}g carbs
           </span>
           <span className="rounded-md border border-subtle bg-primary/5 px-[5px] py-[1px]">
-            {entry.fatG}g fat
+            {Math.round(entry.fatG)}g fat
           </span>
         </div>
       </div>
@@ -36,7 +36,7 @@ export default function FoodEntryRow({ entry, onDelete, deleting }: Props) {
       {/* Right: calories + delete */}
       <div className="flex shrink-0 items-center gap-3">
         <div className="flex flex-col items-end leading-[1.1]">
-          <span className="text-[15px] font-extrabold text-primary">{entry.calories}</span>
+          <span className="text-[15px] font-extrabold text-primary">{Math.round(entry.calories)}</span>
           <span className="mt-[1px] text-[10px] text-muted2">kcal</span>
         </div>
         <button

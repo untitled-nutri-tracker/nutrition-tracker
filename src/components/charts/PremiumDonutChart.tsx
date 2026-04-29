@@ -54,7 +54,7 @@ export function PremiumDonutChart({ data, title }: { data: DonutData[]; title?: 
               outerRadius="84%"
               dataKey="value"
               paddingAngle={3}
-              stroke="rgba(255,255,255,0.08)"
+              stroke="var(--bg-card)"
               strokeWidth={1}
               cornerRadius={9}
             >
