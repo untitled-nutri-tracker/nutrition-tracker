@@ -238,6 +238,13 @@ UNION ALL SELECT d.day_idx, 10, 'demo30-almonds', 1.0 FROM temp_demo_days d WHER
 UNION ALL SELECT d.day_idx, 10, 'demo30-banana', 1.0 FROM temp_demo_days d WHERE (d.day_idx % 2 = 0) AND (d.day_idx % 4 = 2)
 UNION ALL SELECT d.day_idx, 10, 'demo30-peanutbutter', 1.0 FROM temp_demo_days d WHERE (d.day_idx % 2 = 0) AND (d.day_idx % 4 = 2);
 
+-- Trigger AI Over-Calorie Alert
+-- Inject massive calorie spike on days 26, 27, 28 (last 3 days excluding today)
+INSERT INTO temp_demo_meal_food (day_idx, meal_type, barcode, quantity)
+SELECT 26, 4, 'demo30-peanutbutter', 8.0 UNION ALL
+SELECT 27, 4, 'demo30-peanutbutter', 8.0 UNION ALL
+SELECT 28, 4, 'demo30-peanutbutter', 8.0;
+
 INSERT INTO meal_items (meal_id, food_id, serving_id, quantity, note, created_at, updated_at)
 SELECT
   m.id,
