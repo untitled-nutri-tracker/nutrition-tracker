@@ -87,6 +87,7 @@ Use this order to avoid rework and combine overlapping layout concerns:
 1. **Shell-safe-area contract first**
    - Finalize and verify top and bottom safe-area CSS variables in `AppShell`.
    - Validate all primary routes (`/`, `/log`, `/insights`, `/ai`, `/settings`) in iPhone simulator.
+   - Status update: iPhone 17 Pro simulator run is launching successfully again after clearing stale Vite port usage; continue visual route-by-route validation pass in this active run.
 
 2. **AI Advisor layout stabilization second (overlaps with Step 1)**
    - Keep outer shell from becoming the active scroll container on AI route.
