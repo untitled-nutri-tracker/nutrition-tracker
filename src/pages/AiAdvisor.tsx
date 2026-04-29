@@ -914,7 +914,7 @@ export default function AiAdvisor() {
                   </button>
                 ))}
               </div>
-              <div className="ai-controls-helper">
+              <div className="text-xs leading-relaxed text-muted/80">
                 Explicit scopes in your question, like "today", "yesterday", or "last 7 days", override the selected window.
               </div>
             </div>
