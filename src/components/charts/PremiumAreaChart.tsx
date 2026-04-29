@@ -40,7 +40,7 @@ export function PremiumAreaChart({
   const renderCustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="-translate-y-2 rounded-2xl border border-subtle bg-[#1c1c22]/95 px-3 py-2 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
+        <div className="-translate-y-2 rounded-2xl border border-subtle bg-card/95 px-3 py-2 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
           <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</div>
           <div className="flex items-center gap-2 font-mono text-base font-semibold text-primary">
             <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }} />

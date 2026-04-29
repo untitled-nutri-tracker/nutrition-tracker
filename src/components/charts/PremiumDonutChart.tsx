@@ -21,7 +21,7 @@ export function PremiumDonutChart({ data, title }: { data: DonutData[]; title?: 
     if (active && payload && payload.length) {
       const { name, value, color } = payload[0].payload;
       return (
-        <div className="rounded-2xl border border-subtle bg-[#1c1c22]/95 p-3 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
+        <div className="rounded-2xl border border-subtle bg-card/95 p-3 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
           <div className="flex items-center gap-2">
             <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
             <span className="text-xs font-medium text-muted">{name}</span>

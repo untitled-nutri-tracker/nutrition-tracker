@@ -157,8 +157,8 @@ export default function ProfileForm(props: {
 
         {!validation.ok && (
           <div style={{ padding: 10, borderRadius: 12, border: "1px solid rgba(255,80,80,0.35)", background: "rgba(255,80,80,0.08)" }}>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>Fix these issues:</div>
-            <ul style={{ margin: "8px 0 0 18px", color: "rgba(255,255,255,0.75)", fontSize: 12 }}>
+            <div style={{ fontSize: 12, color: "var(--text)", fontWeight: 600 }}>Fix these issues:</div>
+            <ul style={{ margin: "8px 0 0 18px", color: "var(--muted)", fontSize: 12 }}>
               {validation.errs.map((e) => (
                 <li key={e}>{e}</li>
               ))}

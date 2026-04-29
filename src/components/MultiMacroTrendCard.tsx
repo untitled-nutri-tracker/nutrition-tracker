@@ -98,7 +98,7 @@ export function MultiMacroTrendCard({ data, metrics, period, targets }: MultiMac
     if (!active || !payload || payload.length === 0) return null;
 
     return (
-      <div className="rounded-2xl border border-subtle bg-[#1c1c22]/95 px-3 py-2 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
+      <div className="rounded-2xl border border-subtle bg-card/95 px-3 py-2 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
         <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</div>
         <div className="space-y-1">
           {payload.map((item: any) => {
@@ -119,7 +119,7 @@ export function MultiMacroTrendCard({ data, metrics, period, targets }: MultiMac
   };
 
   return (
-    <section className="rounded-3xl border border-subtle bg-[#1c1c22]/92 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-6">
+    <section className="rounded-3xl border border-subtle bg-card/92 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-6">
       <div className="mb-4">
         <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Multi-Macro Trend</h4>
         <div className="mt-1 text-lg font-semibold tracking-tight text-primary">Last {period} adherence to target</div>

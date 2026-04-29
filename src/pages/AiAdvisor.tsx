@@ -806,10 +806,10 @@ export default function AiAdvisor() {
       )}
 
       {/* Toolbar */}
-      <div className="m-4 shrink-0 flex flex-wrap items-center justify-between gap-2 rounded-[18px] border border-subtle bg-[#1e1e2a]/90 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] max-sm:m-3 max-sm:flex-col max-sm:items-start max-sm:px-3 max-sm:py-2">
+      <div className="m-4 shrink-0 flex flex-wrap items-center justify-between gap-2 rounded-[18px] border border-subtle bg-card/90 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] max-sm:m-3 max-sm:flex-col max-sm:items-start max-sm:px-3 max-sm:py-2">
         <div className="flex items-center gap-1 flex-wrap min-w-0">
           <button
-            className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-subtle bg-white/5 text-muted transition-all hover:-translate-y-px hover:border-subtle hover:text-primary"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-subtle bg-primary/5 text-muted transition-all hover:-translate-y-px hover:border-subtle hover:text-primary"
             onClick={() => setIsControlsOpen((prev) => !prev)}
             title="Open chat controls"
             aria-label="Open chat controls"
@@ -863,7 +863,7 @@ export default function AiAdvisor() {
           role="presentation"
         >
           <div
-            className="w-[min(720px,95%)] max-h-[90vh] overflow-hidden border border-white/[0.12] bg-[#1a1e29] shadow-[0_18px_50px_rgba(0,0,0,0.6)] rounded-[24px] flex flex-col m-auto max-sm:w-full max-sm:rounded-[24px_24px_0_0] max-sm:max-h-[95vh]"
+            className="w-[min(720px,95%)] max-h-[90vh] overflow-hidden border border-white/[0.12] bg-card shadow-[0_18px_50px_rgba(0,0,0,0.6)] rounded-[24px] flex flex-col m-auto max-sm:w-full max-sm:rounded-[24px_24px_0_0] max-sm:max-h-[95vh]"
             role="dialog"
             aria-label="Chat controls"
             aria-modal="true"
@@ -875,7 +875,7 @@ export default function AiAdvisor() {
                 <div className="mt-1 text-sm leading-relaxed text-muted max-sm:text-[11px]">Adjust advisor settings and jump between sessions.</div>
               </div>
               <button
-                className="border border-subtle bg-white/10 text-muted rounded-[10px] w-8 h-8 cursor-pointer text-[19px] leading-none hover:text-primary hover:border-blue-300/60 hover:bg-blue-300/15"
+                className="border border-subtle bg-card/80 text-muted rounded-[10px] w-8 h-8 cursor-pointer text-[19px] leading-none hover:text-primary hover:border-blue-300/60 hover:bg-blue-300/15"
                 onClick={() => setIsControlsOpen(false)}
                 title="Close controls"
               >
@@ -889,7 +889,7 @@ export default function AiAdvisor() {
                 {GOAL_OPTIONS.map((option) => (
                   <button
                     key={option.value}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold cursor-pointer border transition-all hover:border-blue-300/64 hover:bg-blue-300/18 hover:-translate-y-px max-sm:text-[11px] max-sm:px-2.5 max-sm:py-2 ${goal === option.value ? "border-blue-400/78 bg-gradient-to-br from-indigo-400/34 to-sky-400/26 text-primary" : "border-white/[0.26] bg-white/10 text-muted"}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold cursor-pointer border transition-all hover:border-blue-300/64 hover:bg-blue-300/18 hover:-translate-y-px max-sm:text-[11px] max-sm:px-2.5 max-sm:py-2 ${goal === option.value ? "border-blue-400/78 bg-gradient-to-br from-indigo-400/34 to-sky-400/26 text-primary" : "border-white/[0.26] bg-card/80 text-muted"}`}
                     onClick={() => {
                       localStorage.setItem("nutrilog_goal", option.value);
                       setGoal(option.value);
@@ -907,7 +907,7 @@ export default function AiAdvisor() {
                 {CONTEXT_OPTIONS.map((option) => (
                   <button
                     key={option.value}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold cursor-pointer border transition-all hover:border-blue-300/64 hover:bg-blue-300/18 hover:-translate-y-px max-sm:text-[11px] max-sm:px-2.5 max-sm:py-2 ${contextDays === option.value ? "border-blue-400/78 bg-gradient-to-br from-indigo-400/34 to-sky-400/26 text-primary" : "border-white/[0.26] bg-white/10 text-muted"}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold cursor-pointer border transition-all hover:border-blue-300/64 hover:bg-blue-300/18 hover:-translate-y-px max-sm:text-[11px] max-sm:px-2.5 max-sm:py-2 ${contextDays === option.value ? "border-blue-400/78 bg-gradient-to-br from-indigo-400/34 to-sky-400/26 text-primary" : "border-white/[0.26] bg-card/80 text-muted"}`}
                     onClick={() => setContextDays(option.value)}
                   >
                     {option.label}
@@ -919,7 +919,7 @@ export default function AiAdvisor() {
             <div className="flex flex-col gap-3 px-5 pb-5 max-sm:px-4 max-sm:pb-4">
               <div className="text-xs font-bold text-muted uppercase tracking-[0.08em]">Chat History</div>
               <input
-                className="w-full rounded-[10px] border border-white/[0.34] bg-white/10 text-muted text-xs px-2.5 py-2 outline-none focus:border-blue-400/82 focus:shadow-[0_0_0_3px_rgba(130,162,255,0.2)] placeholder:text-muted"
+                className="w-full rounded-[10px] border border-white/[0.34] bg-card/80 text-muted text-xs px-2.5 py-2 outline-none focus:border-blue-400/82 focus:shadow-[0_0_0_3px_rgba(130,162,255,0.2)] placeholder:text-muted"
                 type="search"
                 placeholder="Search sessions..."
                 value={controlsSearch}
@@ -941,7 +941,7 @@ export default function AiAdvisor() {
                         {isRenaming ? (
                           <div className="flex items-center gap-1.5 max-sm:flex-wrap">
                             <input
-                              className="flex-1 min-w-0 max-sm:w-full rounded-lg border border-white/[0.34] bg-white/10 text-muted text-xs px-2.5 py-1.5 focus:outline-none focus:border-blue-400/82"
+                              className="flex-1 min-w-0 max-sm:w-full rounded-lg border border-white/[0.34] bg-card/80 text-muted text-xs px-2.5 py-1.5 focus:outline-none focus:border-blue-400/82"
                               value={renameDraft}
                               onChange={(e) => setRenameDraft(e.target.value)}
                               onKeyDown={(e) => {
@@ -958,14 +958,14 @@ export default function AiAdvisor() {
                               autoFocus
                             />
                             <button
-                              className="border border-white/[0.34] bg-white/10 text-muted rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
+                              className="border border-white/[0.34] bg-card/80 text-muted rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
                               onClick={() => void saveRenamedSession(session.id)}
                               disabled={isPending || !renameDraft.trim()}
                             >
                               Save
                             </button>
                             <button
-                              className="border border-white/[0.34] bg-white/10 text-muted rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
+                              className="border border-white/[0.34] bg-card/80 text-muted rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
                               onClick={cancelRenameSession}
                               disabled={isPending}
                             >
@@ -989,14 +989,14 @@ export default function AiAdvisor() {
                             </button>
                             <div className="flex gap-1.5 mt-1 max-sm:flex-wrap">
                               <button
-                                className="border border-white/[0.34] bg-white/10 text-muted rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
+                                className="border border-white/[0.34] bg-card/80 text-muted rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
                                 onClick={() => startRenameSession(session)}
                                 disabled={isPending}
                               >
                                 Rename
                               </button>
                               <button
-                                className="border border-red-400/42 text-red-200/95 bg-white/5 rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-red-400/78 hover:bg-red-400/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
+                                className="border border-red-400/42 text-red-200/95 bg-primary/5 rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-red-400/78 hover:bg-red-400/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
                                 onClick={() => void removeSession(session)}
                                 disabled={isPending}
                               >
@@ -1209,7 +1209,7 @@ export default function AiAdvisor() {
                       {msg.provider}
                     </span>
                   )}
-                  <span className="rounded-md border border-subtle bg-white/5 px-[7px] py-[2px] text-[10px] text-muted">
+                  <span className="rounded-md border border-subtle bg-primary/5 px-[7px] py-[2px] text-[10px] text-muted">
                     AI Generated
                   </span>
                 </>
@@ -1285,7 +1285,7 @@ export default function AiAdvisor() {
         {!isControlsOpen && (
           <div className="absolute left-0 right-0 z-20 bottom-[calc(var(--shell-mobile-nav-offset)-0.25rem)] p-2.5 pt-1.5 max-sm:px-2 max-sm:pb-2 md:bottom-0 md:p-4">
             <div className="mx-auto w-full max-w-4xl">
-              <div className="relative flex gap-2 items-end px-3.5 py-3 rounded-[22px] border border-subtle bg-[#1e1e2a]/95 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] max-sm:px-3 max-sm:py-2.5">
+              <div className="relative flex gap-2 items-end px-3.5 py-3 rounded-[22px] border border-subtle bg-card/95 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] max-sm:px-3 max-sm:py-2.5">
                 <textarea
                   ref={textareaRef}
                   value={input}
@@ -1293,7 +1293,7 @@ export default function AiAdvisor() {
                   onKeyDown={handleKeyDown}
                   placeholder="Ask about your nutrition…"
                   rows={1}
-                  className="flex-1 min-w-0 px-3 py-2.5 rounded-[10px] border border-white/[0.08] bg-white/5 text-muted resize-none text-[16px] sm:text-[13px] font-[inherit] leading-relaxed max-h-[120px] transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-muted"
+                  className="flex-1 min-w-0 px-3 py-2.5 rounded-[10px] border border-white/[0.08] bg-primary/5 text-muted resize-none text-[16px] sm:text-[13px] font-[inherit] leading-relaxed max-h-[120px] transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-muted"
                 />
                 <button
                   onClick={() => sendQuestion(input)}
@@ -1310,7 +1310,7 @@ export default function AiAdvisor() {
 
         {/* Sliding Grocery List Panel */}
         {isGroceryOpen && (
-          <div className="absolute right-3 top-3 bottom-[calc(var(--shell-mobile-content-padding)+0.5rem)] z-30 flex w-[min(360px,calc(100%-1.5rem))] max-w-sm flex-col rounded-2xl border border-subtle bg-[#14161e]/95 p-3 shadow-[0_18px_44px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:static lg:ml-3 lg:mb-0 lg:w-[320px] lg:max-w-none lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:border-subtle lg:bg-[#14161e]/95 lg:p-4 lg:shadow-none">
+          <div className="absolute right-3 top-3 bottom-[calc(var(--shell-mobile-content-padding)+0.5rem)] z-30 flex w-[min(360px,calc(100%-1.5rem))] max-w-sm flex-col rounded-2xl border border-subtle bg-card/95 p-3 shadow-[0_18px_44px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:static lg:ml-3 lg:mb-0 lg:w-[320px] lg:max-w-none lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:border-subtle lg:bg-card/95 lg:p-4 lg:shadow-none">
             <div className="mb-3 flex items-center justify-between border-b border-subtle pb-2.5">
               <span className="inline-flex items-center gap-1.5 text-[14px] font-bold text-emerald-400">
                 <Basket size={15} weight="duotone" />

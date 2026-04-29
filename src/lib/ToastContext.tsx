@@ -52,7 +52,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               borderRadius: 12,
               fontSize: 13,
               fontWeight: 500,
-              color: "rgba(255,255,255,0.95)",
+              color: "var(--text)",
               backdropFilter: "blur(12px)",
               boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
               animation: "fadeSlideUp 0.25s ease",

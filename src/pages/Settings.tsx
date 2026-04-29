@@ -82,7 +82,7 @@ export default function Settings() {
       </div>
 
       <div className="card pop-in-delay-1 w-full">
-        <div className="text-base font-semibold">Energy estimates</div>
+        <div className="text-primary font-semibold ">Energy estimates</div>
         <div className="mt-1 text-xs text-muted2">
           Based on Mifflin–St Jeor + activity multiplier.
         </div>
@@ -115,7 +115,7 @@ export default function Settings() {
         )}
       </div>
       <div className="card pop-in-delay-1 w-full">
-        <div className="mb-1 text-base font-semibold">Appearance</div>
+        <div className="mb-1 text-primary font-semibold">Appearance</div>
         <div className="mb-3.5 text-sm text-muted">
           Choose your preferred color theme.
         </div>
@@ -144,7 +144,7 @@ export default function Settings() {
       </div>
 
       <div className="card pop-in-delay-1 w-full">
-        <div className="text-base font-semibold">Database export</div>
+        <div className="text-primary font-semibold">Database export</div>
         <div className="mt-1 text-xs text-muted2">
           Export the currently connected database as an Excel workbook.
         </div>
@@ -425,7 +425,7 @@ function ApiKeySection() {
 
   return (
     <div className="card pop-in-delay-2 w-full">
-      <div className="text-base font-bold leading-snug">
+      <div className="text-primary font-bold leading-snug">
         AI Provider Configuration
       </div>
       <div className="text-xs text-muted mt-1 leading-relaxed">
@@ -639,7 +639,7 @@ function ApiKeySection() {
 
       {/* AI Context & Memory */}
       <div className="card pop-in-delay-3 mt-3.5 w-full">
-        <div className="mb-1 text-base font-bold leading-snug">
+        <div className="mb-1 text-primary font-bold leading-snug">
           AI Context & Memory
         </div>
         <div className="mb-4 mt-1 text-xs leading-relaxed text-muted">
@@ -818,7 +818,7 @@ const metricBox: React.CSSProperties = {
 
 const metricLabel: React.CSSProperties = {
   fontSize: 12,
-  color: "var(--muted2)",
+  color: "var(--text-muted2)",
 };
 
 const metricValue: React.CSSProperties = {

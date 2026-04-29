@@ -64,7 +64,7 @@ export function ConfirmLogCard({
   const rounded = (n: number) => Math.round(n);
 
   return (
-    <section className="mt-2 mb-2 rounded-3xl border border-subtle bg-[#1c1c22]/92 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+    <section className="mt-2 mb-2 rounded-3xl border border-subtle bg-card/92 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
       <div className="flex items-center gap-2">
         <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-400/15 text-emerald-200">
           <PlusCircle size={16} weight="duotone" />

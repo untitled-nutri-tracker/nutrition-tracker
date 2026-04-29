@@ -409,7 +409,7 @@ export default function LogFood() {
     <div className="page-enter mx-auto flex w-full max-w-[1000px] flex-col gap-4 p-4 pb-[calc(var(--shell-mobile-content-padding)+1rem)] md:p-8 md:pb-8">
       {/* Meal type + date selector */}
       <div className="card pop-in max-w-[900px]">
-        <div className="text-base font-semibold">Log Food</div>
+        <div className="text-primary font-semibold">Log Food</div>
         <div className="mt-1 text-xs text-muted">
           Search for food, scan a barcode, or enter one manually.
         </div>
@@ -437,7 +437,7 @@ export default function LogFood() {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="ml-auto rounded-[10px] border border-subtle bg-primary/5 px-2.5 py-[7px] text-xs text-muted [color-scheme:dark] max-sm:ml-0 max-sm:w-full max-sm:min-h-[44px]"
+            className="ml-auto rounded-[10px] border border-subtle bg-primary/5 px-2.5 py-[7px] text-xs text-muted [color-scheme:light_dark] max-sm:ml-0 max-sm:w-full max-sm:min-h-[44px]"
           />
         </div>
       </div>
@@ -519,7 +519,7 @@ export default function LogFood() {
                     ? "rgba(80,200,120,0.9)"
                     : barcodeDigits.length > 13
                       ? "rgba(255,80,80,0.9)"
-                      : "var(--muted2)",
+                      : "var(--text-muted2)",
                   border: `1px solid ${barcodeFormat ? "rgba(80,200,120,0.3)" : "transparent"}`,
                 }}>
                   {barcodeFormat
@@ -612,7 +612,7 @@ export default function LogFood() {
       {photoLoading && (
         <div className="card" style={{ maxWidth: 900, border: "1px solid rgba(80,200,120,0.28)", background: "rgba(80,200,120,0.05)" }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Analyzing food photo…</div>
-          <div style={{ marginTop: 6, color: "var(--muted)", fontSize: 12 }}>
+          <div style={{ marginTop: 6, color: "var(--text-muted)", fontSize: 12 }}>
             The photo is sent to the selected vision model, then only the predicted food name is used for USDA nutrition lookup.
           </div>
         </div>
@@ -620,13 +620,13 @@ export default function LogFood() {
 
       {photoEstimate && (
         <div className="card border-emerald-500/40 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.1)] [animation:confirm-slide-up_0.3s_ease-out]" style={{ maxWidth: 900 }}>
-          <div style={{ fontSize: 11, color: "var(--muted2)", fontWeight: 600, marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted2)", fontWeight: 600, marginBottom: 10 }}>
             Food photo estimate · Source: USDA + vision estimate · Confidence {Math.round((photoEstimate.confidence || 0) * 100)}%
           </div>
 
           <div style={{ display: "grid", gap: 12 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1.3fr 0.7fr", gap: 10 }}>
-              <label style={{ display: "grid", gap: 4, fontSize: 11, color: "var(--muted2)" }}>
+              <label style={{ display: "grid", gap: 4, fontSize: 11, color: "var(--text-muted2)" }}>
                 Food
                 <input
                   value={photoForm.foodName}
@@ -634,7 +634,7 @@ export default function LogFood() {
                   style={inputStyle}
                 />
               </label>
-              <label style={{ display: "grid", gap: 4, fontSize: 11, color: "var(--muted2)" }}>
+              <label style={{ display: "grid", gap: 4, fontSize: 11, color: "var(--text-muted2)" }}>
                 Estimated grams
                 <input
                   type="number"
@@ -647,7 +647,7 @@ export default function LogFood() {
             </div>
 
             {photoEstimate.usdaDescription && (
-              <div style={{ fontSize: 12, color: "var(--muted2)" }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted2)" }}>
                 USDA match: {photoEstimate.usdaDescription}
                 {photoEstimate.usdaFdcId ? ` · FDC ${photoEstimate.usdaFdcId}` : ""}
               </div>
@@ -660,7 +660,7 @@ export default function LogFood() {
                 ["Carbs", "carbsG", "g"],
                 ["Fat", "fatG", "g"],
               ].map(([label, key, unit]) => (
-                <label key={key} style={{ display: "grid", gap: 4, fontSize: 11, color: "var(--muted2)" }}>
+                <label key={key} style={{ display: "grid", gap: 4, fontSize: 11, color: "var(--text-muted2)" }}>
                   {label} ({unit})
                   <input
                     type="number"
@@ -673,7 +673,7 @@ export default function LogFood() {
               ))}
             </div>
 
-            <label style={{ display: "grid", gap: 4, fontSize: 11, color: "var(--muted2)" }}>
+            <label style={{ display: "grid", gap: 4, fontSize: 11, color: "var(--text-muted2)" }}>
               Notes
               <input
                 value={photoForm.notes}
@@ -708,7 +708,7 @@ export default function LogFood() {
       {/* Confirmation card (after barcode scan/lookup) */}
       {confirmProduct && (
         <div className="card border-emerald-500/40 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.1)] [animation:confirm-slide-up_0.3s_ease-out]" style={{ maxWidth: 900 }}>
-          <div style={{ fontSize: 11, color: "var(--muted2)", fontWeight: 600, marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted2)", fontWeight: 600, marginBottom: 10 }}>
             {scannedBarcode ? `Barcode: ${scannedBarcode}` : "Product Found"}
           </div>
 
@@ -740,7 +740,7 @@ export default function LogFood() {
 
           <div className="flex items-center gap-2.5 mt-3.5 flex-wrap">
             <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-              <label style={{ fontSize: 11, color: "var(--muted2)" }}>Qty:</label>
+              <label style={{ fontSize: 11, color: "var(--text-muted2)" }}>Qty:</label>
               <input
                 type="number"
                 min="0.1"
@@ -750,7 +750,7 @@ export default function LogFood() {
                 style={{
                   width: 50, padding: "4px 6px", borderRadius: 8,
                   border: "1px solid var(--border)", background: "rgba(255,255,255,0.04)",
-                  color: "var(--text)", fontSize: 12, textAlign: "center",
+                  color: "var(--text-primary)", fontSize: 12, textAlign: "center",
                 }}
               />
             </div>
@@ -794,7 +794,7 @@ export default function LogFood() {
             <span style={{ fontSize: 28 }}>🔍</span>
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>Product not found</div>
-              <div style={{ marginTop: 4, color: "var(--muted)", fontSize: 12 }}>
+              <div style={{ marginTop: 4, color: "var(--text-muted)", fontSize: 12 }}>
                 No product matched barcode
                 <code style={{
                   padding: "2px 8px",
@@ -829,7 +829,7 @@ export default function LogFood() {
               Dismiss
             </button>
           </div>
-          <div style={{ marginTop: 8, fontSize: 11, color: "var(--muted2)" }}>
+          <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-muted2)" }}>
             Tip: Check the barcode digits are correct, or try searching by product name.
           </div>
         </div>
@@ -839,14 +839,14 @@ export default function LogFood() {
       {error && (
         <div className="card" style={{ maxWidth: 900, border: "1px solid rgba(255,80,80,0.35)", background: "rgba(255,80,80,0.08)" }}>
           <div style={{ fontWeight: 600 }}>Error</div>
-          <div style={{ marginTop: 6, color: "var(--muted)", fontSize: 13 }}>{error}</div>
+          <div style={{ marginTop: 6, color: "var(--text-muted)", fontSize: 13 }}>{error}</div>
         </div>
       )}
 
       {/* Results */}
       {results.length > 0 && (
         <div className="w-full">
-          <div style={{ fontSize: 13, color: "var(--muted2)", marginBottom: 10 }}>
+          <div style={{ fontSize: 13, color: "var(--text-muted2)", marginBottom: 10 }}>
             Top {results.length} results for "{query}"
           </div>
 
@@ -880,7 +880,7 @@ export default function LogFood() {
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{product.product_name}</div>
                     {product.brands && (
-                      <div style={{ fontSize: 12, color: "var(--muted2)", marginTop: 2 }}>
+                      <div style={{ fontSize: 12, color: "var(--text-muted2)", marginTop: 2 }}>
                         {product.brands}{product.categories ? ` · ${product.categories}` : ""}
                       </div>
                     )}
@@ -896,14 +896,14 @@ export default function LogFood() {
                   {/* Quantity + Log button */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
                     <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                      <label style={{ fontSize: 11, color: "var(--muted2)" }}>Qty:</label>
+                      <label style={{ fontSize: 11, color: "var(--text-muted2)" }}>Qty:</label>
                       <input
                         type="number"
                         min="0.1"
                         step="0.5"
                         value={quantity[uid] ?? "1"}
                         onChange={(e) => setQuantity((prev) => ({ ...prev, [uid]: e.target.value }))}
-                        style={{ width: 50, padding: "4px 6px", borderRadius: 8, border: "1px solid var(--border)", background: "rgba(255,255,255,0.04)", color: "var(--text)", fontSize: 12, textAlign: "center" }}
+                        style={{ width: 50, padding: "4px 6px", borderRadius: 8, border: "1px solid var(--border)", background: "rgba(255,255,255,0.04)", color: "var(--text-primary)", fontSize: 12, textAlign: "center" }}
                       />
                     </div>
                     <button
@@ -928,7 +928,7 @@ export default function LogFood() {
 
       {!loading && hasSearched && results.length === 0 && !confirmProduct && !error && (
         <div className="card" style={{ maxWidth: 900 }}>
-          <div style={{ color: "var(--muted2)", fontSize: 13 }}>
+          <div style={{ color: "var(--text-muted2)", fontSize: 13 }}>
             No results found. Try a different search term or barcode.
           </div>
         </div>
@@ -940,7 +940,7 @@ export default function LogFood() {
 function MacroBadge({ label, value, unit, color }: { label: string; value: number; unit: string; color: string }) {
   return (
     <span style={{ display: "inline-flex", alignItems: "baseline", gap: 4, padding: "6px 12px", borderRadius: 12, background: color, border: "1px solid rgba(255,255,255,0.12)", fontSize: 13, minWidth: "75px", justifyContent: "center" }}>
-      <span style={{ color: "var(--muted2)" }}>{label}</span>
+      <span style={{ color: "var(--text-muted2)" }}>{label}</span>
       <span style={{ fontWeight: 700 }}>{value}<span style={{ fontWeight: 400, fontSize: 10, marginLeft: 1 }}>{unit}</span></span>
     </span>
   );
@@ -950,7 +950,7 @@ const pillStyle: React.CSSProperties = {
   padding: "7px 14px",
   borderRadius: 10,
   border: "1px solid var(--border)",
-  color: "var(--text)",
+  color: "var(--text-primary)",
   cursor: "pointer",
   fontSize: 13,
   fontWeight: 600,
@@ -963,7 +963,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 12,
   border: "1px solid var(--border)",
   background: "rgba(255,255,255,0.04)",
-  color: "var(--text)",
+  color: "var(--text-primary)",
   outline: "none",
 };
 
@@ -972,7 +972,7 @@ const buttonStyle: React.CSSProperties = {
   borderRadius: 12,
   border: "1px solid rgba(124,92,255,0.35)",
   background: "linear-gradient(135deg, rgba(124,92,255,0.25), rgba(0,209,255,0.10))",
-  color: "var(--text)",
+  color: "var(--text-primary)",
   cursor: "pointer",
   whiteSpace: "nowrap",
   fontWeight: 600,
@@ -984,7 +984,7 @@ const logBtnStyle: React.CSSProperties = {
   borderRadius: 10,
   border: "1px solid rgba(124,92,255,0.35)",
   background: "linear-gradient(135deg, rgba(124,92,255,0.15), rgba(0,209,255,0.08))",
-  color: "var(--text)",
+  color: "var(--text-primary)",
   cursor: "pointer",
   whiteSpace: "nowrap",
   fontSize: 12,

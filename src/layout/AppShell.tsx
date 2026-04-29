@@ -113,7 +113,7 @@ export default function AppShell() {
   useEffect(() => setMounted(true), []);
 
   const shellStyles = {
-    "--shell-mobile-nav-offset": "calc(env(safe-area-inset-bottom) + 0.2rem)",
+    "--shell-mobile-nav-offset": "calc(env(safe-area-inset-bottom) + 0.05rem)",
     "--shell-mobile-content-padding": "calc(6rem + env(safe-area-inset-bottom))",
     "--shell-mobile-top-inset": "max(env(safe-area-inset-top), 0.5rem)",
   } as CSSProperties;
@@ -206,7 +206,7 @@ export default function AppShell() {
             <div className="w-[1px] h-8 bg-border-card mx-2" />
             <button
               onClick={() => navigate('/log')}
-              className="relative mr-1 flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-emerald-200/45 bg-gradient-to-br from-emerald-300/55 to-cyan-300/48 text-[#10131a] shadow-[0_8px_18px_-8px_rgba(16,185,129,0.7)] transition-all hover:scale-105 active:scale-95"
+              className="relative mr-1 flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-emerald-200/45 bg-gradient-to-br from-emerald-300/55 to-cyan-300/48 text-primary shadow-[0_8px_18px_-8px_rgba(16,185,129,0.7)] transition-all hover:scale-105 active:scale-95"
             >
               <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity hover:opacity-100" />
               <Plus weight="bold" size={20} />
@@ -218,7 +218,7 @@ export default function AppShell() {
       {/* Global Contextual AI FAB (Desktop Only) */}
       {pathname !== '/ai' && (
         <button 
-          className="fixed bottom-8 right-8 z-50 hidden h-14 w-14 items-center justify-center rounded-full border border-emerald-200/35 bg-gradient-to-br from-emerald-300/50 to-cyan-300/42 text-2xl text-[#10131a] shadow-[0_12px_26px_-12px_rgba(16,185,129,0.7)] transition-all duration-300 hover:scale-110 active:scale-95 md:flex"
+          className="fixed bottom-8 right-8 z-50 hidden h-14 w-14 items-center justify-center rounded-full border border-emerald-200/35 bg-gradient-to-br from-emerald-300/50 to-cyan-300/42 text-2xl text-primary shadow-[0_12px_26px_-12px_rgba(16,185,129,0.7)] transition-all duration-300 hover:scale-110 active:scale-95 md:flex"
           onClick={() => navigate('/ai')}
           title="Ask AI"
         >

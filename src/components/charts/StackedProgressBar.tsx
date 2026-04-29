@@ -34,7 +34,7 @@ export function StackedProgressBar({ data }: { data: ProgressData[] }) {
     if (active && payload && payload.length) {
       const data = payload[0].payload as typeof chartData[0];
       return (
-        <div className="-translate-y-2 rounded-2xl border border-subtle bg-[#1c1c22]/95 px-3 py-2 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
+        <div className="-translate-y-2 rounded-2xl border border-subtle bg-card/95 px-3 py-2 shadow-[0_14px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md">
           <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
             <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: data.color }} />
             {data.name}

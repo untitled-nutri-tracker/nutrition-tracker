@@ -19,7 +19,7 @@ function RoutedApp() {
 
   if (loading) {
     return (
-      <div className="flex h-[100dvh] w-full items-center justify-center bg-[#0d0d12] text-muted text-sm">
+      <div className="flex h-[100dvh] w-full items-center justify-center bg-base text-muted text-sm">
         Loading workspace…
       </div>
     );

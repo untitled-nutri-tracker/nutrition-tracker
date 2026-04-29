@@ -31,7 +31,7 @@ export function NutritionChartCard({ data, metric, title }: NutritionChartCardPr
   }));
 
   return (
-    <section className="flex w-full flex-col gap-4 rounded-3xl border border-subtle bg-[#1c1c22]/92 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-6">
+    <section className="flex w-full flex-col gap-4 rounded-3xl border border-subtle bg-card/92 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-6">
       <div className="flex justify-between items-start">
         <div>
           <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Trend Analysis</h4>
