@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Barbell,
   CalendarCheck,
@@ -7,18 +8,26 @@ import {
   Heart,
   ShieldCheck,
   TrendUp,
-  WarningCircle,
   ChartPieSlice,
+  X,
+  ChatCircleText,
 } from "@phosphor-icons/react";
+
 import ProfileSummaryCard from "../components/ProfileSummaryCard";
 import { PremiumAreaChart } from "../components/charts/PremiumAreaChart";
 import { PremiumDonutChart } from "../components/charts/PremiumDonutChart";
 import { StackedProgressBar } from "../components/charts/StackedProgressBar";
 import { MacroTrendChart } from "../components/charts/MacroTrendChart";
 import { MealDistributionChart, type MealDistributionData } from "../components/charts/MealDistributionChart";
+
 import { getDailyNutritionTotals, getNutritionTrend } from "../generated/commands";
 import { localDateString, loadEntriesRange } from "../lib/foodLogStore";
-import type { NutritionTotals, NutritionTrendPoint } from "../generated/types";
+import { detectNutritionThresholdAlerts } from "../lib/nutritionAlerts";
+import { getNutritionTargets, type MacroTargets } from "../lib/nutritionTargets";
+import { loadProfile } from "../lib/profileStore";
+import type { NutritionTotals, NutritionTrendPoint, AppUserProfile } from "../generated/types";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface DayData {
   date: string;
@@ -35,6 +44,15 @@ interface Targets {
   proteinG: number;
   carbsG: number;
   fatG: number;
+  sourceLabel: string;
+}
+
+interface NudgeAlert {
+  type: 'warning' | 'danger';
+  emoji: string;
+  title: string;
+  message: string;
+  thresholdLabel: string;
 }
 
 const METRIC_COLORS = {
@@ -44,66 +62,14 @@ const METRIC_COLORS = {
   fat: "var(--metric-fat)",
 } as const;
 
-function getTargets(): Targets {
-  const goal = localStorage.getItem("nutrilog_goal") || "maintenance";
-  let cal = 2000;
-  let pro = 75;
-  let carb = 250;
-  let fat = 65;
-
-  try {
-    const raw = localStorage.getItem("nutrilog.userProfile.v1");
-    if (raw) {
-      const p = JSON.parse(raw);
-      const w = p.weightKg || 70;
-      const actMult: Record<string, number> = {
-        sedentary: 1.2,
-        light: 1.375,
-        moderate: 1.55,
-        active: 1.725,
-        very_active: 1.9,
-      };
-      const mult = actMult[p.activityLevel] || 1.55;
-      const bmr =
-        p.sex === "male"
-          ? 10 * w + 6.25 * (p.heightCm || 170) - 5 * (p.age || 30) + 5
-          : 10 * w + 6.25 * (p.heightCm || 160) - 5 * (p.age || 30) - 161;
-      const tdee = bmr * mult;
-
-      if (goal === "weight_loss") {
-        cal = tdee - 400;
-        pro = w * 1.4;
-      } else if (goal === "muscle_gain") {
-        cal = tdee + 300;
-        pro = w * 1.8;
-      } else {
-        cal = tdee;
-        pro = w * 1.2;
-      }
-
-      carb = (cal * 0.45) / 4;
-      fat = (cal * 0.25) / 9;
-    }
-  } catch {
-    // Keep defaults when local profile is unavailable.
-  }
-
+function mapTargets(targets: MacroTargets): Targets {
   return {
-    calories: Math.round(cal),
-    proteinG: Math.round(pro),
-    carbsG: Math.round(carb),
-    fatG: Math.round(fat),
+    calories: targets.calories,
+    proteinG: targets.protein,
+    carbsG: targets.carbs,
+    fatG: targets.fat,
+    sourceLabel: targets.sourceLabel,
   };
-}
-
-function getProfile() {
-  try {
-    const raw = localStorage.getItem("nutrilog.userProfile.v1");
-    if (raw) return JSON.parse(raw);
-  } catch {
-    // noop
-  }
-  return null;
 }
 
 function computeBMI(weightKg: number, heightCm: number): number {
@@ -112,11 +78,13 @@ function computeBMI(weightKg: number, heightCm: number): number {
 }
 
 function bmiCategory(bmi: number): { label: string; colorClass: string } {
-  if (bmi < 18.5) return { label: "Underweight", colorClass: "text-sky-300" };
-  if (bmi < 25) return { label: "Normal", colorClass: "text-emerald-300" };
-  if (bmi < 30) return { label: "Overweight", colorClass: "text-amber-300" };
-  return { label: "Obese", colorClass: "text-rose-300" };
+  if (bmi < 18.5) return { label: "Underweight", colorClass: "text-sky-400" };
+  if (bmi < 25) return { label: "Normal", colorClass: "text-emerald-400" };
+  if (bmi < 30) return { label: "Overweight", colorClass: "text-amber-400" };
+  return { label: "Obese", colorClass: "text-rose-400" };
 }
+
+// ── Shared UI Components ──────────────────────────────────────────────────────
 
 function BentoCard({
   title,
@@ -144,68 +112,106 @@ function BentoCard({
   );
 }
 
-function HealthNudgeCard({ data, targets }: { data: DayData[]; targets: Targets }) {
-  const recent = data.slice(-3);
-  const overCalorieDays = recent.filter((day) => day.entryCount > 0 && day.calories > targets.calories * 1.15).length;
-  const lowProteinDays = recent.filter((day) => day.entryCount > 0 && day.proteinG < targets.proteinG * 0.5).length;
-  const missingLogDays = recent.filter((day) => day.entryCount === 0).length;
+// Rewritten HealthNudge using Tailwind and Bento conventions
+function HealthNudge({ alerts, sourceLabel }: { alerts: NudgeAlert[]; sourceLabel: string }) {
+  const [dismissed, setDismissed] = useState(() => {
+    return !!sessionStorage.getItem(`nutrilog_nudge_${localDateString()}`);
+  });
+  const navigate = useNavigate();
 
-  const alertMessage =
-    overCalorieDays >= 2
-      ? "Calorie intake has been above target for most of the last 3 days."
-      : lowProteinDays >= 2
-        ? "Protein has been too low recently. Add one high-protein meal tomorrow."
-        : missingLogDays >= 2
-          ? "Logging consistency dropped over the last 3 days."
-          : "You are maintaining steady nutrition patterns this week.";
+  useEffect(() => {
+    setDismissed(!!sessionStorage.getItem(`nutrilog_nudge_${localDateString()}`));
+  }, [alerts.length]);
 
-  const toneClass =
-    overCalorieDays >= 2
-      ? "border-red-500/20 bg-red-500/10 dark:border-red-400/20 dark:bg-red-400/10 text-red-900 dark:text-red-200"
-      : lowProteinDays >= 2 || missingLogDays >= 2
-        ? "border-amber-500/20 bg-amber-500/10 text-amber-900 dark:border-amber-300/20 dark:bg-amber-300/10 dark:text-amber-200"
-        : "border-emerald-500/20 bg-emerald-500/10 text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200";
+  function handleDismiss() {
+    setDismissed(true);
+    sessionStorage.setItem(`nutrilog_nudge_${localDateString()}`, '1');
+  }
+
+  if (dismissed || alerts.length === 0) return null;
+
+  const isDanger = alerts.some(a => a.type === 'danger');
+  const toneClass = isDanger 
+    ? "border-red-500/20 bg-red-500/10" 
+    : "border-amber-500/20 bg-amber-500/10";
+  const titleColor = isDanger ? "text-red-500" : "text-amber-500";
 
   return (
-    <div className={`rounded-2xl border px-4 py-3 ${toneClass}`}>
-      <div className="flex items-start gap-2.5">
-        <WarningCircle size={18} weight="duotone" className="mt-0.5 opacity-70" />
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.12em] opacity-70">Health Nudge</div>
-          <p className="mt-1 text-sm opacity-70">{alertMessage}</p>
+    <div className={`rounded-3xl border px-5 py-4 ${toneClass} shadow-sm backdrop-blur-md`}>
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl mt-0.5">🚨</span>
+          <div>
+            <div className={`text-sm font-bold tracking-tight ${titleColor}`}>Nutrition Alerts</div>
+            <div className="text-[10px] uppercase tracking-[0.12em] opacity-70 mt-0.5">Using {sourceLabel.toLowerCase()}</div>
+          </div>
         </div>
+        <button onClick={handleDismiss} className="rounded-full p-1 opacity-60 hover:bg-black/10 dark:hover:bg-white/10 hover:opacity-100 transition">
+          <X size={18} weight="bold" />
+        </button>
       </div>
+
+      <div className="flex flex-col gap-4">
+        {alerts.map((a, i) => (
+          <div key={i} className="flex items-start gap-3">
+            <span className="text-lg mt-0.5">{a.emoji}</span>
+            <div>
+              <div className="text-[13px] font-bold text-primary">{a.title}</div>
+              <div className={`text-[10px] font-semibold uppercase tracking-wider mb-1 ${a.type === 'danger' ? 'text-red-400' : 'text-amber-400'}`}>{a.thresholdLabel}</div>
+              <div className="text-xs leading-relaxed opacity-80">{a.message}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button 
+        onClick={() => navigate('/ai')} 
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-2.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+      >
+        <ChatCircleText size={16} weight="duotone" /> Get AI Advice
+      </button>
     </div>
   );
 }
 
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
 export default function Insights() {
-  const [range, setRange] = useState<7 | 14 | 30>(30);
+  const goal = localStorage.getItem('nutrilog_goal') || 'maintenance';
+  const [range, setRange] = useState<7 | 14 | 30>(7);
   const [dayData, setDayData] = useState<DayData[]>([]);
   const [mealDistribution, setMealDistribution] = useState<MealDistributionData[]>([]);
   const [dailyTotals, setDailyTotals] = useState<NutritionTotals | null>(null);
+  const [targets, setTargets] = useState<Targets>(() => mapTargets(getNutritionTargets(null, goal)));
+  const [alerts, setAlerts] = useState<NudgeAlert[]>([]);
+  const [profile, setProfile] = useState<AppUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
       setLoading(true);
+      setError(null);
 
       try {
         const now = Math.floor(Date.now() / 1000);
-        const start = now - (range - 1) * 86400;
         const offsetMinutes = new Date().getTimezoneOffset();
 
         const endDateObj = new Date();
+        endDateObj.setHours(23, 59, 59, 999);
         const startDateObj = new Date();
+        startDateObj.setHours(0, 0, 0, 0);
         startDateObj.setDate(startDateObj.getDate() - (range - 1));
-        
+
         const startDateStr = localDateString(startDateObj);
         const endDateStr = localDateString(endDateObj);
 
-        const [trend, todayTotals, entriesRangeMap] = await Promise.all([
+        const [trend, todayTotals, entriesRangeMap, loadedProfile] = await Promise.all([
           getNutritionTrend({
-            start,
-            end: now,
+            start: Math.floor(startDateObj.getTime() / 1000),
+            end: Math.floor(endDateObj.getTime() / 1000),
             bucket: "DAY",
             offsetMinutes,
           }),
@@ -214,7 +220,12 @@ export default function Insights() {
             offsetMinutes,
           }),
           loadEntriesRange(startDateStr, endDateStr),
+          loadProfile(),
         ]);
+
+        if (cancelled) return;
+
+        const rawTargets = getNutritionTargets(loadedProfile, goal);
 
         const days: DayData[] = (trend || []).map((point: NutritionTrendPoint) => {
           const date = new Date(point.periodStart * 1000);
@@ -251,22 +262,40 @@ export default function Insights() {
           { name: "Snacks", calories: mealData.snack, percentage: totalCalories > 0 ? (mealData.snack / totalCalories) * 100 : 0 },
         ];
 
+        const nudges = detectNutritionThresholdAlerts(trend || [], rawTargets, {
+          windowDays: 3,
+          excludeToday: true,
+        }).map(alert => ({
+          type: alert.severity,
+          emoji: alert.emoji,
+          title: alert.title,
+          message: alert.message,
+          thresholdLabel: alert.thresholdLabel,
+        }));
+
         setDayData(days);
         setMealDistribution(mDist);
         setDailyTotals(todayTotals);
+        setTargets(mapTargets(rawTargets));
+        setProfile(loadedProfile);
+        setAlerts(nudges);
       } catch (err) {
+        if (cancelled) return;
         console.error("Failed to load insights data:", err);
         setDayData([]);
         setDailyTotals(null);
+        setAlerts([]);
+        setProfile(null);
+        setTargets(mapTargets(getNutritionTargets(null, goal)));
+        setError(err instanceof Error ? err.message : 'Could not load nutrition insights right now.');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     load();
-  }, [range]);
-
-  const targets = useMemo(() => getTargets(), []);
+    return () => { cancelled = true; };
+  }, [range, goal]);
 
   const stats = useMemo(() => {
     const totalDays = dayData.length || 1;
@@ -317,7 +346,6 @@ export default function Insights() {
   );
 
   const bmiMeta = useMemo(() => {
-    const profile = getProfile();
     if (!profile?.weightKg || !profile?.heightCm) return null;
     const bmi = computeBMI(profile.weightKg, profile.heightCm);
     return {
@@ -326,9 +354,9 @@ export default function Insights() {
       weightKg: profile.weightKg,
       heightCm: profile.heightCm,
     };
-  }, []);
+  }, [profile]);
 
-  if (loading) {
+  if (loading && !dayData.length) {
     return (
       <div className="page-enter flex h-full items-center justify-center px-4 pb-28 pt-5 md:px-8 md:pb-8">
         <div className="rounded-3xl border border-subtle bg-card/80 px-6 py-5 text-sm opacity-70">Loading insights dashboard...</div>
@@ -342,7 +370,11 @@ export default function Insights() {
         <ProfileSummaryCard />
       </div>
 
-      <div className="pop-in flex items-center justify-between gap-3 rounded-3xl border border-subtle bg-card/80 px-4 py-3.5 md:px-5 md:py-4">
+      <div className="pop-in-delay-1">
+        <HealthNudge alerts={alerts} sourceLabel={targets.sourceLabel} />
+      </div>
+
+      <div className="pop-in-delay-2 flex items-center justify-between gap-3 rounded-3xl border border-subtle bg-card/80 px-4 py-3.5 md:px-5 md:py-4">
         <div>
           <div className="text-[11px] uppercase tracking-[0.16em] opacity-70">Nutrition Cockpit</div>
           <h2 className="mt-1 text-xl font-semibold tracking-tight text-primary">Performance Overview</h2>
@@ -353,7 +385,7 @@ export default function Insights() {
               key={r}
               className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                 range === r
-                  ? "bg-white text-zinc-900"
+                  ? "bg-white text-zinc-900 shadow-sm"
                   : "opacity-70 hover:bg-primary/5 hover:text-primary"
               }`}
               onClick={() => setRange(r)}
@@ -364,6 +396,12 @@ export default function Insights() {
           ))}
         </div>
       </div>
+
+      {error && (
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-500">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <div className="rounded-3xl border border-subtle bg-card/80 p-4">
@@ -470,8 +508,6 @@ export default function Insights() {
           </div>
         </BentoCard>
       ) : null}
-
-      <HealthNudgeCard data={dayData} targets={targets} />
 
       <div className="h-4" />
     </div>
