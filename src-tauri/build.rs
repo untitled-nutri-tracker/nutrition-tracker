@@ -7,7 +7,7 @@ fn generate_bindings() {
             "../src-rust-crates/database".to_string(),
             "../src-rust-crates/model".to_string()
         ]),
-        output_path: "../src/generated/".to_string(),
+        output_path: "../src/bindings/".to_string(),
         validation_library: "none".to_string(),
         verbose: Some(true),
         visualize_deps: Some(true),
