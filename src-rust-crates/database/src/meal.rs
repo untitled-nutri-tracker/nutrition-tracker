@@ -8,6 +8,8 @@ use nutrack_model::validate::Validate;
 use rusqlite::{params, Connection, OptionalExtension};
 use std::collections::{BTreeMap, BTreeSet};
 
+const DEMO_SEED_SQL: &str = include_str!("../sql/seed_demo_30_days.sql");
+
 #[derive(Debug, Clone)]
 struct NutritionAggregateRow {
     occurred_at: i64,
@@ -866,6 +868,23 @@ pub async fn build_nlog(days: i64, offset_minutes: i64) -> Result<String, String
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     let conn = manager.connection().map_err(|e| crate::sanitize_db_error(e.to_string()))?;
     build_nlog_with_conn(&conn, days, offset_minutes)
+}
+
+/// Seeds demo data for the last 30 days from a SQL script for consistent demos.
+#[tauri::command]
+pub async fn seed_demo_food_log_30_days() -> Result<String, String> {
+    let manager = crate::DatabaseConnectionManager::global()
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let conn = manager
+        .connection()
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+
+    let before = conn.total_changes();
+    conn.execute_batch(DEMO_SEED_SQL)
+        .map_err(|e| crate::sanitize_db_error(e.to_string()))?;
+    let changed = conn.total_changes().saturating_sub(before);
+
+    Ok(format!("Seeded demo logs for 30 days ({} row changes).", changed))
 }
 
 #[cfg(test)]

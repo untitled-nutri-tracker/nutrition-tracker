@@ -221,6 +221,7 @@ pub fn run() {
             nutrack_database::meal::get_daily_nutrition_totals,
             nutrack_database::meal::get_weekly_nutrition_totals,
             nutrack_database::meal::get_nutrition_trend,
+            nutrack_database::meal::seed_demo_food_log_30_days,
             // AI Database
             nutrack_database::ai::create_chat_session,
             nutrack_database::ai::get_chat_sessions,

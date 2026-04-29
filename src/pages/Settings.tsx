@@ -24,6 +24,7 @@ export default function Settings() {
   const { profile, loading, saving, error, computed, persist, reset } =
     useUserProfile();
   const [exporting, setExporting] = useState(false);
+  const [seedingDemoLogs, setSeedingDemoLogs] = useState(false);
   const { showToast } = useToast();
 
   async function handleExportXlsx() {
@@ -56,6 +57,26 @@ export default function Settings() {
       );
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handleSeedDemoFoodLog() {
+    if (!session.connectedPath?.trim()) {
+      showToast("Connect or create a database first.", "error");
+      return;
+    }
+
+    setSeedingDemoLogs(true);
+    try {
+      const message = await invoke<string>("seed_demo_food_log_30_days");
+      showToast(message || "Demo logs seeded successfully.", "success");
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Failed to seed demo logs",
+        "error"
+      );
+    } finally {
+      setSeedingDemoLogs(false);
     }
   }
 
@@ -170,6 +191,26 @@ export default function Settings() {
 
       {/* ── AI Provider Configuration ── */}
       <ApiKeySection />
+
+      <div className="card pop-in-delay-1 w-full">
+        <div className="text-primary font-semibold">Demo Data</div>
+        <div className="mt-1 text-xs text-muted2">
+          Populate the last 30 days with realistic meal logs for demos.
+        </div>
+        <div className="mt-3.5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs text-muted">
+            This will replace any existing logs in that 30-day window.
+          </div>
+          <button
+            type="button"
+            onClick={handleSeedDemoFoodLog}
+            disabled={seedingDemoLogs || !session.connectedPath}
+            className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {seedingDemoLogs ? "Seeding demo logs..." : "Populate last 30 days"}
+          </button>
+        </div>
+      </div>
       </div>
     </div>
   );
