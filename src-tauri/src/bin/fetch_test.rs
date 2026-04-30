@@ -10,10 +10,7 @@ async fn main() {
             println!("Successfully fetched: {}", facts.serving.food.name);
             println!(
                 "  Calories: {} kcal | Protein: {}g | Carbs: {}g | Fat: {}g",
-                facts.calories_kcal,
-                facts.protein_g,
-                facts.total_carbohydrate_g,
-                facts.fat_g,
+                facts.calories_kcal, facts.protein_g, facts.total_carbohydrate_g, facts.fat_g,
             );
         }
         Err(e) => eprintln!("Error: {}", e),

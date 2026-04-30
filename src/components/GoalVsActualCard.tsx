@@ -1,4 +1,6 @@
-import { formatPercent, getMacroPercent, getMacroZoneLabel, getMacroZoneTone, type MacroTargets } from '../lib/nutritionTargets';
+import { StackedProgressBar } from './charts/StackedProgressBar';
+import { PremiumDonutChart } from './charts/PremiumDonutChart';
+import type { MacroTargets } from '../lib/nutritionTargets';
 
 interface GoalVsActualCardProps {
   period: string;
@@ -11,39 +13,27 @@ interface GoalVsActualCardProps {
   };
 }
 
-function AdherenceBar({
-  label,
-  unit,
-  actual,
-  target,
-}: {
-  label: string;
-  unit: string;
-  actual: number;
-  target: number;
-}) {
-  const ratio = getMacroPercent(actual, target);
-  const pct = Math.min(Math.round(ratio), 200);
-  const clamped = Math.min(pct, 100);
-  const color = ratio >= 85 && ratio <= 115 ? '#34d399' : ratio > 115 ? '#f59e0b' : '#60a5fa';
-
-  return (
-    <div className="ai-goal-row">
-      <div className="ai-goal-row-head">
-        <span>{label}</span>
-        <span className="ai-goal-row-meta">{Math.round(actual)} / {Math.round(target)}{unit} ({formatPercent(pct)})</span>
-      </div>
-      <div className="ai-goal-track">
-        <div className="ai-goal-fill" style={{ width: `${clamped}%`, background: color }} />
-      </div>
-      <div className={`ai-widget-status-line ${getMacroZoneTone(ratio)}`}>
-        {getMacroZoneLabel(ratio)}
-      </div>
-    </div>
-  );
-}
+const METRIC_COLORS = {
+  calories: "var(--metric-calories)",
+  protein: "var(--metric-protein)",
+  carbs: "var(--metric-carbs)",
+  fat: "var(--metric-fat)",
+} as const;
 
 export function GoalVsActualCard({ period, targets, actual }: GoalVsActualCardProps) {
+  const donutData = [
+    { name: 'Protein', value: actual.protein, color: METRIC_COLORS.protein },
+    { name: 'Carbs', value: actual.carbs, color: METRIC_COLORS.carbs },
+    { name: 'Fat', value: actual.fat, color: METRIC_COLORS.fat },
+  ];
+
+  const progressData = [
+    { name: 'Cals', actual: actual.calories, target: targets.calories, color: METRIC_COLORS.calories, unit: 'kcal' },
+    { name: 'Protein', actual: actual.protein, target: targets.protein, color: METRIC_COLORS.protein, unit: 'g' },
+    { name: 'Carbs', actual: actual.carbs, target: targets.carbs, color: METRIC_COLORS.carbs, unit: 'g' },
+    { name: 'Fat', actual: actual.fat, target: targets.fat, color: METRIC_COLORS.fat, unit: 'g' },
+  ];
+
   const adherenceValues = [
     targets.calories > 0 ? actual.calories / targets.calories : 0,
     targets.protein > 0 ? actual.protein / targets.protein : 0,
@@ -56,28 +46,33 @@ export function GoalVsActualCard({ period, targets, actual }: GoalVsActualCardPr
   );
 
   return (
-    <div className="ai-widget-card ai-goal-card">
-      <div className="ai-widget-chart-header">
+    <section className="w-full rounded-3xl border border-subtle bg-card/92 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-6">
+      <div className="flex justify-between items-start">
         <div>
-          <h4 className="ai-widget-chart-label">Goal vs Actual</h4>
-          <div className="ai-widget-chart-title">{`Last ${period} adherence`}</div>
+          <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Goal vs Actual</h4>
+          <div className="text-lg font-semibold tracking-tight text-primary">Last {period} adherence</div>
         </div>
-        <div className="ai-widget-chart-latest">
-          <div className="ai-widget-chart-latest-value">{score}%</div>
-          <div className="ai-widget-chart-latest-label">Avg adherence</div>
+        <div className="flex flex-col items-end">
+          <div className="bg-gradient-to-br from-emerald-300 to-cyan-300 bg-clip-text text-3xl font-bold leading-none tracking-tighter text-transparent">
+            {score}%
+          </div>
+          <div className="mt-1 text-xs font-medium text-muted">Avg adherence</div>
         </div>
       </div>
 
-      <div style={{ fontSize: 10, color: 'rgba(235,225,208,0.62)', marginTop: -2 }}>
-        Calorie, protein, carb, and fat targets are personalized when profile data is available.
+      <div className="-mt-1 text-[11px] leading-relaxed text-muted">
+        Calorie, protein, carb, and fat targets are personalized based on your profile.
       </div>
 
-      <div className="ai-goal-grid">
-        <AdherenceBar label="Calories" unit="kcal" actual={actual.calories} target={targets.calories} />
-        <AdherenceBar label="Protein" unit="g" actual={actual.protein} target={targets.protein} />
-        <AdherenceBar label="Carbs" unit="g" actual={actual.carbs} target={targets.carbs} />
-        <AdherenceBar label="Fat" unit="g" actual={actual.fat} target={targets.fat} />
+      <div className="mt-2 grid grid-cols-1 items-center gap-6 md:grid-cols-2 md:gap-8">
+        <div className="h-[200px]">
+          <PremiumDonutChart data={donutData} />
+        </div>
+
+        <div className="h-[200px]">
+          <StackedProgressBar data={progressData} />
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

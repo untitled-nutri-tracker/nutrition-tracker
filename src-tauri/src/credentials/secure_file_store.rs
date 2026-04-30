@@ -34,16 +34,17 @@ impl SecureFileStore {
     /// Create a new `SecureFileStore` at the given path.
     /// The encryption key is derived from the machine's unique ID.
     pub fn new(vault_path: &std::path::Path) -> Result<Self, String> {
-        let machine_id = machine_uid::get()
-            .unwrap_or_else(|_| "nutrilog-fallback-device-id".to_string());
+        // On desktop, derive encryption key from the machine's hardware ID.
+        // On iOS, this fallback store is never used (keyring/iOS Keychain is always available),
+        // but we need a compilable fallback.
+        #[cfg(not(target_os = "ios"))]
+        let machine_id =
+            machine_uid::get().unwrap_or_else(|_| "nutrilog-fallback-device-id".to_string());
+        #[cfg(target_os = "ios")]
+        let machine_id = "nutrilog-ios-unused-fallback".to_string();
 
         let mut key = [0u8; 32];
-        pbkdf2::pbkdf2_hmac::<Sha256>(
-            machine_id.as_bytes(),
-            PBKDF2_SALT,
-            PBKDF2_ROUNDS,
-            &mut key,
-        );
+        pbkdf2::pbkdf2_hmac::<Sha256>(machine_id.as_bytes(), PBKDF2_SALT, PBKDF2_ROUNDS, &mut key);
 
         Ok(SecureFileStore {
             vault_path: vault_path.to_path_buf(),
@@ -57,8 +58,8 @@ impl SecureFileStore {
             return Ok(Vault::default());
         }
 
-        let data = fs::read(&self.vault_path)
-            .map_err(|e| format!("Failed to read vault file: {}", e))?;
+        let data =
+            fs::read(&self.vault_path).map_err(|e| format!("Failed to read vault file: {}", e))?;
 
         if data.len() < NONCE_LEN {
             return Err("Vault file is corrupted (too small)".into());
@@ -81,8 +82,8 @@ impl SecureFileStore {
 
     /// Encrypt and write the vault to disk.
     fn write_vault(&self, vault: &Vault) -> Result<(), String> {
-        let plaintext = serde_json::to_vec(vault)
-            .map_err(|e| format!("Vault JSON serialize error: {}", e))?;
+        let plaintext =
+            serde_json::to_vec(vault).map_err(|e| format!("Vault JSON serialize error: {}", e))?;
 
         let mut rng = rand::thread_rng();
         let mut nonce_bytes = [0u8; NONCE_LEN];

@@ -30,3 +30,4 @@ npm-debug.log*
 src-ai/node_modules/
 src-ai/data/*.json
 target2/
+.agents/rules/antigravity-rtk-rules.md

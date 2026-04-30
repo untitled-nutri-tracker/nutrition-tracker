@@ -18,7 +18,11 @@ function RoutedApp() {
   const { session, loading } = useDatabaseSession();
 
   if (loading) {
-    return <div className="appLoading">Loading workspace...</div>;
+    return (
+      <div className="flex h-[100dvh] w-full items-center justify-center bg-base text-muted text-sm">
+        Loading workspace…
+      </div>
+    );
   }
 
   if (!session.connectedPath) {

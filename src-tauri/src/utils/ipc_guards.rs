@@ -26,9 +26,7 @@ pub fn sanitize_string(field: &str, value: String, max_len: usize) -> Result<Str
         return Err(format!("{field} cannot be empty."));
     }
     if trimmed.len() > max_len {
-        return Err(format!(
-            "{field} is too long (max {max_len} characters)."
-        ));
+        return Err(format!("{field} is too long (max {max_len} characters)."));
     }
     Ok(trimmed)
 }
@@ -57,10 +55,7 @@ pub fn validate_barcode(value: &str) -> Result<(), String> {
     if value.len() > 50 {
         return Err("Barcode is too long (max 50 characters).".into());
     }
-    if !value
-        .chars()
-        .all(|c| c.is_ascii_alphanumeric() || c == '-')
-    {
+    if !value.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
         return Err("Barcode contains invalid characters.".into());
     }
     Ok(())

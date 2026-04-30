@@ -11,30 +11,38 @@ interface Props {
 
 export default function FoodEntryRow({ entry, onDelete, deleting }: Props) {
   return (
-    <div style={rowStyle}>
+    <div className="flex items-center gap-3 rounded-xl border border-subtle bg-primary/5 px-3 py-2.5 transition-colors">
 
       {/* Left: name + meta */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={nameStyle}>{entry.foodName}</div>
-        <div style={metaStyle}>
+      <div className="min-w-0 flex-1">
+        <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-semibold text-primary">
+          {entry.foodName}
+        </div>
+        <div className="mt-[3px] flex flex-wrap gap-1 text-[11px] text-muted2">
           {entry.brand && <span>{entry.brand} · </span>}
           {entry.servingDesc && <span>{entry.servingDesc} · </span>}
-          <span style={macroChip}>{entry.proteinG}g protein</span>
-          <span style={macroChip}>{entry.carbsG}g carbs</span>
-          <span style={macroChip}>{entry.fatG}g fat</span>
+          <span className="rounded-md border border-subtle bg-primary/5 px-[5px] py-[1px]">
+            {Math.round(entry.proteinG)}g protein
+          </span>
+          <span className="rounded-md border border-subtle bg-primary/5 px-[5px] py-[1px]">
+            {Math.round(entry.carbsG)}g carbs
+          </span>
+          <span className="rounded-md border border-subtle bg-primary/5 px-[5px] py-[1px]">
+            {Math.round(entry.fatG)}g fat
+          </span>
         </div>
       </div>
 
       {/* Right: calories + delete */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-        <div style={calStyle}>
-          <span style={calNum}>{entry.calories}</span>
-          <span style={calLabel}>kcal</span>
+      <div className="flex shrink-0 items-center gap-3">
+        <div className="flex flex-col items-end leading-[1.1]">
+          <span className="text-[15px] font-extrabold text-primary">{Math.round(entry.calories)}</span>
+          <span className="mt-[1px] text-[10px] text-muted2">kcal</span>
         </div>
         <button
           onClick={() => onDelete(entry.id)}
           disabled={deleting}
-          style={deleteBtnStyle}
+          className="cursor-pointer rounded-lg border border-transparent bg-transparent px-1.5 py-1 text-[11px] leading-none text-primary/25 transition-colors hover:border-red-500/50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Delete entry"
           title="Delete"
         >
@@ -45,72 +53,3 @@ export default function FoodEntryRow({ entry, onDelete, deleting }: Props) {
     </div>
   );
 }
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const rowStyle: React.CSSProperties = {
-  display:      "flex",
-  alignItems:   "center",
-  gap:          12,
-  padding:      "10px 12px",
-  borderRadius: 11,
-  border:       "1px solid rgba(255,255,255,0.06)",
-  background:   "rgba(255,255,255,0.03)",
-  transition:   "background .1s ease",
-};
-
-const nameStyle: React.CSSProperties = {
-  fontSize:     13,
-  fontWeight:   600,
-  color:        "var(--text)",
-  overflow:     "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace:   "nowrap",
-};
-
-const metaStyle: React.CSSProperties = {
-  marginTop: 3,
-  fontSize:  11,
-  color:     "var(--muted2)",
-  display:   "flex",
-  flexWrap:  "wrap",
-  gap:       4,
-};
-
-const macroChip: React.CSSProperties = {
-  background:   "rgba(255,255,255,0.06)",
-  border:       "1px solid rgba(255,255,255,0.08)",
-  borderRadius: 6,
-  padding:      "1px 5px",
-};
-
-const calStyle: React.CSSProperties = {
-  display:       "flex",
-  flexDirection: "column",
-  alignItems:    "flex-end",
-  lineHeight:    1.1,
-};
-
-const calNum: React.CSSProperties = {
-  fontSize:   15,
-  fontWeight: 800,
-  color:      "var(--text)",
-};
-
-const calLabel: React.CSSProperties = {
-  fontSize: 10,
-  color:    "var(--muted2)",
-  marginTop: 1,
-};
-
-const deleteBtnStyle: React.CSSProperties = {
-  background:   "transparent",
-  border:       "1px solid transparent",
-  borderRadius: 8,
-  color:        "rgba(255,255,255,0.25)",
-  cursor:       "pointer",
-  fontSize:     11,
-  padding:      "4px 6px",
-  transition:   "color .1s, border-color .1s",
-  lineHeight:   1,
-};

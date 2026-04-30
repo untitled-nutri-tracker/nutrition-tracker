@@ -1,11 +1,11 @@
 //! KeyringStore — OS-native credential storage via the `keyring` crate.
 //!
 //! Uses macOS Keychain, Windows Credential Manager, or Linux Secret Service.
-//! 
+//!
 //! **UX Improvement:** All keys are stored in a single JSON blob under ONE
 //! keychain entry (`__nutrilog_vault__`). This prevents the OS from prompting
-//! the user multiple times (once per API key). Furthermore, the vault is 
-//! cached in memory after the first read, so the user is only prompted at most 
+//! the user multiple times (once per API key). Furthermore, the vault is
+//! cached in memory after the first read, so the user is only prompted at most
 //! once per session (if they don't click "Always Allow").
 
 use super::CredentialStore;
@@ -69,8 +69,8 @@ impl KeyringStore {
         let entry = Entry::new(APP_SERVICE, VAULT_KEY)
             .map_err(|e| format!("Keyring entry error: {}", e))?;
 
-        let json = serde_json::to_string(vault)
-            .map_err(|e| format!("JSON serialize error: {}", e))?;
+        let json =
+            serde_json::to_string(vault).map_err(|e| format!("JSON serialize error: {}", e))?;
 
         entry
             .set_password(&json)

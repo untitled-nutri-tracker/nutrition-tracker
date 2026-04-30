@@ -7,20 +7,29 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "scan:style-debt": "sh -c \"echo '[inline styles]' && grep -RIn 'style={{' src/pages src/components || true && echo '' && echo '[raw color literals]' && grep -RInE '#[0-9A-Fa-f]{3,8}|rgba\\(|hsl\\(' src/pages src/components || true && echo '' && echo '[safe-area usage]' && grep -RInE 'safe-area|env\\(safe-area-inset' src || true\""
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "@tailwindcss/vite": "^4.2.4",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-barcode-scanner": "^2.4.4",
     "@tauri-apps/plugin-dialog": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
     "canvas-confetti": "^1.9.4",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.38.0",
     "react": "^19.1.0",
     "react-confetti": "^6.4.0",
     "react-dom": "^19.1.0",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.13.1"
+    "react-router-dom": "^7.13.1",
+    "recharts": "^3.8.1",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.2.4"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

@@ -22,6 +22,8 @@ pub struct DatabaseSessionInfo {
     connected_path: Option<String>,
     last_path: Option<String>,
     default_database_directory: String,
+    /// "desktop" or "mobile" — used by the frontend to decide whether to show file pickers.
+    platform: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -131,6 +133,12 @@ pub fn get_database_session(app: AppHandle) -> Result<DatabaseSessionInfo, Strin
     let manager = crate::DatabaseConnectionManager::global().map_err(|e| e.to_string())?;
     let prefs = load_preferences(&app)?;
 
+    let platform = if cfg!(target_os = "ios") || cfg!(target_os = "android") {
+        "mobile"
+    } else {
+        "desktop"
+    };
+
     Ok(DatabaseSessionInfo {
         connected_path: manager
             .current_path()
@@ -140,6 +148,7 @@ pub fn get_database_session(app: AppHandle) -> Result<DatabaseSessionInfo, Strin
         default_database_directory: default_database_directory(&app)?
             .to_string_lossy()
             .into_owned(),
+        platform: platform.to_string(),
     })
 }
 

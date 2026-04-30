@@ -24,51 +24,15 @@ export default function StatCard({
   style,
 }: StatCardProps) {
   return (
-    <div style={{ ...cardStyle, ...style }}>
-      <div style={labelStyle}>{label}</div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 3, marginTop: 4 }}>
-        <span
-          style={{
-            ...valueStyle,
-            color: accent ? "rgba(124,92,255,0.95)" : "var(--text)",
-          }}
-        >
+    <div className="rounded-xl border border-subtle bg-primary/5 px-3 py-2.5 transition-colors" style={style}>
+      <div className="text-[11px] text-muted2">{label}</div>
+      <div className="mt-1 flex items-baseline gap-1">
+        <span className={`text-lg font-extrabold leading-none ${accent ? "text-indigo-400" : "text-primary"}`}>
           {value}
         </span>
-        {unit && <span style={unitStyle}>{unit}</span>}
+        {unit && <span className="text-[11px] text-muted2">{unit}</span>}
       </div>
-      {detail && <div style={detailStyle}>{detail}</div>}
+      {detail && <div className="mt-1 text-[11px] text-muted2">{detail}</div>}
     </div>
   );
 }
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const cardStyle: React.CSSProperties = {
-  border:       "1px solid var(--border)",
-  borderRadius: 12,
-  padding:      "10px 12px",
-  background:   "rgba(255,255,255,0.03)",
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: 11,
-  color:    "var(--muted2)",
-};
-
-const valueStyle: React.CSSProperties = {
-  fontSize:   18,
-  fontWeight: 800,
-  lineHeight: 1,
-};
-
-const unitStyle: React.CSSProperties = {
-  fontSize: 11,
-  color:    "var(--muted2)",
-};
-
-const detailStyle: React.CSSProperties = {
-  fontSize:  11,
-  color:     "var(--muted2)",
-  marginTop: 3,
-};

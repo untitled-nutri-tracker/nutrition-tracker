@@ -34,16 +34,23 @@ impl SearchProduct {
     /// Build a SearchProduct from OpenFoodFacts nutriments JSON.
     fn from_off(p: &Value) -> Option<Self> {
         let name = p["product_name"].as_str().unwrap_or("").to_string();
-        if name.is_empty() { return None; }
+        if name.is_empty() {
+            return None;
+        }
         let nut = &p["nutriments"];
         Some(Self {
             product_name: name,
             barcode: p["code"].as_str().unwrap_or("").to_string(),
             brands: p["brands"].as_str().unwrap_or("").to_string(),
-            categories: p["categories"].as_str()
+            categories: p["categories"]
+                .as_str()
                 .and_then(|c| c.split(',').next())
-                .unwrap_or("").to_string(),
-            image_url: p["image_front_small_url"].as_str().unwrap_or("").to_string(),
+                .unwrap_or("")
+                .to_string(),
+            image_url: p["image_front_small_url"]
+                .as_str()
+                .unwrap_or("")
+                .to_string(),
             calories_kcal: f32val(nut, "energy-kcal_100g"),
             fat_g: f32val(nut, "fat_100g"),
             saturated_fat_g: f32val(nut, "saturated-fat_100g"),
@@ -115,10 +122,7 @@ pub async fn fetch(barcode: &str) -> Result<NutritionFacts, String> {
         return Err(format!("OpenFoodFacts API error: HTTP {}", res.status()));
     }
 
-    let json: Value = res
-        .json()
-        .await
-        .map_err(map_network_error)?; // user-friendly decode errors
+    let json: Value = res.json().await.map_err(map_network_error)?; // user-friendly decode errors
 
     if json["status"].as_i64() != Some(1) {
         return Err(format!("Product not found for barcode: {}", barcode));
@@ -233,4 +237,3 @@ fn urlencoding(s: &str) -> String {
         })
         .collect()
 }
-
