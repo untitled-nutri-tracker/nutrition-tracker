@@ -5,13 +5,19 @@
  * The frontend can store keys and check status, but NEVER retrieve
  * the plaintext key — only masked previews.
  */
-import { invoke } from "@tauri-apps/api/core";
+import {
+  deleteCredential,
+  getCredentialPreview,
+  hasCredential,
+  listCredentials as listCredentialsCommand,
+  storeCredential,
+} from "../bindings";
 
 const USE_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 export interface CredentialInfo {
   service: string;
-  has_key: boolean;
+  hasKey: boolean;
   preview: string;
 }
 
@@ -85,31 +91,31 @@ export function useCredentials() {
       console.warn("[useCredentials] Not in Tauri — skipping store");
       return;
     }
-    await invoke("store_credential", { service, key });
+    await storeCredential({ service, key });
   }
 
   /** Delete a stored credential. */
   async function deleteKey(service: string): Promise<void> {
     if (!USE_TAURI) return;
-    await invoke("delete_credential", { service });
+    await deleteCredential({ service });
   }
 
   /** Check if a credential exists. */
   async function hasKey(service: string): Promise<boolean> {
     if (!USE_TAURI) return false;
-    return await invoke<boolean>("has_credential", { service });
+    return await hasCredential({ service });
   }
 
   /** Get a masked preview of a stored key (e.g. "sk-abc…xyz"). */
   async function getPreview(service: string): Promise<string> {
     if (!USE_TAURI) return "";
-    return await invoke<string>("get_credential_preview", { service });
+    return await getCredentialPreview({ service });
   }
 
   /** List all stored credentials with masked previews. */
   async function listCredentials(): Promise<CredentialInfo[]> {
     if (!USE_TAURI) return [];
-    return await invoke<CredentialInfo[]>("list_credentials");
+    return await listCredentialsCommand();
   }
 
   return { storeKey, deleteKey, hasKey, getPreview, listCredentials };

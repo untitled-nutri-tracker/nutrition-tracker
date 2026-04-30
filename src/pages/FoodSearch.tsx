@@ -1,7 +1,15 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
-import { invoke } from "@tauri-apps/api/core";
 import { createEntry } from "../lib/foodLogStore";
+import {
+  createFood,
+  createMeal,
+  createMealItem,
+  createNutritionFacts,
+  createServing,
+  fetchFoodByBarcode,
+  searchFoodOnline,
+} from "../bindings";
 
 // Toggle: false = localStorage (works now), true = Tauri IPC
 const USE_TAURI = false;
@@ -102,10 +110,10 @@ export default function LogFood() {
     setError(null);
     setConfirmProduct(null); // clear confirmation card on new search
     try {
-      const result = await invoke<SearchResult>("search_food_online", {
+      const result = await searchFoodOnline({
         query: query.trim(),
         page: 1,
-      });
+      }) as unknown as SearchResult;
       setResults(rankResults(result.products, query));
     } catch (e: any) {
       setError(e?.toString() ?? "Search failed");
@@ -140,9 +148,9 @@ export default function LogFood() {
     setConfirmQty("1");
     setScannedBarcode(code);
     try {
-      const result = await invoke<SearchResult>("fetch_food_by_barcode", {
+      const result = await fetchFoodByBarcode({
         barcode: code,
-      });
+      }) as unknown as SearchResult;
       if (result.products.length > 0) {
         setConfirmProduct(result.products[0]);
         setResults([]);
@@ -263,20 +271,20 @@ export default function LogFood() {
     // Tauri IPC path
     const now = Math.floor(Date.now() / 1000);
     const occurredAt = Math.floor(new Date(date + "T12:00:00").getTime() / 1000);
-    const food = await invoke<any>("create_food", {
+    const food = await createFood({
       food: {
         id: 0, name: product.product_name, brand: product.brands,
         category: product.categories, source: "openfoodfacts",
         refUrl: "", barcode: product.barcode, createdAt: now, updatedAt: now,
       },
     });
-    const serving = await invoke<any>("create_serving", {
+    const serving = await createServing({
       serving: {
         id: 0, food, amount: 100, unit: "GRAM", gramsEquiv: 100,
         isDefault: true, createdAt: now, updatedAt: now,
       },
     });
-    await invoke("create_nutrition_facts", {
+    await createNutritionFacts({
       nutritionFacts: {
         SERVING: serving,
         CALORIES_KCAL: product.calories_kcal || 0,
@@ -295,14 +303,14 @@ export default function LogFood() {
         IRON_MG: product.iron_mg || 0,
       },
     });
-    const meal = await invoke<any>("create_meal", {
+    const meal = await createMeal({
       meal: {
-        id: 0, occurredAt, mealType: mealType.toUpperCase(),
+        id: 0, occurredAt, mealType: mealType.toUpperCase() as any,
         title: mealType.charAt(0).toUpperCase() + mealType.slice(1),
         note: "", createdAt: now, updatedAt: now,
       },
     });
-    await invoke("create_meal_item", {
+    await createMealItem({
       mealItem: {
         id: 0, meal, food, serving, quantity: qty,
         note: "", createdAt: now, updatedAt: now,
@@ -341,20 +349,20 @@ export default function LogFood() {
     // Tauri IPC path
     const now = Math.floor(Date.now() / 1000);
     const occurredAt = Math.floor(new Date(date + "T12:00:00").getTime() / 1000);
-    const food = await invoke<any>("create_food", {
+    const food = await createFood({
       food: {
         id: 0, name: product.product_name, brand: product.brands,
         category: product.categories, source: "openfoodfacts",
         refUrl: "", barcode: product.barcode, createdAt: now, updatedAt: now,
       },
     });
-    const serving = await invoke<any>("create_serving", {
+    const serving = await createServing({
       serving: {
         id: 0, food, amount: 100, unit: "GRAM", gramsEquiv: 100,
         isDefault: true, createdAt: now, updatedAt: now,
       },
     });
-    await invoke("create_nutrition_facts", {
+    await createNutritionFacts({
       nutritionFacts: {
         SERVING: serving,
         CALORIES_KCAL: product.calories_kcal || 0,
@@ -373,14 +381,14 @@ export default function LogFood() {
         IRON_MG: product.iron_mg || 0,
       },
     });
-    const meal = await invoke<any>("create_meal", {
+    const meal = await createMeal({
       meal: {
-        id: 0, occurredAt, mealType: mealType.toUpperCase(),
+        id: 0, occurredAt, mealType: mealType.toUpperCase() as any,
         title: mealType.charAt(0).toUpperCase() + mealType.slice(1),
         note: "", createdAt: now, updatedAt: now,
       },
     });
-    await invoke("create_meal_item", {
+    await createMealItem({
       mealItem: {
         id: 0, meal, food, serving, quantity: qty,
         note: "", createdAt: now, updatedAt: now,
