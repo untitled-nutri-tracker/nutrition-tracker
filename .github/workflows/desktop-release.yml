@@ -2,15 +2,66 @@ name: Desktop Release
 
 on:
   push:
-    tags:
-      - 'v*' # Triggers automatically when you push a tag like v0.1.0
+    branches:
+      - main # Triggers automatically when you merge code into main
   workflow_dispatch: # Allows you to manually trigger a release from the GitHub UI
 
 permissions:
   contents: write
 
 jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      is_new_version: ${{ steps.check.outputs.is_new_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history and tags
+      
+      - name: Strict Version Check
+        id: check
+        run: |
+          TAURI_VER=$(jq -r '.version' src-tauri/tauri.conf.json)
+          PKG_VER=$(jq -r '.version' package.json)
+          
+          # Edge Case 1: Mismatched versions
+          if [ "$TAURI_VER" != "$PKG_VER" ]; then
+            echo "Error: Version mismatch! tauri.conf.json ($TAURI_VER) != package.json ($PKG_VER)"
+            echo "is_new_version=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          # Edge Case 2: Invalid SemVer format
+          if ! [[ "$TAURI_VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "Error: Version $TAURI_VER is not valid SemVer format."
+            echo "is_new_version=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          # Edge Case 3: Downgrading to a lower version
+          LATEST_TAG=$(git tag -l "app-v*" | sed 's/^app-v//' | sort -V | tail -n 1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No previous releases found. Proceeding with initial release $TAURI_VER."
+            echo "is_new_version=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          # Compare versions using GNU sort
+          HIGHEST=$(printf "%s\n%s" "$LATEST_TAG" "$TAURI_VER" | sort -V | tail -n 1)
+          
+          if [ "$HIGHEST" = "$TAURI_VER" ] && [ "$TAURI_VER" != "$LATEST_TAG" ]; then
+            echo "Success: $TAURI_VER is strictly greater than previous latest ($LATEST_TAG). Proceeding."
+            echo "is_new_version=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Skipping: Proposed version $TAURI_VER is NOT strictly greater than latest release $LATEST_TAG."
+            echo "is_new_version=false" >> "$GITHUB_OUTPUT"
+          fi
+
   release-desktop:
+    needs: check-version
+    if: needs.check-version.outputs.is_new_version == 'true'
     permissions:
       contents: write
     strategy:
@@ -56,8 +107,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # By leaving tagName blank, Tauri automatically uses the pushed git tag (e.g. "v1.0.0")
-          releaseName: 'Nutrition Tracker ${{ github.ref_name }}'
+          # Automatically uses the version from your tauri.conf.json (e.g. "app-v0.1.0")
+          tagName: app-v__VERSION__
+          releaseName: 'Nutrition Tracker v__VERSION__'
           releaseBody: 'See the assets below to download the latest Mac Desktop installer.'
           releaseDraft: false
           prerelease: false
