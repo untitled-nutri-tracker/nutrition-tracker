@@ -1,6 +1,7 @@
 import { useNetwork } from "../lib/NetworkContext";
 import { useState, useRef, useEffect, useMemo, lazy, Suspense, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { Basket, ChatCircleDots, Lightning, List, Robot, SpinnerGap } from "@phosphor-icons/react";
 import { LLM_PROVIDERS } from "../hooks/useCredentials";
 import { useAiConfig } from "../hooks/useAiConfig";
 import { loadProfile } from "../lib/profileStore";
@@ -16,8 +17,6 @@ import {
 } from "../generated/commands";
 import { AiChatSession, type AiChatMessage, NutritionTrendPoint, type AppUserProfile } from "../generated/types";
 import ReactMarkdown from "react-markdown";
-import "../styles/ai-advisor.css";
-
 const ConfirmLogCard = lazy(() =>
   import("../components/ConfirmLogCard").then((module) => ({ default: module.ConfirmLogCard })),
 );
@@ -49,7 +48,6 @@ interface ChatMessage {
 interface GoalOption {
   value: string;
   label: string;
-  emoji: string;
 }
 
 interface ContextOption {
@@ -58,17 +56,17 @@ interface ContextOption {
 }
 
 const QUICK_PROMPTS = [
-  { label: "📊 Weekly Digest", prompt: "Generate my Weekly Nutrition Report Card. Include: (1) daily average macros vs my targets, (2) best and worst days this week, (3) consistency patterns like meal skipping or late-night eating, (4) my top 3 action items for next week. Set context to Last 7 Days." },
-  { label: "❓ Simulate a Meal", prompt: "I'm thinking about eating a Big Mac for lunch. Simulate the macros for me and tell me how it affects my daily limits." },
-  { label: "📅 Plan Tomorrow", prompt: "Based on my macro deficits, generate a healthy 3-meal plan for tomorrow and automatically log it into my diary." },
-  { label: "🛒 Build Grocery List", prompt: "Look at my diet and suggest 3 ingredients I should buy to improve my nutrition, then add them to my grocery list." },
-  { label: "🔍 Audit This", prompt: "Audit the ingredients in a standard Protein Bar. Tell me if it's healthy." },
+  { label: "Weekly Digest", prompt: "Generate my Weekly Nutrition Report Card. Include: (1) daily average macros vs my targets, (2) best and worst days this week, (3) consistency patterns like meal skipping or late-night eating, (4) my top 3 action items for next week. Set context to Last 7 Days." },
+  { label: "Simulate a Meal", prompt: "I'm thinking about eating a Big Mac for lunch. Simulate the macros for me and tell me how it affects my daily limits." },
+  { label: "Plan Tomorrow", prompt: "Based on my macro deficits, generate a healthy 3-meal plan for tomorrow and automatically log it into my diary." },
+  { label: "Build Grocery List", prompt: "Look at my diet and suggest 3 ingredients I should buy to improve my nutrition, then add them to my grocery list." },
+  { label: "Audit This", prompt: "Audit the ingredients in a standard Protein Bar. Tell me if it's healthy." },
 ];
 
 const GOAL_OPTIONS: GoalOption[] = [
-  { value: "weight_loss", label: "Cut", emoji: "🔥" },
-  { value: "maintenance", label: "Maintain", emoji: "⚖️" },
-  { value: "muscle_gain", label: "Bulk", emoji: "💪" },
+  { value: "weight_loss", label: "Cut" },
+  { value: "maintenance", label: "Maintain" },
+  { value: "muscle_gain", label: "Bulk" },
 ];
 
 const CONTEXT_OPTIONS: ContextOption[] = [
@@ -152,12 +150,12 @@ function TrendDataWidget({ metric, period }: { metric: TrendMetric; period: stri
     fetchData();
   }, [metric, period]);
 
-  if (loading) return <div className="ai-widget-loading">Loading trend data...</div>;
-  if (widgetError) return <div className="ai-widget-state">{widgetError}</div>;
-  if (!data.length) return <div className="ai-widget-state">No nutrition data available for this period yet.</div>;
+  if (loading) return <div className="mt-2 mb-2 text-xs text-amber-200/80">Loading trend data...</div>;
+  if (widgetError) return <div className="mt-2 mb-2 text-xs text-amber-200/80 border border-dashed border-amber-200/20 rounded-[10px] px-2.5 py-2 bg-amber-100/5">{widgetError}</div>;
+  if (!data.length) return <div className="mt-2 mb-2 text-xs text-amber-200/80 border border-dashed border-amber-200/20 rounded-[10px] px-2.5 py-2 bg-amber-100/5">No nutrition data available for this period yet.</div>;
 
   return (
-    <Suspense fallback={<div className="ai-widget-loading">Loading chart...</div>}>
+    <Suspense fallback={<div className="mt-2 mb-2 text-xs text-amber-200/80">Loading chart...</div>}>
       <NutritionChartCard 
         data={data} 
         metric={metric}
@@ -223,12 +221,12 @@ function MultiMacroTrendWidget({ period, metrics, goal }: { period: string; metr
     };
   }, [period, goal]);
 
-  if (loading) return <div className="ai-widget-loading">Loading multi-macro trend...</div>;
-  if (widgetError) return <div className="ai-widget-state">{widgetError}</div>;
-  if (!data.length) return <div className="ai-widget-state">No trend data available for this period yet.</div>;
+  if (loading) return <div className="mt-2 mb-2 text-xs text-amber-200/80">Loading multi-macro trend...</div>;
+  if (widgetError) return <div className="mt-2 mb-2 text-xs text-amber-200/80 border border-dashed border-amber-200/20 rounded-[10px] px-2.5 py-2 bg-amber-100/5">{widgetError}</div>;
+  if (!data.length) return <div className="mt-2 mb-2 text-xs text-amber-200/80 border border-dashed border-amber-200/20 rounded-[10px] px-2.5 py-2 bg-amber-100/5">No trend data available for this period yet.</div>;
 
   return (
-    <Suspense fallback={<div className="ai-widget-loading">Loading chart...</div>}>
+    <Suspense fallback={<div className="mt-2 mb-2 text-xs text-amber-200/80">Loading chart...</div>}>
       <MultiMacroTrendCard data={data} metrics={metrics} period={period} targets={targets} />
     </Suspense>
   );
@@ -280,9 +278,9 @@ function GoalVsActualWidget({ period, goal }: { period: string; goal: string }) 
     fetchData();
   }, [period, goal]);
 
-  if (loading) return <div className="ai-widget-loading">Loading goal comparison...</div>;
-  if (widgetError) return <div className="ai-widget-state">{widgetError}</div>;
-  if (!data.length) return <div className="ai-widget-state">No data available for goal comparison yet.</div>;
+  if (loading) return <div className="mt-2 mb-2 text-xs text-amber-200/80">Loading goal comparison...</div>;
+  if (widgetError) return <div className="mt-2 mb-2 text-xs text-amber-200/80 border border-dashed border-amber-200/20 rounded-[10px] px-2.5 py-2 bg-amber-100/5">{widgetError}</div>;
+  if (!data.length) return <div className="mt-2 mb-2 text-xs text-amber-200/80 border border-dashed border-amber-200/20 rounded-[10px] px-2.5 py-2 bg-amber-100/5">No data available for goal comparison yet.</div>;
 
   const divisor = Math.max(data.length, 1);
   const targets = getNutritionTargets(profile, goal);
@@ -304,7 +302,7 @@ function GoalVsActualWidget({ period, goal }: { period: string; goal: string }) 
   };
 
   return (
-    <Suspense fallback={<div className="ai-widget-loading">Loading card...</div>}>
+    <Suspense fallback={<div className="mt-2 mb-2 text-xs text-amber-200/80">Loading card...</div>}>
       <GoalVsActualCard period={period} targets={targets} actual={avgActual} />
     </Suspense>
   );
@@ -322,6 +320,14 @@ export default function AiAdvisor() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isGroceryOpen, setIsGroceryOpen] = useState(false);
   const [isControlsOpen, setIsControlsOpen] = useState(false);
+  useEffect(() => {
+    if (isControlsOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [isControlsOpen]);
   const [startInNewSession, setStartInNewSession] = useState(false);
   const [sessionLoading, setSessionLoading] = useState(false);
 
@@ -571,7 +577,7 @@ export default function AiAdvisor() {
         ...prev,
         aiMsg,
         ...(assistantSaveFailed
-          ? [{ role: "assistant" as const, content: "⚠️ I answered, but I could not save this reply to session history." }]
+          ? [{ role: "assistant" as const, content: "Warning: I answered, but I could not save this reply to session history." }]
           : []),
       ]);
       
@@ -589,7 +595,7 @@ export default function AiAdvisor() {
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: `⚠️ ${helpText}` },
+        { role: "assistant", content: `Warning: ${helpText}` },
       ]);
     } finally {
       setLoading(false);
@@ -788,18 +794,11 @@ export default function AiAdvisor() {
   };
 
   return (
-    <div className="page-enter pop-in ai-advisor-shell">
+    <div className="page-enter flex h-full min-h-0 w-full flex-col gap-0 overflow-hidden p-0">
       {(!isOnline && selectedProvider !== "ollama") && (
-        <div
-          className="card"
-          style={{
-            border: "1px solid rgba(255, 180, 0, 0.3)",
-            background: "rgba(255, 180, 0, 0.06)",
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ fontWeight: 600 }}>You're offline</div>
-          <div style={{ marginTop: 6, color: "var(--muted)" }}>
+        <div className="shrink-0 mx-4 mt-4 mb-0 p-3.5 rounded-[18px] border border-amber-500/30 bg-amber-500/10 backdrop-blur-md sm:mx-5 md:mx-6">
+          <div className="font-semibold">You're offline</div>
+          <div className="mt-1.5 text-muted">
             Cloud AI advice requires an internet connection. Switch to <strong>Ollama (Local)</strong> or connect to the
             network to continue.
           </div>
@@ -807,51 +806,50 @@ export default function AiAdvisor() {
       )}
 
       {/* Toolbar */}
-      <div className="ai-advisor-toolbar">
-        <div className="ai-advisor-toolbar-left">
+      <div className="m-4 shrink-0 flex flex-wrap items-center justify-between gap-2 rounded-[18px] border border-subtle bg-card/90 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] max-sm:m-3 max-sm:flex-col max-sm:items-start max-sm:px-3 max-sm:py-2">
+        <div className="flex items-center gap-1 flex-wrap min-w-0">
           <button
-            className="ai-advisor-toolbar-action ai-advisor-controls-btn"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-subtle bg-primary/5 text-muted transition-all hover:-translate-y-px hover:border-subtle hover:text-primary"
             onClick={() => setIsControlsOpen((prev) => !prev)}
             title="Open chat controls"
             aria-label="Open chat controls"
             aria-haspopup="dialog"
             aria-expanded={isControlsOpen}
           >
-            <span aria-hidden="true">☰</span>
+            <List size={18} weight="bold" />
           </button>
-          <span className="ai-advisor-chip provider">{providerConfig.name}</span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-semibold whitespace-nowrap max-w-[180px] overflow-hidden text-ellipsis bg-indigo-500/12 text-indigo-300/95 border border-indigo-500/25">{providerConfig.name}</span>
           {selectedModel && (
-            <span className="ai-advisor-chip model" title={selectedModel}>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-semibold whitespace-nowrap max-w-[180px] overflow-hidden text-ellipsis bg-cyan-500/10 text-cyan-300/90 border border-cyan-500/20" title={selectedModel}>
               {selectedModel}
             </span>
           )}
           {selectedProvider === "ollama" ? (
-            <span className="ai-advisor-chip local">🔒 Local</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.04em] bg-emerald-500/10 text-emerald-400/90 border border-emerald-500/25">Local</span>
           ) : (
-            <span className="ai-advisor-chip cloud">☁️ Cloud</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.04em] bg-amber-500/10 text-amber-400/90 border border-amber-500/20">Cloud</span>
           )}
         </div>
 
-        <div className="ai-advisor-toolbar-right">
+        <div className="flex items-center gap-1 shrink-0 max-sm:w-full">
           {messages.length > 0 && (
             <button
-              className="ai-advisor-toolbar-action"
+              className="bg-indigo-500/10 border border-indigo-500/20 text-muted px-2.5 py-1 rounded-md cursor-pointer flex items-center transition-all hover:bg-indigo-500/15 hover:border-indigo-500/40 hover:-translate-y-px"
               onClick={startNewChat}
               title="New Chat"
             >
               <span>+</span>
-              <span style={{ fontSize: 11, fontWeight: "bold", marginLeft: 4 }}>New Chat</span>
+              <span className="ml-1 text-[11px] font-bold">New Chat</span>
             </button>
           )}
 
           <button
-            className="ai-advisor-toolbar-action"
+            className={`border px-2.5 py-1 rounded-md cursor-pointer flex items-center transition-all hover:-translate-y-px ${isGroceryOpen ? "border-emerald-500/40 bg-emerald-500/15 text-primary" : "border-indigo-500/20 bg-indigo-500/10 text-muted hover:bg-indigo-500/15 hover:border-indigo-500/40"}`}
             onClick={() => setIsGroceryOpen(!isGroceryOpen)}
             title="Toggle Grocery List"
-            style={{ background: isGroceryOpen ? 'rgba(16, 185, 129, 0.15)' : '', borderColor: isGroceryOpen ? 'rgba(16, 185, 129, 0.4)' : '' }}
           >
-            <span>🛒</span>
-            <span style={{ fontSize: 11, fontWeight: "bold", marginLeft: 4 }}>
+            <Basket size={14} weight="duotone" />
+            <span className="ml-1 text-[11px] font-bold">
               List {groceryList.length > 0 && `(${groceryList.length})`}
             </span>
           </button>
@@ -860,24 +858,24 @@ export default function AiAdvisor() {
 
       {isControlsOpen && (
         <div
-          className="ai-controls-overlay"
+          className="absolute inset-0 z-[1200] flex items-stretch justify-center bg-gradient-to-br from-[rgba(68,81,124,0.20)] via-[rgba(6,8,12,0.76)] to-[rgba(20,90,90,0.18)] p-2.5 backdrop-blur-md max-sm:items-end max-sm:p-0"
           onClick={() => setIsControlsOpen(false)}
           role="presentation"
         >
           <div
-            className="ai-controls-panel card"
+            className="w-[min(720px,95%)] max-h-[90vh] overflow-hidden border border-white/[0.12] bg-card shadow-[0_18px_50px_rgba(0,0,0,0.6)] rounded-[24px] flex flex-col m-auto max-sm:w-full max-sm:rounded-[24px_24px_0_0] max-sm:max-h-[95vh]"
             role="dialog"
             aria-label="Chat controls"
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="ai-controls-header">
+            <div className="flex justify-between items-start gap-2.5 px-5 py-4 border-b border-white/[0.07] sticky top-0 z-[2] bg-gradient-to-b from-[#1a1e29]/98 to-[#1a1e29]/93 max-sm:px-4 max-sm:py-3">
               <div>
-                <div className="ai-controls-title">Chat Controls</div>
-                <div className="ai-controls-subtitle">Adjust advisor settings and jump between sessions.</div>
+                <div className="text-base font-[800] text-muted tracking-[0.01em] max-sm:text-[15px]">Chat Controls</div>
+                <div className="mt-1 text-sm leading-relaxed text-muted max-sm:text-[11px]">Adjust advisor settings and jump between sessions.</div>
               </div>
               <button
-                className="ai-controls-close"
+                className="border border-subtle bg-card/80 text-muted rounded-[10px] w-8 h-8 cursor-pointer text-[19px] leading-none hover:text-primary hover:border-blue-300/60 hover:bg-blue-300/15"
                 onClick={() => setIsControlsOpen(false)}
                 title="Close controls"
               >
@@ -885,55 +883,54 @@ export default function AiAdvisor() {
               </button>
             </div>
 
-            <div className="ai-controls-section">
-              <div className="ai-controls-section-title">Goal</div>
-              <div className="ai-controls-pill-row">
+            <div className="flex-1 overflow-y-auto px-5 pt-5 pb-3 flex flex-col gap-6 max-sm:px-4 max-sm:pt-4">
+              <div className="text-xs font-bold text-muted uppercase tracking-[0.08em]">Goal</div>
+              <div className="flex flex-wrap gap-2 max-sm:gap-1.5">
                 {GOAL_OPTIONS.map((option) => (
                   <button
                     key={option.value}
-                    className={`ai-controls-pill ${goal === option.value ? "active" : ""}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold cursor-pointer border transition-all hover:border-blue-300/64 hover:bg-blue-300/18 hover:-translate-y-px max-sm:text-[11px] max-sm:px-2.5 max-sm:py-2 ${goal === option.value ? "border-blue-400/78 bg-gradient-to-br from-indigo-400/34 to-sky-400/26 text-primary" : "border-white/[0.26] bg-card/80 text-muted"}`}
                     onClick={() => {
                       localStorage.setItem("nutrilog_goal", option.value);
                       setGoal(option.value);
                     }}
                   >
-                    <span>{option.emoji}</span>
                     <span>{option.label}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="ai-controls-section">
-              <div className="ai-controls-section-title">Context Window</div>
-              <div className="ai-controls-pill-row">
+            <div className="px-5 py-3 flex flex-col gap-6 max-sm:px-4">
+              <div className="text-xs font-bold text-muted uppercase tracking-[0.08em]">Context Window</div>
+              <div className="flex flex-wrap gap-2 max-sm:gap-1.5">
                 {CONTEXT_OPTIONS.map((option) => (
                   <button
                     key={option.value}
-                    className={`ai-controls-pill ${contextDays === option.value ? "active" : ""}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold cursor-pointer border transition-all hover:border-blue-300/64 hover:bg-blue-300/18 hover:-translate-y-px max-sm:text-[11px] max-sm:px-2.5 max-sm:py-2 ${contextDays === option.value ? "border-blue-400/78 bg-gradient-to-br from-indigo-400/34 to-sky-400/26 text-primary" : "border-white/[0.26] bg-card/80 text-muted"}`}
                     onClick={() => setContextDays(option.value)}
                   >
                     {option.label}
                   </button>
                 ))}
               </div>
-              <div className="ai-controls-helper">
+              <div className="text-xs leading-relaxed text-muted/80">
                 Explicit scopes in your question, like "today", "yesterday", or "last 7 days", override the selected window.
               </div>
             </div>
 
-            <div className="ai-controls-section ai-controls-history-section">
-              <div className="ai-controls-section-title">Chat History</div>
+            <div className="flex flex-col gap-3 px-5 pb-5 max-sm:px-4 max-sm:pb-4">
+              <div className="text-xs font-bold text-muted uppercase tracking-[0.08em]">Chat History</div>
               <input
-                className="ai-controls-search"
+                className="w-full rounded-[10px] border border-white/[0.34] bg-card/80 text-muted text-xs px-2.5 py-2 outline-none focus:border-blue-400/82 focus:shadow-[0_0_0_3px_rgba(130,162,255,0.2)] placeholder:text-muted"
                 type="search"
                 placeholder="Search sessions..."
                 value={controlsSearch}
                 onChange={(e) => setControlsSearch(e.target.value)}
               />
-              <div className="ai-controls-history-list">
+              <div className="min-h-[120px] flex-1 overflow-y-auto flex flex-col gap-2 pr-1 max-sm:min-h-[180px]">
                 {filteredSessions.length === 0 ? (
-                  <div className="ai-controls-history-empty">No saved sessions yet. Start a chat to create one.</div>
+                  <div className="border border-dashed border-white/[0.35] rounded-xl p-3 text-muted text-xs">No saved sessions yet. Start a chat to create one.</div>
                 ) : (
                   filteredSessions.map((session) => {
                     const isActive = activeSessionId === session.id;
@@ -942,12 +939,12 @@ export default function AiAdvisor() {
                     return (
                       <div
                         key={session.id}
-                        className={`ai-history-item ${isActive ? "active" : ""}`}
+                        className={`text-left border rounded-xl p-2.5 cursor-pointer flex flex-col gap-1 transition-all hover:-translate-y-px max-sm:p-2.5 ${isActive ? "border-cyan-400/74 bg-gradient-to-br from-blue-400/26 to-cyan-400/19" : "border-white/[0.24] bg-white/[0.08] hover:border-blue-300/62 hover:bg-blue-300/18"}`}
                       >
                         {isRenaming ? (
-                          <div className="ai-history-rename-row">
+                          <div className="flex items-center gap-1.5 max-sm:flex-wrap">
                             <input
-                              className="ai-history-rename-input"
+                              className="flex-1 min-w-0 max-sm:w-full rounded-lg border border-white/[0.34] bg-card/80 text-muted text-xs px-2.5 py-1.5 focus:outline-none focus:border-blue-400/82"
                               value={renameDraft}
                               onChange={(e) => setRenameDraft(e.target.value)}
                               onKeyDown={(e) => {
@@ -964,14 +961,14 @@ export default function AiAdvisor() {
                               autoFocus
                             />
                             <button
-                              className="ai-history-action-btn"
+                              className="border border-white/[0.34] bg-card/80 text-muted rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
                               onClick={() => void saveRenamedSession(session.id)}
                               disabled={isPending || !renameDraft.trim()}
                             >
                               Save
                             </button>
                             <button
-                              className="ai-history-action-btn muted"
+                              className="border border-white/[0.34] bg-card/80 text-muted rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
                               onClick={cancelRenameSession}
                               disabled={isPending}
                             >
@@ -981,7 +978,7 @@ export default function AiAdvisor() {
                         ) : (
                           <>
                             <button
-                              className="ai-history-main"
+                              className="text-left border-0 bg-transparent text-[inherit] cursor-pointer p-0 w-full disabled:opacity-70 disabled:cursor-wait"
                               onClick={() => {
                                 setStartInNewSession(false);
                                 setMessages([]); // Clear messages immediately for snappier UI
@@ -990,19 +987,19 @@ export default function AiAdvisor() {
                               }}
                               disabled={isPending}
                             >
-                              <div className="ai-history-item-title">{getSessionOptionLabel(session)}</div>
-                              <div className="ai-history-item-meta">{getSessionPreview(session)}</div>
+                              <div className="text-xs text-muted font-bold leading-[1.35] max-sm:text-[11px]">{getSessionOptionLabel(session)}</div>
+                              <div className="text-[11px] text-muted max-sm:text-[10px]">{getSessionPreview(session)}</div>
                             </button>
-                            <div className="ai-history-actions-row">
+                            <div className="flex gap-1.5 mt-1 max-sm:flex-wrap">
                               <button
-                                className="ai-history-action-btn muted"
+                                className="border border-white/[0.34] bg-card/80 text-muted rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-blue-300/75 hover:bg-blue-300/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
                                 onClick={() => startRenameSession(session)}
                                 disabled={isPending}
                               >
                                 Rename
                               </button>
                               <button
-                                className="ai-history-action-btn danger"
+                                className="border border-red-400/42 text-red-200/95 bg-primary/5 rounded-lg px-2 py-1.5 text-[11px] font-semibold cursor-pointer transition-all hover:border-red-400/78 hover:bg-red-400/20 disabled:opacity-60 disabled:cursor-not-allowed max-sm:flex-auto max-sm:min-h-[44px]"
                                 onClick={() => void removeSession(session)}
                                 disabled={isPending}
                               >
@@ -1021,26 +1018,39 @@ export default function AiAdvisor() {
         </div>
       )}
 
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, position: 'relative' }}>
-        {/* ── Scrollable messages area ── */}
-        <div className="ai-advisor-messages" id="ai-messages-scroll" style={{ flex: 1 }}>
-
+      <div className="relative flex min-h-0 flex-1">
+        <div className="relative flex min-w-0 flex-1">
+          {/* ── Scrollable messages area ── */}
+          <div
+            className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-3.5 [scrollbar-width:thin] [scrollbar-color:rgba(124,92,255,0.25)_transparent]"
+            id="ai-messages-scroll"
+            style={{
+              flex: 1,
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 0, black 1.25rem, black calc(100% - 5rem), transparent 100%)",
+              maskImage: "linear-gradient(to bottom, transparent 0, black 1.25rem, black calc(100% - 5rem), transparent 100%)",
+              WebkitMaskRepeat: "no-repeat",
+              maskRepeat: "no-repeat",
+              WebkitMaskSize: "100% 100%",
+              maskSize: "100% 100%",
+            }}
+          >
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-2.5 pb-28 sm:pb-36">
 
         {/* Quick prompts (only when empty) */}
-        {messages.length === 0 && !sessionLoading && (
-          <div className="ai-advisor-empty">
-            <div className="ai-advisor-empty-icon">💬</div>
-            <div className="ai-advisor-empty-title">Start a conversation</div>
-            <div className="ai-advisor-empty-text">
+        {messages.length === 0 && (
+          <div className="flex min-h-[55vh] flex-col items-center justify-center text-center px-1 py-10 gap-2">
+            <ChatCircleDots size={38} weight="duotone" className="mb-1 text-muted" />
+            <div className="text-lg font-bold text-muted">Start a conversation</div>
+            <div className="text-sm text-muted max-w-[400px] mb-3">
               Ask anything about your nutrition, or try one of these:
             </div>
-            <div className="ai-advisor-quick-grid">
+            <div className="flex gap-2 flex-wrap justify-center max-w-[600px] max-sm:gap-1.5">
               {QUICK_PROMPTS.map((qp) => (
                 <button
                   key={qp.label}
                   onClick={() => sendQuestion(qp.prompt)}
                   disabled={loading}
-                  className="ai-advisor-quick-btn"
+                  className="px-4 py-2.5 rounded-xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/15 to-cyan-500/10 text-muted cursor-pointer text-sm font-semibold transition-all hover:border-indigo-500/50 hover:from-indigo-500/25 hover:to-cyan-500/15 hover:-translate-y-px disabled:opacity-50 disabled:cursor-wait max-sm:text-xs max-sm:px-3 max-sm:py-2 max-sm:flex-auto max-sm:text-center max-sm:min-h-[44px]"
                 >
                   {qp.label}
                 </button>
@@ -1051,13 +1061,9 @@ export default function AiAdvisor() {
 
         {/* Loading session history */}
         {sessionLoading && (
-          <div className="ai-advisor-empty" style={{ marginTop: 40 }}>
-             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, color: "var(--muted2)", fontSize: 13 }}>
-               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ai-loading-spinner">
-                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-               </svg>
-               <span>Loading chat history...</span>
-             </div>
+          <div className="mt-10 flex items-center justify-center gap-2 text-[13px] text-muted">
+            <SpinnerGap size={17} weight="bold" className="animate-spin" />
+            <span>Loading chat history...</span>
           </div>
         )}
 
@@ -1113,7 +1119,7 @@ export default function AiAdvisor() {
                 if (parts.length >= 5) {
                   const [foodName, cal, p, c, f, mealType = "snack", dateStr = new Date().toISOString().slice(0, 10)] = parts;
                   contentElements.push(
-                    <Suspense key={`widget-${keyCounter++}`} fallback={<div className="ai-widget-loading">Loading card...</div>}>
+                    <Suspense key={`widget-${keyCounter++}`} fallback={<div className="mt-2 mb-2 text-xs text-amber-200/80">Loading card...</div>}>
                       <ConfirmLogCard
                         foodName={foodName.trim()}
                         calories={parseFloat(cal) || 0}
@@ -1188,61 +1194,51 @@ export default function AiAdvisor() {
           return (
           <div
             key={i}
-            className={`card ai-chat-bubble ${msg.role === "assistant" ? "ai-chat-assistant" : "ai-chat-user"}`}
+            className={`w-fit max-w-[calc(100%-0.5rem)] sm:max-w-[85%] [animation:fadeSlideUp_0.3s_cubic-bezier(0.16,1,0.3,1)_forwards] rounded-2xl px-4 py-3.5 border backdrop-blur-sm transition-all ${
+              msg.role === "assistant"
+                ? "self-start border-indigo-500/20 [border-left:3px_solid_rgba(124,92,255,0.45)] bg-[rgba(124,92,255,0.05)]"
+                : "self-end border-cyan-500/15 [border-right:3px_solid_rgba(0,209,255,0.35)] bg-[rgba(0,209,255,0.04)]"
+            }`}
           >
-            <div className="ai-chat-role" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-muted">
               {msg.role === "user" ? "You" : (
                 <>
-                  <span>🤖 NutriLog AI</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Robot size={12} weight="fill" />
+                    NutriLog AI
+                  </span>
                   {msg.provider && (
-                    <span style={{
-                      fontSize: 10,
-                      fontWeight: 600,
-                      padding: "2px 7px",
-                      borderRadius: 6,
-                      background: "rgba(124,92,255,0.15)",
-                      border: "1px solid rgba(124,92,255,0.3)",
-                      color: "rgba(124,92,255,0.9)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}>
+                    <span className="rounded-md border border-indigo-400/35 bg-indigo-500/15 px-[7px] py-[2px] text-[10px] font-semibold uppercase tracking-[0.05em] text-indigo-300/95">
                       {msg.provider}
                     </span>
                   )}
-                  <span style={{
-                    fontSize: 10,
-                    padding: "2px 7px",
-                    borderRadius: 6,
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "var(--muted2)",
-                  }}>
+                  <span className="rounded-md border border-subtle bg-primary/5 px-[7px] py-[2px] text-[10px] text-muted">
                     AI Generated
                   </span>
                 </>
               )}
             </div>
             {msg.role === "assistant" ? (
-              <div className="ai-markdown" style={{ fontSize: 14, lineHeight: 1.7 }}>
+              <div className="prose prose-invert prose-sm max-w-none text-[14px] leading-[1.7] text-muted">
                 {contentElements.length > 0 ? contentElements : <ReactMarkdown>{msg.content}</ReactMarkdown>}
               </div>
             ) : (
-              <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+              <div className="whitespace-pre-wrap text-[14px] leading-[1.6]">
                 {msg.content}
               </div>
             )}
 
             {/* .nlog data toggle */}
             {msg.nlogData && (
-              <div style={{ marginTop: 10 }}>
+              <div className="mt-2.5">
                 <button
                   onClick={() => setShowNlog(showNlog === i ? null : i)}
-                  className="ai-nlog-toggle"
+                  className="bg-transparent border-0 text-muted text-[11px] cursor-pointer underline p-0 transition-colors hover:text-muted"
                 >
                   {showNlog === i ? "Hide .nlog data" : "Show .nlog data sent to AI"}
                 </button>
                 {showNlog === i && (
-                  <pre className="ai-nlog-pre">
+                  <pre className="mt-1.5 p-2.5 rounded-lg bg-card/80 text-[11px] overflow-auto max-h-[200px] text-muted border border-subtle">
                     {msg.nlogData}
                   </pre>
                 )}
@@ -1250,10 +1246,13 @@ export default function AiAdvisor() {
             )}
 
             {msg.tokens !== undefined && msg.tokens > 0 && (
-              <div className="ai-chat-tokens" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span>⚡ {msg.tokens} tokens</span>
+              <div className="mt-1.5 flex items-center gap-2 text-[10px] text-muted">
+                <span className="inline-flex items-center gap-1">
+                  <Lightning size={12} weight="fill" />
+                  {msg.tokens} tokens
+                </span>
                 {msg.provider && (
-                  <span style={{ color: "var(--muted2)" }}>· via {msg.provider}</span>
+                  <span className="text-muted">· via {msg.provider}</span>
                 )}
               </div>
             )}
@@ -1263,13 +1262,13 @@ export default function AiAdvisor() {
 
         {/* Loading indicator */}
         {loading && (
-            <div className="card ai-chat-bubble ai-chat-assistant">
-              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "var(--text)" }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ai-loading-spinner">
+          <div className="w-fit max-w-[calc(100%-0.5rem)] sm:max-w-[85%] self-start [animation:fadeSlideUp_0.3s_cubic-bezier(0.16,1,0.3,1)_forwards] rounded-2xl px-4 py-3.5 border border-indigo-500/20 [border-left:3px_solid_rgba(124,92,255,0.45)] bg-[rgba(124,92,255,0.05)] backdrop-blur-sm">
+              <div className="flex items-center gap-2.5 text-sm text-muted">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="[animation:spin_1s_linear_infinite] text-indigo-400 shrink-0">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
-                <span className="ai-loading-text">
-                  Consulting NutriLog AI...
+                <span className="[animation:pulse_2s_ease-in-out_infinite] text-muted">
+                  Consulting NutriLog AI…
                 </span>
               </div>
             </div>
@@ -1277,87 +1276,79 @@ export default function AiAdvisor() {
 
         {/* Error */}
         {error && !loading && (
-          <div className="card" style={{ border: "1px solid rgba(255,80,80,0.35)", background: "rgba(255,80,80,0.08)" }}>
-            <div style={{ fontSize: 13 }}>{error}</div>
+          <div className="w-fit max-w-[calc(100%-0.5rem)] sm:max-w-[85%] self-start rounded-2xl px-4 py-3.5 border border-red-500/30 bg-red-500/10">
+            <div className="text-[13px]">{error}</div>
           </div>
         )}
 
         {/* Scroll anchor */}
         <div ref={messagesEndRef} />
-      </div>
+          </div>
+        </div>
+        {!isControlsOpen && (
+          <div className="absolute left-0 right-0 z-20 bottom-[calc(var(--shell-mobile-nav-offset)-0.25rem)] p-2.5 pt-1.5 max-sm:px-2 max-sm:pb-2 md:bottom-0 md:p-4">
+            <div className="mx-auto w-full max-w-4xl">
+              <div className="relative flex gap-2 items-end px-3.5 py-3 rounded-[22px] border border-subtle bg-card/95 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] max-sm:px-3 max-sm:py-2.5">
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask about your nutrition…"
+                  rows={1}
+                  className="flex-1 min-w-0 px-3 py-2.5 rounded-[10px] border border-white/[0.08] bg-primary/5 text-muted resize-none text-[16px] sm:text-[13px] font-[inherit] leading-relaxed max-h-[120px] transition-colors focus:border-indigo-500/40 focus:outline-none placeholder:text-muted"
+                />
+                <button
+                  onClick={() => sendQuestion(input)}
+                  disabled={loading || !input.trim()}
+                  className="px-5 py-2.5 rounded-[10px] border border-indigo-500/35 bg-gradient-to-br from-indigo-500/25 to-cyan-500/10 text-muted cursor-pointer font-semibold text-[13px] whitespace-nowrap transition-all hover:from-indigo-500/35 hover:to-cyan-500/18 disabled:opacity-50 disabled:cursor-default max-sm:px-4 max-sm:py-3 max-sm:min-h-[44px]"
+                >
+                  {loading ? "…" : "Send"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
 
-      {/* Sliding Grocery List Panel */}
-      {isGroceryOpen && (
-        <div
-          className="card"
-          style={{
-            width: 280,
-            borderLeft: "1px solid var(--border)",
-            background: "rgba(20, 22, 30, 0.95)",
-            flexShrink: 0,
-            animation: "fadeSlideLeft 0.2s ease-out",
-            border: "none",
-            borderRadius: 0,
-            display: "flex",
-            flexDirection: "column",
-            margin: 0
-          }}
-        >
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, paddingBottom: 10, borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: "#10b981" }}>🛒 Smart Grocery List</span>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        {/* Sliding Grocery List Panel */}
+        {isGroceryOpen && (
+          <div className="absolute right-3 top-3 bottom-[calc(var(--shell-mobile-content-padding)+0.5rem)] z-30 flex w-[min(360px,calc(100%-1.5rem))] max-w-sm flex-col rounded-2xl border border-subtle bg-card/95 p-3 shadow-[0_18px_44px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:static lg:ml-3 lg:mb-0 lg:w-[320px] lg:max-w-none lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:border-subtle lg:bg-card/95 lg:p-4 lg:shadow-none">
+            <div className="mb-3 flex items-center justify-between border-b border-subtle pb-2.5">
+              <span className="inline-flex items-center gap-1.5 text-[14px] font-bold text-emerald-400">
+                <Basket size={15} weight="duotone" />
+                Smart Grocery List
+              </span>
               <button
                 onClick={clearGroceryList}
-                style={{ background: "none", border: "none", color: "var(--muted2)", fontSize: 10, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.05em" }}
+                className="border-0 bg-transparent text-[10px] uppercase tracking-[0.05em] text-muted transition-colors hover:text-muted"
               >
                 Clear All
               </button>
             </div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1, overflowY: "auto" }}>
-            {groceryList.length === 0 ? (
-              <div style={{ textAlign: "center", color: "var(--muted2)", fontSize: 12, marginTop: 40 }}>
-                Your grocery list is empty. Ask the AI to build one for you!
-              </div>
-            ) : (
-              groceryList.map((item) => (
-                <div key={item} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(0,0,0,0.3)", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.02)" }}>
-                  <span style={{ fontSize: 13 }}>{item}</span>
-                  <button
-                    onClick={() => removeGroceryItem(item)}
-                    style={{ background: "none", border: "none", color: "var(--muted2)", cursor: "pointer", fontSize: 16 }}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-      </div>
 
-      {/* ── Fixed input bar ── */}
-      {!isControlsOpen && (
-        <div className="ai-advisor-input-bar">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask about your nutrition…"
-            rows={1}
-            className="ai-advisor-textarea"
-          />
-          <button
-            onClick={() => sendQuestion(input)}
-            disabled={loading || !input.trim()}
-            className="ai-advisor-send-btn"
-          >
-            {loading ? "…" : "Send"}
-          </button>
-        </div>
-      )}
+            <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
+              {groceryList.length === 0 ? (
+                <div className="mt-10 text-center text-[12px] text-muted">
+                  Your grocery list is empty. Ask the AI to build one for you!
+                </div>
+              ) : (
+                groceryList.map((item) => (
+                  <div key={item} className="flex items-center justify-between rounded-lg border border-subtle bg-card/80 px-3 py-2">
+                    <span className="text-[13px] text-muted">{item}</span>
+                    <button
+                      onClick={() => removeGroceryItem(item)}
+                      className="border-0 bg-transparent text-[16px] leading-none text-muted transition-colors hover:text-muted"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

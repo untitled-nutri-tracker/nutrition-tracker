@@ -42,6 +42,7 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         meal::get_daily_nutrition_totals,
         meal::get_weekly_nutrition_totals,
         meal::get_nutrition_trend,
+        meal::seed_demo_food_log_30_days,
         meal::update_meal,
         meal::delete_meal,
         meal::create_meal_item,

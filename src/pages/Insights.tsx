@@ -1,15 +1,31 @@
-// src/pages/Insights.tsx
-// Full analytics dashboard with charts, BMI, and health trajectory
-
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { AppUserProfile, NutritionTrendPoint } from "../generated/types";
-import { getNutritionTrend } from "../generated/commands";
+import {
+  Barbell,
+  CalendarCheck,
+  ChartLineUp,
+  Flame,
+  Heart,
+  ShieldCheck,
+  TrendUp,
+  ChartPieSlice,
+  X,
+  ChatCircleText,
+} from "@phosphor-icons/react";
+
 import ProfileSummaryCard from "../components/ProfileSummaryCard";
+import { PremiumAreaChart } from "../components/charts/PremiumAreaChart";
+import { PremiumDonutChart } from "../components/charts/PremiumDonutChart";
+import { StackedProgressBar } from "../components/charts/StackedProgressBar";
+import { MacroTrendChart } from "../components/charts/MacroTrendChart";
+import { MealDistributionChart, type MealDistributionData } from "../components/charts/MealDistributionChart";
+
+import { getDailyNutritionTotals, getNutritionTrend } from "../generated/commands";
+import { localDateString, loadEntriesRange } from "../lib/foodLogStore";
 import { detectNutritionThresholdAlerts } from "../lib/nutritionAlerts";
-import { localDateString } from "../lib/foodLogStore";
 import { getNutritionTargets, type MacroTargets } from "../lib/nutritionTargets";
 import { loadProfile } from "../lib/profileStore";
+import type { NutritionTotals, NutritionTrendPoint, AppUserProfile } from "../generated/types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -39,7 +55,12 @@ interface NudgeAlert {
   thresholdLabel: string;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+const METRIC_COLORS = {
+  calories: "var(--metric-calories)",
+  protein: "var(--metric-protein)",
+  carbs: "var(--metric-carbs)",
+  fat: "var(--metric-fat)",
+} as const;
 
 function mapTargets(targets: MacroTargets): Targets {
   return {
@@ -51,227 +72,47 @@ function mapTargets(targets: MacroTargets): Targets {
   };
 }
 
-function toDayData(point: NutritionTrendPoint): DayData {
-  const date = new Date(point.periodStart * 1000);
-  return {
-    date: localDateString(date),
-    label: date.toLocaleDateString('en-US', { weekday: 'narrow', day: 'numeric' }),
-    calories: point.totals.caloriesKcal,
-    proteinG: point.totals.proteinG,
-    carbsG: point.totals.totalCarbohydrateG,
-    fatG: point.totals.fatG,
-    entryCount: point.totals.itemCount,
-  };
-}
-
 function computeBMI(weightKg: number, heightCm: number): number {
   const heightM = heightCm / 100;
   return weightKg / (heightM * heightM);
 }
 
-function bmiCategory(bmi: number): { label: string; color: string } {
-  if (bmi < 18.5) return { label: 'Underweight', color: '#60a5fa' };
-  if (bmi < 25) return { label: 'Normal', color: '#10b981' };
-  if (bmi < 30) return { label: 'Overweight', color: '#fbbf24' };
-  return { label: 'Obese', color: '#ef4444' };
+function bmiCategory(bmi: number): { label: string; colorClass: string } {
+  if (bmi < 18.5) return { label: "Underweight", colorClass: "text-sky-400" };
+  if (bmi < 25) return { label: "Normal", colorClass: "text-emerald-400" };
+  if (bmi < 30) return { label: "Overweight", colorClass: "text-amber-400" };
+  return { label: "Obese", colorClass: "text-rose-400" };
 }
 
-// ── Chart Components ──────────────────────────────────────────────────────────
+// ── Shared UI Components ──────────────────────────────────────────────────────
 
-function BarChart({ data, dataKey, targetValue, color, label, unit }: {
-  data: DayData[];
-  dataKey: keyof DayData;
-  targetValue: number;
-  color: string;
-  label: string;
-  unit: string;
+function BentoCard({
+  title,
+  subtitle,
+  icon,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
 }) {
-  const maxVal = Math.max(...data.map(d => d[dataKey] as number), targetValue, 10) * 1.15;
-
   return (
-    <div style={chartCardStyle}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontSize: 14, fontWeight: 700 }}>{label}</span>
-        <span style={{ fontSize: 11, color: 'var(--muted2)' }}>Target: {targetValue}{unit}</span>
-      </div>
-      <svg viewBox="0 0 400 160" style={{ width: '100%', height: 160 }}>
-        {/* Target line */}
-        <line
-          x1="0" y1={140 - (targetValue / maxVal) * 130}
-          x2="400" y2={140 - (targetValue / maxVal) * 130}
-          stroke={color} strokeWidth="1" strokeDasharray="6,4" opacity="0.5"
-        />
-        {/* Bars */}
-        {data.map((d, i) => {
-          const val = d[dataKey] as number;
-          const h = (val / maxVal) * 130;
-          const x = i * (400 / data.length) + 8;
-          const w = (400 / data.length) - 16;
-          const overTarget = val > targetValue * 1.1;
-          const barColor = overTarget ? '#f97316' : color;
-          return (
-            <g key={d.date || i}>
-              <rect x={x} y={140 - h} width={w} height={h} rx="4" fill={barColor} opacity="0.75" />
-              <text x={x + w / 2} y={155} textAnchor="middle" fill="var(--muted2,#888)" fontSize="9">{d.label}</text>
-              {val > 0 && <text x={x + w / 2} y={140 - h - 4} textAnchor="middle" fill="var(--muted2,#888)" fontSize="8">{Math.round(val)}</text>}
-            </g>
-          );
-        })}
-      </svg>
-    </div>
+    <section className="rounded-3xl border border-subtle bg-card/80 p-5 md:p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <header className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.16em] opacity-70">Insights</div>
+          <h3 className="mt-1 text-base font-semibold tracking-tight text-primary">{title}</h3>
+          {subtitle ? <p className="mt-1 text-xs opacity-70">{subtitle}</p> : null}
+        </div>
+        {icon ? <div className="rounded-2xl border border-subtle bg-primary/5 p-2.5 opacity-70">{icon}</div> : null}
+      </header>
+      {children}
+    </section>
   );
 }
 
-function MacroPieChart({ data }: { data: DayData[] }) {
-  const totP = data.reduce((s, d) => s + d.proteinG, 0);
-  const totC = data.reduce((s, d) => s + d.carbsG, 0);
-  const totF = data.reduce((s, d) => s + d.fatG, 0);
-  const total = totP + totC + totF;
-  if (total === 0) return null;
-
-  const pPct = totP / total;
-  const cPct = totC / total;
-  const fPct = totF / total;
-
-  // SVG donut
-  const r = 60, cx = 80, cy = 80;
-  const circumference = 2 * Math.PI * r;
-
-  const pLen = pPct * circumference;
-  const cLen = cPct * circumference;
-  const fLen = fPct * circumference;
-
-  const pOff = 0;
-  const cOff = -pLen;
-  const fOff = -(pLen + cLen);
-
-  return (
-    <div style={chartCardStyle}>
-      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Macro Distribution (Weekly Avg)</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-        <svg viewBox="0 0 160 160" style={{ width: 120, height: 120 }}>
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="18" />
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#8b5cf6" strokeWidth="18"
-            strokeDasharray={`${pLen} ${circumference - pLen}`} strokeDashoffset={pOff}
-            transform={`rotate(-90 ${cx} ${cy})`} />
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#06b6d4" strokeWidth="18"
-            strokeDasharray={`${cLen} ${circumference - cLen}`} strokeDashoffset={cOff}
-            transform={`rotate(-90 ${cx} ${cy})`} />
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f59e0b" strokeWidth="18"
-            strokeDasharray={`${fLen} ${circumference - fLen}`} strokeDashoffset={fOff}
-            transform={`rotate(-90 ${cx} ${cy})`} />
-        </svg>
-        <div style={{ display: 'grid', gap: 8 }}>
-          <LegendItem color="#8b5cf6" label="Protein" value={`${Math.round(pPct * 100)}%`} sub={`${Math.round(totP / data.length)}g/day`} />
-          <LegendItem color="#06b6d4" label="Carbs" value={`${Math.round(cPct * 100)}%`} sub={`${Math.round(totC / data.length)}g/day`} />
-          <LegendItem color="#f59e0b" label="Fat" value={`${Math.round(fPct * 100)}%`} sub={`${Math.round(totF / data.length)}g/day`} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LegendItem({ color, label, value, sub }: { color: string; label: string; value: string; sub: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ width: 10, height: 10, borderRadius: '50%', background: color }} />
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 600 }}>{label}: {value}</div>
-        <div style={{ fontSize: 10, color: 'var(--muted2)' }}>{sub}</div>
-      </div>
-    </div>
-  );
-}
-
-function BMICard({ profile }: { profile: AppUserProfile | null }) {
-  if (!profile || !profile.weightKg || !profile.heightCm) {
-    return (
-      <div style={chartCardStyle}>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Body Metrics</div>
-        <div style={{ fontSize: 12, color: 'var(--muted2)' }}>Set up your profile to see BMI calculations.</div>
-      </div>
-    );
-  }
-
-  const bmi = computeBMI(profile.weightKg, profile.heightCm);
-  const cat = bmiCategory(bmi);
-  const heightM = profile.heightCm / 100;
-  const idealMin = 18.5 * heightM * heightM;
-  const idealMax = 24.9 * heightM * heightM;
-
-  // BMI scale visualization (15 to 40)
-  const scaleMin = 15, scaleMax = 40;
-  const pct = ((bmi - scaleMin) / (scaleMax - scaleMin)) * 100;
-
-  return (
-    <div style={chartCardStyle}>
-      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Body Metrics</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-        <div style={metricBoxStyle}>
-          <div style={{ fontSize: 24, fontWeight: 800, color: cat.color }}>{bmi.toFixed(1)}</div>
-          <div style={{ fontSize: 10, color: 'var(--muted2)' }}>BMI</div>
-          <div style={{ fontSize: 11, color: cat.color, fontWeight: 600, marginTop: 2 }}>{cat.label}</div>
-        </div>
-        <div style={metricBoxStyle}>
-          <div style={{ fontSize: 16, fontWeight: 700 }}>{profile.weightKg}<span style={{ fontSize: 11, color: 'var(--muted2)' }}> kg</span></div>
-          <div style={{ fontSize: 10, color: 'var(--muted2)', marginTop: 2 }}>Current Weight</div>
-          <div style={{ fontSize: 10, color: 'var(--muted2)', marginTop: 4 }}>Ideal: {idealMin.toFixed(0)}–{idealMax.toFixed(0)} kg</div>
-        </div>
-      </div>
-      {/* BMI Scale Bar */}
-      <div style={{ fontSize: 10, color: 'var(--muted2)', marginBottom: 4 }}>BMI Scale</div>
-      <div style={{ position: 'relative', height: 18, borderRadius: 9, overflow: 'hidden', background: 'linear-gradient(90deg, #60a5fa 0%, #10b981 28%, #10b981 40%, #fbbf24 60%, #ef4444 100%)' }}>
-        <div style={{
-          position: 'absolute',
-          left: `calc(${Math.min(Math.max(pct, 2), 98)}% - 6px)`,
-          top: 1, width: 12, height: 16, borderRadius: 4,
-          background: '#fff', border: '2px solid #111',
-          transition: 'left 0.5s ease',
-        }} />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--muted2)', marginTop: 2 }}>
-        <span>15</span><span>18.5</span><span>25</span><span>30</span><span>40</span>
-      </div>
-    </div>
-  );
-}
-
-function ConsistencyCard({ data, targets }: { data: DayData[]; targets: Targets }) {
-  const daysWithFood = data.filter(d => d.entryCount > 0).length;
-  const totalDays = data.length;
-  const pct = totalDays > 0 ? (daysWithFood / totalDays) * 100 : 0;
-  const avgCal = totalDays > 0 ? data.reduce((s, d) => s + d.calories, 0) / totalDays : 0;
-
-  // Streak (from most recent day backwards)
-  let streak = 0;
-  for (let i = data.length - 1; i >= 0; i--) {
-    if (data[i].entryCount > 0) streak++;
-    else break;
-  }
-
-  return (
-    <div style={chartCardStyle}>
-      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Consistency & Trends</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-        <div style={metricBoxStyle}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: pct >= 80 ? '#10b981' : pct >= 50 ? '#fbbf24' : '#ef4444' }}>{Math.round(pct)}%</div>
-          <div style={{ fontSize: 10, color: 'var(--muted2)' }}>Days Logged</div>
-        </div>
-        <div style={metricBoxStyle}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: 'rgba(124,92,255,0.9)' }}>{streak}</div>
-          <div style={{ fontSize: 10, color: 'var(--muted2)' }}>Current Streak</div>
-        </div>
-        <div style={metricBoxStyle}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: avgCal <= targets.calories * 1.1 ? '#10b981' : '#f97316' }}>{Math.round(avgCal)}</div>
-          <div style={{ fontSize: 10, color: 'var(--muted2)' }}>Avg Cal/Day</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Proactive Health Nudge ────────────────────────────────────────────────────
-
+// Rewritten HealthNudge using Tailwind and Bento conventions
 function HealthNudge({ alerts, sourceLabel }: { alerts: NudgeAlert[]; sourceLabel: string }) {
   const [dismissed, setDismissed] = useState(() => {
     return !!sessionStorage.getItem(`nutrilog_nudge_${localDateString()}`);
@@ -289,42 +130,45 @@ function HealthNudge({ alerts, sourceLabel }: { alerts: NudgeAlert[]; sourceLabe
 
   if (dismissed || alerts.length === 0) return null;
 
-  const primaryType = alerts.some(a => a.type === 'danger') ? 'danger' : 'warning';
+  const isDanger = alerts.some(a => a.type === 'danger');
+  const toneClass = isDanger 
+    ? "border-red-500/20 bg-red-500/10" 
+    : "border-amber-500/20 bg-amber-500/10";
+  const titleColor = isDanger ? "text-red-500" : "text-amber-500";
 
   return (
-    <div style={{
-      border: primaryType === 'danger' ? '1px solid rgba(239,68,68,0.35)' : '1px solid rgba(251,191,36,0.35)',
-      background: primaryType === 'danger' ? 'rgba(239,68,68,0.06)' : 'rgba(251,191,36,0.06)',
-      borderRadius: 14, padding: '14px 16px',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 20 }}>🚨</span>
+    <div className={`rounded-3xl border px-5 py-4 ${toneClass} shadow-sm backdrop-blur-md`}>
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl mt-0.5">🚨</span>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: primaryType === 'danger' ? '#ef4444' : '#fbbf24' }}>Nutrition Threshold Alerts</div>
-            <div style={{ fontSize: 10, color: 'var(--muted2)' }}>Using {sourceLabel.toLowerCase()}</div>
+            <div className={`text-sm font-bold tracking-tight ${titleColor}`}>Nutrition Alerts</div>
+            <div className="text-[10px] uppercase tracking-[0.12em] opacity-70 mt-0.5">Using {sourceLabel.toLowerCase()}</div>
           </div>
         </div>
-        <button onClick={handleDismiss} style={{ background: 'none', border: 'none', color: 'var(--muted2)', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}>✕</button>
+        <button onClick={handleDismiss} className="rounded-full p-1 opacity-60 hover:bg-black/10 dark:hover:bg-white/10 hover:opacity-100 transition">
+          <X size={18} weight="bold" />
+        </button>
       </div>
-      <div style={{ display: 'grid', gap: 10 }}>
+
+      <div className="flex flex-col gap-4">
         {alerts.map((a, i) => (
-          <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-            <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{a.emoji}</span>
+          <div key={i} className="flex items-start gap-3">
+            <span className="text-lg mt-0.5">{a.emoji}</span>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 2 }}>{a.title}</div>
-              <div style={{ fontSize: 10, color: a.type === 'danger' ? '#fca5a5' : '#fde68a', marginBottom: 2 }}>{a.thresholdLabel}</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>{a.message}</div>
+              <div className="text-[13px] font-bold text-primary">{a.title}</div>
+              <div className={`text-[10px] font-semibold uppercase tracking-wider mb-1 ${a.type === 'danger' ? 'text-red-400' : 'text-amber-400'}`}>{a.thresholdLabel}</div>
+              <div className="text-xs leading-relaxed opacity-80">{a.message}</div>
             </div>
           </div>
         ))}
       </div>
-      <button onClick={() => navigate('/ai')} style={{
-        marginTop: 10, width: '100%', padding: '8px 12px', borderRadius: 8,
-        border: '1px solid rgba(124,92,255,0.3)', background: 'rgba(124,92,255,0.12)',
-        color: 'rgba(124,92,255,0.95)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-      }}>
-        💬 Get AI Advice →
+
+      <button 
+        onClick={() => navigate('/ai')} 
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-2.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+      >
+        <ChatCircleText size={16} weight="duotone" /> Get AI Advice
       </button>
     </div>
   );
@@ -336,6 +180,8 @@ export default function Insights() {
   const goal = localStorage.getItem('nutrilog_goal') || 'maintenance';
   const [range, setRange] = useState<7 | 14 | 30>(7);
   const [dayData, setDayData] = useState<DayData[]>([]);
+  const [mealDistribution, setMealDistribution] = useState<MealDistributionData[]>([]);
+  const [dailyTotals, setDailyTotals] = useState<NutritionTotals | null>(null);
   const [targets, setTargets] = useState<Targets>(() => mapTargets(getNutritionTargets(null, goal)));
   const [alerts, setAlerts] = useState<NudgeAlert[]>([]);
   const [profile, setProfile] = useState<AppUserProfile | null>(null);
@@ -349,27 +195,73 @@ export default function Insights() {
       setLoading(true);
       setError(null);
 
-      const endDate = new Date();
-      endDate.setHours(23, 59, 59, 999);
-      const startDate = new Date();
-      startDate.setHours(0, 0, 0, 0);
-      startDate.setDate(startDate.getDate() - (range - 1));
-
       try {
-        const [trend, loadedProfile] = await Promise.all([
+        const now = Math.floor(Date.now() / 1000);
+        const offsetMinutes = new Date().getTimezoneOffset();
+
+        const endDateObj = new Date();
+        endDateObj.setHours(23, 59, 59, 999);
+        const startDateObj = new Date();
+        startDateObj.setHours(0, 0, 0, 0);
+        startDateObj.setDate(startDateObj.getDate() - (range - 1));
+
+        const startDateStr = localDateString(startDateObj);
+        const endDateStr = localDateString(endDateObj);
+
+        const [trend, todayTotals, entriesRangeMap, loadedProfile] = await Promise.all([
           getNutritionTrend({
-            start: Math.floor(startDate.getTime() / 1000),
-            end: Math.floor(endDate.getTime() / 1000),
-            bucket: 'DAY',
-            offsetMinutes: new Date().getTimezoneOffset(),
+            start: Math.floor(startDateObj.getTime() / 1000),
+            end: Math.floor(endDateObj.getTime() / 1000),
+            bucket: "DAY",
+            offsetMinutes,
           }),
+          getDailyNutritionTotals({
+            anchor: now,
+            offsetMinutes,
+          }),
+          loadEntriesRange(startDateStr, endDateStr),
           loadProfile(),
         ]);
 
         if (cancelled) return;
 
         const rawTargets = getNutritionTargets(loadedProfile, goal);
-        const days = (trend || []).map(toDayData);
+
+        const days: DayData[] = (trend || []).map((point: NutritionTrendPoint) => {
+          const date = new Date(point.periodStart * 1000);
+          return {
+            date: date.toISOString().slice(0, 10),
+            label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+            calories: point.totals.caloriesKcal,
+            proteinG: point.totals.proteinG,
+            carbsG: point.totals.totalCarbohydrateG,
+            fatG: point.totals.fatG,
+            entryCount: point.totals.itemCount,
+          };
+        });
+
+        const mealData = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
+        let totalCalories = 0;
+
+        Object.values(entriesRangeMap).forEach((entries) => {
+          entries.forEach((entry) => {
+            const mt = entry.mealType.toLowerCase();
+            if (mt === "breakfast") mealData.breakfast += entry.calories;
+            else if (mt === "lunch") mealData.lunch += entry.calories;
+            else if (mt === "dinner") mealData.dinner += entry.calories;
+            else mealData.snack += entry.calories;
+            
+            totalCalories += entry.calories;
+          });
+        });
+
+        const mDist: MealDistributionData[] = [
+          { name: "Breakfast", calories: mealData.breakfast, percentage: totalCalories > 0 ? (mealData.breakfast / totalCalories) * 100 : 0 },
+          { name: "Lunch", calories: mealData.lunch, percentage: totalCalories > 0 ? (mealData.lunch / totalCalories) * 100 : 0 },
+          { name: "Dinner", calories: mealData.dinner, percentage: totalCalories > 0 ? (mealData.dinner / totalCalories) * 100 : 0 },
+          { name: "Snacks", calories: mealData.snack, percentage: totalCalories > 0 ? (mealData.snack / totalCalories) * 100 : 0 },
+        ];
+
         const nudges = detectNutritionThresholdAlerts(trend || [], rawTargets, {
           windowDays: 3,
           excludeToday: true,
@@ -381,13 +273,17 @@ export default function Insights() {
           thresholdLabel: alert.thresholdLabel,
         }));
 
+        setDayData(days);
+        setMealDistribution(mDist);
+        setDailyTotals(todayTotals);
         setTargets(mapTargets(rawTargets));
         setProfile(loadedProfile);
-        setDayData(days);
         setAlerts(nudges);
       } catch (err) {
         if (cancelled) return;
+        console.error("Failed to load insights data:", err);
         setDayData([]);
+        setDailyTotals(null);
         setAlerts([]);
         setProfile(null);
         setTargets(mapTargets(getNutritionTargets(null, goal)));
@@ -396,32 +292,104 @@ export default function Insights() {
         if (!cancelled) setLoading(false);
       }
     }
+
     load();
     return () => { cancelled = true; };
-  }, [goal, range]);
+  }, [range, goal]);
+
+  const stats = useMemo(() => {
+    const totalDays = dayData.length || 1;
+    const loggedDays = dayData.filter((d) => d.entryCount > 0).length;
+    const avgCalories = Math.round(dayData.reduce((sum, d) => sum + d.calories, 0) / totalDays);
+    const avgProtein = Math.round(dayData.reduce((sum, d) => sum + d.proteinG, 0) / totalDays);
+    const avgCarbs = Math.round(dayData.reduce((sum, d) => sum + d.carbsG, 0) / totalDays);
+    const avgFat = Math.round(dayData.reduce((sum, d) => sum + d.fatG, 0) / totalDays);
+
+    let streak = 0;
+    for (let i = dayData.length - 1; i >= 0; i -= 1) {
+      if (dayData[i].entryCount > 0) streak += 1;
+      else break;
+    }
+
+    return {
+      loggedPct: Math.round((loggedDays / totalDays) * 100),
+      streak,
+      avgCalories,
+      avgProtein,
+      avgCarbs,
+      avgFat,
+    };
+  }, [dayData]);
+
+  const calorieAreaData = useMemo(
+    () => dayData.map((d) => ({ date: d.label, value: Math.round(d.calories) })),
+    [dayData],
+  );
+
+  const donutData = useMemo(
+    () => [
+      { name: "Protein", value: Math.round(dailyTotals?.proteinG ?? 0), color: METRIC_COLORS.protein },
+      { name: "Carbs", value: Math.round(dailyTotals?.totalCarbohydrateG ?? 0), color: METRIC_COLORS.carbs },
+      { name: "Fat", value: Math.round(dailyTotals?.fatG ?? 0), color: METRIC_COLORS.fat },
+    ],
+    [dailyTotals?.fatG, dailyTotals?.proteinG, dailyTotals?.totalCarbohydrateG],
+  );
+
+  const progressData = useMemo(
+    () => [
+      { name: "Calories", actual: stats.avgCalories, target: targets.calories, color: METRIC_COLORS.calories, unit: "kcal" },
+      { name: "Protein", actual: stats.avgProtein, target: targets.proteinG, color: METRIC_COLORS.protein, unit: "g" },
+      { name: "Carbs", actual: stats.avgCarbs, target: targets.carbsG, color: METRIC_COLORS.carbs, unit: "g" },
+      { name: "Fat", actual: stats.avgFat, target: targets.fatG, color: METRIC_COLORS.fat, unit: "g" },
+    ],
+    [stats.avgCalories, stats.avgProtein, stats.avgCarbs, stats.avgFat, targets],
+  );
+
+  const bmiMeta = useMemo(() => {
+    if (!profile?.weightKg || !profile?.heightCm) return null;
+    const bmi = computeBMI(profile.weightKg, profile.heightCm);
+    return {
+      bmi,
+      category: bmiCategory(bmi),
+      weightKg: profile.weightKg,
+      heightCm: profile.heightCm,
+    };
+  }, [profile]);
+
+  if (loading && !dayData.length) {
+    return (
+      <div className="page-enter flex h-full items-center justify-center px-4 pb-28 pt-5 md:px-8 md:pb-8">
+        <div className="rounded-3xl border border-subtle bg-card/80 px-6 py-5 text-sm opacity-70">Loading insights dashboard...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="page-enter" style={{ display: "grid", gap: 14, maxWidth: 900 }}>
+    <div className="page-enter mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-28 pt-5 md:gap-5 md:px-8 md:pb-8 md:pt-6">
       <div className="pop-in">
         <ProfileSummaryCard />
       </div>
 
-      <HealthNudge alerts={alerts} sourceLabel={targets.sourceLabel} />
+      <div className="pop-in-delay-1">
+        <HealthNudge alerts={alerts} sourceLabel={targets.sourceLabel} />
+      </div>
 
-      {/* Header with range selector */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontWeight: 700, fontSize: 18 }}>📈 Nutrition Insights</div>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {([7, 14, 30] as const).map(r => (
+      <div className="pop-in-delay-2 flex items-center justify-between gap-3 rounded-3xl border border-subtle bg-card/80 px-4 py-3.5 md:px-5 md:py-4">
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.16em] opacity-70">Nutrition Cockpit</div>
+          <h2 className="mt-1 text-xl font-semibold tracking-tight text-primary">Performance Overview</h2>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-full border border-subtle bg-primary/5 p-1">
+          {([7, 14, 30] as const).map((r) => (
             <button
               key={r}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                range === r
+                  ? "bg-white text-zinc-900 shadow-sm"
+                  : "opacity-70 hover:bg-primary/5 hover:text-primary"
+              }`}
               onClick={() => setRange(r)}
-              style={{
-                padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                border: range === r ? '1px solid rgba(124,92,255,0.5)' : '1px solid var(--border,rgba(255,255,255,0.08))',
-                background: range === r ? 'rgba(124,92,255,0.2)' : 'rgba(255,255,255,0.04)',
-                color: range === r ? 'rgba(124,92,255,0.95)' : 'var(--muted2,#888)',
-              }}
+              type="button"
             >
               {r}d
             </button>
@@ -430,60 +398,118 @@ export default function Insights() {
       </div>
 
       {error && (
-        <div style={{
-          ...chartCardStyle,
-          border: '1px solid rgba(239,68,68,0.35)',
-          background: 'rgba(239,68,68,0.08)',
-          color: '#fecaca',
-        }}>
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-500">
           {error}
         </div>
       )}
 
-      {loading ? (
-        <div style={chartCardStyle}>
-          <div style={{ color: 'var(--muted)', fontSize: 13 }}>Loading insights...</div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <div className="rounded-3xl border border-subtle bg-card/80 p-4">
+          <div className="flex items-center gap-2 opacity-70"><CalendarCheck size={16} weight="duotone" /> Consistency</div>
+          <div className="mt-2 font-mono text-3xl font-semibold text-primary">{stats.loggedPct}%</div>
+          <div className="mt-1 text-xs opacity-70">days logged</div>
         </div>
-      ) : (
-        <>
-          {/* BMI & Body Metrics */}
-          <BMICard profile={profile} />
+        <div className="rounded-3xl border border-subtle bg-card/80 p-4">
+          <div className="flex items-center gap-2 opacity-70"><Flame size={16} weight="duotone" /> Active Streak</div>
+          <div className="mt-2 font-mono text-3xl font-semibold text-primary">{stats.streak}</div>
+          <div className="mt-1 text-xs opacity-70">consecutive days</div>
+        </div>
+        <div className="rounded-3xl border border-subtle bg-card/80 p-4">
+          <div className="flex items-center gap-2 opacity-70"><TrendUp size={16} weight="duotone" /> Avg Calories</div>
+          <div className="mt-2 font-mono text-3xl font-semibold text-primary">{Math.round(stats.avgCalories)}</div>
+          <div className="mt-1 text-xs opacity-70">kcal / day</div>
+        </div>
+        <div className="rounded-3xl border border-subtle bg-card/80 p-4">
+          <div className="flex items-center gap-2 opacity-70"><ChartLineUp size={16} weight="duotone" /> Target Match</div>
+          <div className="mt-2 font-mono text-3xl font-semibold text-primary">
+            {Math.round((Math.min(stats.avgCalories / Math.max(targets.calories, 1), 1.25) / 1.25) * 100)}%
+          </div>
+          <div className="mt-1 text-xs opacity-70">calorie alignment</div>
+        </div>
+      </div>
 
-          {/* Consistency */}
-          <ConsistencyCard data={dayData} targets={targets} />
+      <BentoCard
+        title="Calorie Trend"
+        subtitle={`Rolling ${range}-day view mapped to your daily intake`}
+        icon={<TrendUp size={18} weight="duotone" />}
+      >
+        <PremiumAreaChart
+          data={calorieAreaData}
+          color={METRIC_COLORS.protein}
+          gradientColor={METRIC_COLORS.carbs}
+          height={220}
+          valueFormatter={(v) => `${Math.round(v)} kcal`}
+        />
+      </BentoCard>
 
-          {/* Calorie Chart */}
-          <BarChart data={dayData} dataKey="calories" targetValue={targets.calories} color="#8b5cf6" label="Daily Calories" unit=" kcal" />
+      <div className="grid gap-4 md:grid-cols-2 md:gap-5">
+        <BentoCard
+          title="Macro Trend"
+          subtitle={`Rolling ${range}-day view of your macro splits`}
+          icon={<ChartLineUp size={18} weight="duotone" />}
+        >
+          <MacroTrendChart
+            data={dayData}
+            height={220}
+          />
+        </BentoCard>
 
-          {/* Protein Chart */}
-          <BarChart data={dayData} dataKey="proteinG" targetValue={targets.proteinG} color="#10b981" label="Daily Protein" unit="g" />
+        <BentoCard
+          title="Meal Distribution"
+          subtitle={`Calorie breakdown over the last ${range} days`}
+          icon={<ChartPieSlice size={18} weight="duotone" />}
+        >
+          <div className="h-[220px]">
+            <MealDistributionChart data={mealDistribution} />
+          </div>
+        </BentoCard>
+      </div>
 
-          {/* Macro Distribution Pie */}
-          <MacroPieChart data={dayData} />
+      <div className="grid gap-4 md:grid-cols-2 md:gap-5">
+        <BentoCard
+          title="Macro Distribution"
+          subtitle="Today's macro split from daily totals"
+          icon={<Barbell size={18} weight="duotone" />}
+        >
+          <div className="h-[250px]">
+            <PremiumDonutChart data={donutData} />
+          </div>
+        </BentoCard>
 
-          {/* Carbs Chart */}
-          <BarChart data={dayData} dataKey="carbsG" targetValue={targets.carbsG} color="#06b6d4" label="Daily Carbs" unit="g" />
+        <BentoCard
+          title="Goal Fulfillment"
+          subtitle="Average intake vs personalized targets"
+          icon={<ShieldCheck size={18} weight="duotone" />}
+        >
+          <div className="h-[250px]">
+            <StackedProgressBar data={progressData} />
+          </div>
+        </BentoCard>
+      </div>
 
-          {/* Fat Chart */}
-          <BarChart data={dayData} dataKey="fatG" targetValue={targets.fatG} color="#f59e0b" label="Daily Fat" unit="g" />
-        </>
-      )}
+      {bmiMeta ? (
+        <BentoCard title="Body Metrics" subtitle="Profile-based baseline checks" icon={<Heart size={18} weight="duotone" />}>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            <div className="rounded-xl border border-subtle bg-primary/5 px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-[0.14em] opacity-70">BMI</div>
+              <div className="mt-1 font-mono text-2xl font-semibold text-primary">{bmiMeta.bmi.toFixed(1)}</div>
+              <div className={`mt-0.5 text-xs font-semibold ${bmiMeta.category.colorClass}`}>{bmiMeta.category.label}</div>
+            </div>
+            <div className="rounded-xl border border-subtle bg-primary/5 px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-[0.14em] opacity-70">Weight</div>
+              <div className="mt-1 font-mono text-2xl font-semibold text-primary">{bmiMeta.weightKg.toFixed(1)}</div>
+              <div className="mt-0.5 text-xs opacity-70">kg</div>
+            </div>
+            <div className="rounded-xl border border-subtle bg-primary/5 px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-[0.14em] opacity-70">Height</div>
+              <div className="mt-1 font-mono text-2xl font-semibold text-primary">{Math.round(bmiMeta.heightCm)}</div>
+              <div className="mt-0.5 text-xs opacity-70">cm</div>
+            </div>
+          </div>
+        </BentoCard>
+      ) : null}
+
+      <div className="h-4" />
     </div>
   );
 }
-
-// ── Styles ─────────────────────────────────────────────────────────────────────
-
-const chartCardStyle: React.CSSProperties = {
-  border: '1px solid var(--border, rgba(255,255,255,0.08))',
-  background: 'rgba(255,255,255,0.04)',
-  borderRadius: 14,
-  padding: '16px 18px',
-};
-
-const metricBoxStyle: React.CSSProperties = {
-  background: 'rgba(0,0,0,0.2)',
-  borderRadius: 10,
-  padding: '10px 12px',
-  textAlign: 'center',
-};

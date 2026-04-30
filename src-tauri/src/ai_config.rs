@@ -226,18 +226,14 @@ mod tests {
     fn test_serialize_roundtrip() {
         let mut cfg = AiConfig::default();
         cfg.selected_provider = "openai".into();
-        cfg.selected_models
-            .insert("openai".into(), "gpt-4o".into());
+        cfg.selected_models.insert("openai".into(), "gpt-4o".into());
         cfg.verified_providers.insert("openai".into());
 
         let json = serde_json::to_string(&cfg).unwrap();
         let parsed: AiConfig = serde_json::from_str(&json).unwrap();
 
         assert_eq!(parsed.selected_provider, "openai");
-        assert_eq!(
-            parsed.selected_models.get("openai").unwrap(),
-            "gpt-4o"
-        );
+        assert_eq!(parsed.selected_models.get("openai").unwrap(), "gpt-4o");
         assert!(parsed.verified_providers.contains("openai"));
     }
 

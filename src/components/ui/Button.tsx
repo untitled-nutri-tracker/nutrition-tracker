@@ -1,7 +1,8 @@
 // src/components/ui/Button.tsx
-// Sprint 2.7 — Reusable button component
+// Sprint 2.7 — Reusable button component (Converted to Tailwind, Theme Aware)
 
 import React from "react";
+import { CircleNotch } from "@phosphor-icons/react";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize    = "sm" | "md" | "lg";
@@ -13,58 +14,27 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   iconLeft?: React.ReactNode;
 }
 
-const BASE: React.CSSProperties = {
-  display:        "inline-flex",
-  alignItems:     "center",
-  justifyContent: "center",
-  gap:            6,
-  fontFamily:     "inherit",
-  fontWeight:     600,
-  border:         "1px solid transparent",
-  borderRadius:   11,
-  cursor:         "pointer",
-  transition:     "opacity .12s ease",
-  whiteSpace:     "nowrap",
-  outline:        "none",
+const SIZE_CLASSES: Record<ButtonSize, string> = {
+  sm: "text-xs px-2.5 py-1.5 rounded-lg",
+  md: "text-[13px] px-3.5 py-2.5 rounded-xl",
+  lg: "text-sm px-4 py-3 rounded-2xl",
 };
 
-const SIZES: Record<ButtonSize, React.CSSProperties> = {
-  sm: { fontSize: 12, padding: "5px 10px",  borderRadius: 9  },
-  md: { fontSize: 13, padding: "9px 14px",  borderRadius: 11 },
-  lg: { fontSize: 14, padding: "11px 18px", borderRadius: 13 },
-};
-
-const VARIANTS: Record<ButtonVariant, React.CSSProperties> = {
-  primary: {
-    background:  "linear-gradient(135deg, rgba(124,92,255,0.80), rgba(0,209,255,0.50))",
-    borderColor: "rgba(124,92,255,0.42)",
-    color:       "rgba(255,255,255,0.95)",
-  },
-  secondary: {
-    background:  "rgba(255,255,255,0.06)",
-    borderColor: "rgba(255,255,255,0.13)",
-    color:       "rgba(255,255,255,0.85)",
-  },
-  ghost: {
-    background:  "transparent",
-    borderColor: "transparent",
-    color:       "rgba(255,255,255,0.55)",
-  },
-  danger: {
-    background:  "rgba(255,75,75,0.13)",
-    borderColor: "rgba(255,75,75,0.35)",
-    color:       "rgba(255,120,120,0.95)",
-  },
+const VARIANT_CLASSES: Record<ButtonVariant, string> = {
+  primary: "border-emerald-500/40 bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 text-emerald-600 dark:text-emerald-50 hover:from-emerald-500/30 hover:to-cyan-500/15 shadow-[0_4px_14px_-6px_rgba(16,185,129,0.3)]",
+  secondary: "border-subtle bg-primary/5 text-primary hover:bg-primary/10",
+  ghost: "border-transparent bg-transparent text-muted hover:bg-primary/5 hover:text-primary",
+  danger: "border-red-500/35 bg-red-500/10 text-red-500 hover:bg-red-500/20",
 };
 
 export default function Button({
-  variant  = "primary",
-  size     = "md",
-  loading  = false,
+  className = "",
+  variant =   "primary",
+  size =      "md",
+  loading =   false,
   disabled,
   iconLeft,
   children,
-  style,
   ...rest
 }: ButtonProps) {
   const isDisabled = disabled || loading;
@@ -72,20 +42,14 @@ export default function Button({
   return (
     <button
       disabled={isDisabled}
-      style={{
-        ...BASE,
-        ...SIZES[size],
-        ...VARIANTS[variant],
-        opacity: isDisabled ? 0.5 : 1,
-        cursor:  isDisabled ? "not-allowed" : "pointer",
-        ...style,
-      }}
+      className={`inline-flex items-center justify-center gap-1.5 font-semibold border transition-all duration-200 outline-none whitespace-nowrap select-none active:scale-[0.98] ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${isDisabled ? "opacity-50 cursor-not-allowed active:scale-100" : "cursor-pointer"} ${className}`}
       {...rest}
     >
-      {loading
-        ? <span style={{ opacity: 0.7, fontSize: 12 }}>⏳</span>
-        : iconLeft && <span style={{ lineHeight: 1 }}>{iconLeft}</span>
-      }
+      {loading ? (
+        <CircleNotch weight="bold" className="animate-spin opacity-70" />
+      ) : (
+        iconLeft && <span className="leading-none">{iconLeft}</span>
+      )}
       {children}
     </button>
   );

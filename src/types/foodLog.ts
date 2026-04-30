@@ -70,7 +70,7 @@ export function zeroDailyTotals(): DailyTotals {
 }
 
 export function sumEntries(entries: FoodEntry[]): DailyTotals {
-  return entries.reduce<DailyTotals>(
+  const sum = entries.reduce<DailyTotals>(
     (acc, e) => ({
       calories:   acc.calories   + e.calories,
       proteinG:   acc.proteinG   + e.proteinG,
@@ -80,4 +80,12 @@ export function sumEntries(entries: FoodEntry[]): DailyTotals {
     }),
     zeroDailyTotals()
   );
+  
+  return {
+    calories: Math.round(sum.calories),
+    proteinG: Math.round(sum.proteinG),
+    carbsG: Math.round(sum.carbsG),
+    fatG: Math.round(sum.fatG),
+    entryCount: sum.entryCount,
+  };
 }

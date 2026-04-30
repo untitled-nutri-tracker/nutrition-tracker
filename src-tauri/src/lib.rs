@@ -141,7 +141,16 @@ fn ensure_camera_permission() -> Result<String, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = {
+        let builder = tauri::Builder::default();
+
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+        let builder = builder.plugin(tauri_plugin_barcode_scanner::init());
+
+        builder
+    };
+
+    builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
@@ -225,6 +234,7 @@ pub fn run() {
             nutrack_database::meal::get_daily_nutrition_totals,
             nutrack_database::meal::get_weekly_nutrition_totals,
             nutrack_database::meal::get_nutrition_trend,
+            nutrack_database::meal::seed_demo_food_log_30_days,
             // AI Database
             nutrack_database::ai::create_chat_session,
             nutrack_database::ai::get_chat_sessions,

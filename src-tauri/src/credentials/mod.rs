@@ -71,24 +71,23 @@ impl CredentialManager {
 
         if guard.is_none() {
             // First use — resolve the backend now.
-            let backend: Box<dyn CredentialStore> =
-                match keyring_store::KeyringStore::new() {
-                    Ok(ks) => {
-                        println!("CredentialManager: using OS keychain");
-                        Box::new(ks)
-                    }
-                    Err(e) => {
-                        eprintln!(
+            let backend: Box<dyn CredentialStore> = match keyring_store::KeyringStore::new() {
+                Ok(ks) => {
+                    println!("CredentialManager: using OS keychain");
+                    Box::new(ks)
+                }
+                Err(e) => {
+                    eprintln!(
                             "CredentialManager: OS keychain unavailable ({}), falling back to encrypted file store",
                             e
                         );
-                        let vault_path = self.app_data_dir.join("credentials.vault");
-                        Box::new(
-                            secure_file_store::SecureFileStore::new(&vault_path)
-                                .expect("Failed to initialize secure file store"),
-                        )
-                    }
-                };
+                    let vault_path = self.app_data_dir.join("credentials.vault");
+                    Box::new(
+                        secure_file_store::SecureFileStore::new(&vault_path)
+                            .expect("Failed to initialize secure file store"),
+                    )
+                }
+            };
             *guard = Some(backend);
         }
 

@@ -11,6 +11,8 @@ export interface DatabaseSession {
   connectedPath: string | null;
   lastPath: string | null;
   defaultDatabaseDirectory: string;
+  /** "desktop" or "mobile" — controls whether file pickers are shown */
+  platform: "desktop" | "mobile";
 }
 
 interface DatabaseSessionContextValue {
@@ -26,6 +28,7 @@ const EMPTY_SESSION: DatabaseSession = {
   connectedPath: null,
   lastPath: null,
   defaultDatabaseDirectory: "",
+  platform: "desktop",
 };
 
 const DatabaseSessionContext = createContext<DatabaseSessionContextValue | null>(null);
@@ -60,7 +63,20 @@ export function DatabaseSessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        await refresh();
+        const sess = await refresh();
+
+        // On mobile, auto-create/open a database in the default directory
+        // so users never see a file picker (which doesn't work on iOS).
+        if (sess.platform === "mobile" && !sess.connectedPath) {
+          const defaultPath = sess.defaultDatabaseDirectory + "/nutrition.db";
+          try {
+            await invoke<string>("create_database", { path: defaultPath });
+          } catch {
+            // Already exists — just open it
+            await invoke<string>("open_database", { path: defaultPath });
+          }
+          await refresh();
+        }
       } finally {
         setLoading(false);
       }

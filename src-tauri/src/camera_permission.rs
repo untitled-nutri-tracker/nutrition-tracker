@@ -1,13 +1,12 @@
 #[cfg(target_os = "macos")]
 pub fn ensure_camera_permission() -> Result<String, String> {
-    use objc2_av_foundation::{
-        AVCaptureDevice, AVAuthorizationStatus, AVMediaTypeVideo,
-    };
+    use objc2_av_foundation::{AVAuthorizationStatus, AVCaptureDevice, AVMediaTypeVideo};
     use std::sync::mpsc;
     use std::time::Duration;
 
     let media_type = unsafe {
-        AVMediaTypeVideo.ok_or_else(|| "Camera media type is unavailable on this macOS runtime.".to_string())?
+        AVMediaTypeVideo
+            .ok_or_else(|| "Camera media type is unavailable on this macOS runtime.".to_string())?
     };
 
     let status = unsafe { AVCaptureDevice::authorizationStatusForMediaType(media_type) };
@@ -37,7 +36,14 @@ pub fn ensure_camera_permission() -> Result<String, String> {
     Ok(if granted { "granted" } else { "denied" }.into())
 }
 
-#[cfg(not(target_os = "macos"))]
+/// On iOS, WKWebView handles camera permissions natively via Info.plist keys.
+/// No Rust-side permission prompting is needed — the OS shows its own dialog.
+#[cfg(target_os = "ios")]
+pub fn ensure_camera_permission() -> Result<String, String> {
+    Ok("granted".into())
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "ios")))]
 pub fn ensure_camera_permission() -> Result<String, String> {
     Ok("unsupported".into())
 }

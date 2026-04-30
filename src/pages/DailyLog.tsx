@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { CaretLeft, CaretRight, Fire, Leaf, MagnifyingGlass, ShootingStar } from "@phosphor-icons/react";
 import { useDailyLog } from "../hooks/useDailyLog";
 import { localDateString, loadEntriesByDate } from "../lib/foodLogStore";
 import { MEAL_TYPE_ORDER, MEAL_TYPE_LABELS, MEAL_TYPE_ICONS } from "../types/foodLog";
@@ -62,43 +63,30 @@ function StreakCard() {
   startDay.setDate(startDay.getDate() - 6);
 
   return (
-    <div style={{
-      border: '1px solid rgba(124,92,255,0.2)',
-      background: 'rgba(124,92,255,0.04)',
-      borderRadius: 14,
-      padding: '12px 16px',
-      display: 'grid',
-      gridTemplateColumns: 'auto 1fr',
-      gap: 16,
-      alignItems: 'center',
-    }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 28, fontWeight: 800, color: streak >= 3 ? '#10b981' : streak >= 1 ? '#fbbf24' : 'var(--muted2)', lineHeight: 1 }}>
+    <div className="grid grid-cols-[auto_1fr] items-center gap-4 rounded-2xl border border-emerald-400/25 bg-emerald-500/8 px-4 py-3">
+      <div className="text-center">
+        <div className={`text-[28px] font-extrabold leading-none ${streak >= 3 ? "text-emerald-400" : streak >= 1 ? "text-amber-300" : "text-muted2"}`}>
           {streak}
         </div>
-        <div style={{ fontSize: 10, color: 'var(--muted2)', marginTop: 2 }}>day streak</div>
-        <div style={{ fontSize: 18, marginTop: 2 }}>{streak >= 7 ? '🔥' : streak >= 3 ? '⭐' : '🌱'}</div>
+        <div className="mt-0.5 text-[10px] text-muted2">day streak</div>
+        <div className="mt-1 inline-flex items-center justify-center rounded-lg border border-primary/10 bg-primary/5 p-1 text-muted">
+          {streak >= 7 ? <Fire size={16} weight="fill" className="text-rose-300" /> : streak >= 3 ? <ShootingStar size={16} weight="fill" className="text-amber-300" /> : <Leaf size={16} weight="fill" className="text-emerald-300" />}
+        </div>
       </div>
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(124,92,255,0.9)' }}>Logging Streak</span>
-          <span style={{ fontSize: 10, color: 'var(--muted2)' }}>Best: {bestStreak} days</span>
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-xs font-bold text-emerald-300/95">Logging Streak</span>
+          <span className="text-[10px] text-muted2">Best: {bestStreak} days</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+        <div className="grid grid-cols-7 gap-1">
           {weekMap.map((logged, i) => {
             const d = new Date(startDay);
             d.setDate(d.getDate() + i);
             const label = d.toLocaleDateString('en-US', { weekday: 'narrow' });
             return (
-              <div key={i} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 9, color: 'var(--muted2)', marginBottom: 2 }}>{label}</div>
-                <div style={{
-                  width: 24, height: 24, borderRadius: 6, margin: '0 auto',
-                  background: logged ? 'rgba(16, 185, 129, 0.7)' : 'rgba(255,255,255,0.06)',
-                  border: logged ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(255,255,255,0.08)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, color: logged ? '#fff' : 'var(--muted2)',
-                }}>
+              <div key={i} className="text-center">
+                <div className="mb-0.5 text-[9px] text-muted2">{label}</div>
+                <div className={`mx-auto flex h-6 w-6 items-center justify-center rounded-md border text-[10px] ${logged ? "border-emerald-400/45 bg-emerald-400/70 text-primary" : "border-primary/10 bg-primary/5 text-muted2"}`}>
                   {logged ? '✓' : '·'}
                 </div>
               </div>
@@ -174,24 +162,24 @@ function computeScore(totals: { calories: number; proteinG: number; carbsG: numb
 }
 
 function scoreToGrade(score: number) {
-  if (score >= 90) return { letter: 'A', color: '#10b981', emoji: '🏆' };
-  if (score >= 75) return { letter: 'B', color: '#34d399', emoji: '💪' };
-  if (score >= 60) return { letter: 'C', color: '#fbbf24', emoji: '👍' };
-  if (score >= 40) return { letter: 'D', color: '#f97316', emoji: '⚠️' };
-  return { letter: 'F', color: '#ef4444', emoji: '🔻' };
+  if (score >= 90) return { letter: '', toneClass: 'border-emerald-400/20 bg-emerald-500/8', textClass: 'text-emerald-300' };
+  if (score >= 75) return { letter: '', toneClass: 'border-emerald-300/20 bg-emerald-400/8', textClass: 'text-emerald-200' };
+  if (score >= 60) return { letter: '', toneClass: 'border-amber-300/25 bg-amber-400/10', textClass: 'text-amber-300' };
+  if (score >= 40) return { letter: '', toneClass: 'border-orange-300/25 bg-orange-500/10', textClass: 'text-orange-300' };
+  return { letter: '', toneClass: 'border-red-400/30 bg-red-500/10', textClass: 'text-red-300' };
 }
 
 function MacroBar({ label, actual, target, unit }: { label: string; actual: number; target: number; unit: string }) {
   const pct = target > 0 ? Math.min((actual / target) * 100, 150) : 0;
-  const barColor = pct > 110 ? '#f97316' : pct >= 80 ? '#10b981' : '#fbbf24';
+  const barColorClass = pct > 110 ? 'bg-orange-400' : pct >= 80 ? 'bg-emerald-400' : 'bg-amber-300';
   return (
-    <div style={{ fontSize: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+    <div className="text-xs">
+      <div className="mb-0.5 flex justify-between">
         <span>{label}</span>
-        <span style={{ color: 'var(--muted2)' }}>{Math.round(actual)}/{target}{unit}</span>
+        <span className="text-muted2">{Math.round(actual)}/{target}{unit}</span>
       </div>
-      <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
-        <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: barColor, borderRadius: 4, transition: 'width 0.4s ease' }} />
+      <div className="h-1.5 overflow-hidden rounded bg-primary/10">
+        <div style={{ width: `${Math.min(pct, 100)}%` }} className={`h-full rounded transition-[width] duration-400 ${barColorClass}`} />
       </div>
     </div>
   );
@@ -202,14 +190,16 @@ function NutriScoreCard({ totals }: { totals: { calories: number; proteinG: numb
   const score = computeScore(totals, targets);
   const grade = scoreToGrade(score);
   return (
-    <div style={{ border: `1px solid ${grade.color}33`, background: `${grade.color}08`, borderRadius: 14, padding: '14px 16px', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 16, alignItems: 'center' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 36, fontWeight: 800, color: grade.color, lineHeight: 1 }}>{grade.letter}</div>
-        <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 2 }}>{score}/100</div>
-        <div style={{ fontSize: 16, marginTop: 2 }}>{grade.emoji}</div>
+    <div className={`grid grid-cols-[auto_1fr] items-center gap-4 rounded-2xl border px-4 py-3.5 ${grade.toneClass}`}>
+      <div className="text-center">
+        <div className={`text-4xl font-extrabold leading-none ${grade.textClass}`}>{grade.letter}</div>
+        <div className="mt-0.5 text-[11px] text-muted2">{score}/100</div>
+        <div className="mt-1 inline-flex items-center justify-center rounded-md border border-primary/10 bg-primary/5 p-1">
+          {score >= 90 ? <Fire size={14} weight="fill" className="text-emerald-300" /> : score >= 60 ? <ShootingStar size={14} weight="fill" className="text-amber-300" /> : <Leaf size={14} weight="fill" className="text-rose-300" />}
+        </div>
       </div>
-      <div style={{ display: 'grid', gap: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: grade.color }}>Daily Nutrition Score</div>
+      <div className="grid gap-2">
+        <div className={`text-[13px] font-bold ${grade.textClass}`}>Daily Nutrition Score</div>
         <MacroBar label="Calories" actual={totals.calories} target={targets.calories} unit="kcal" />
         <MacroBar label="Protein" actual={totals.proteinG} target={targets.proteinG} unit="g" />
         <MacroBar label="Carbs" actual={totals.carbsG} target={targets.carbsG} unit="g" />
@@ -246,8 +236,12 @@ export default function DailyLog() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="page-enter" style={{ display: "grid", gap: 14 }}>
-      {showConfetti && <Confetti recycle={false} numberOfPieces={300} style={{ position: 'fixed', left: 0, top: 0, zIndex: 9999, pointerEvents: 'none' }} />}
+    <div className="page-enter mx-auto flex w-full max-w-[1000px] flex-col gap-4 p-4 pb-[calc(var(--shell-mobile-content-padding)+1rem)] md:p-8 md:pb-8">
+      {showConfetti && (
+        <div className="fixed inset-0 z-[9999] pointer-events-none">
+          <Confetti recycle={false} numberOfPieces={300} width={window.innerWidth} height={window.innerHeight} />
+        </div>
+      )}
 
       {/* Profile summary */}
       <div className="pop-in">
@@ -261,33 +255,35 @@ export default function DailyLog() {
 
       {/* Error banner */}
       {error && (
-        <div style={errorBannerStyle}>
-          <span style={{ fontWeight: 600 }}>Error</span> — {error}
+        <div className="rounded-2xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm text-muted">
+          <span className="font-semibold text-primary">Error</span> — {error}
         </div>
       )}
 
       {/* Date nav + Add button */}
-      <div className="pop-in-delay-2" style={dateNavRowStyle}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <div className="pop-in-delay-2 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5">
           <Button
             variant="secondary"
             size="sm"
             onClick={() => setDate(prevDay(date))}
-            style={{ fontSize: 16, padding: "3px 10px" }}
+            className="max-sm:min-h-[40px]"
+            iconLeft={<CaretLeft size={14} weight="bold" />}
           >
-            ‹
+            Prev
           </Button>
 
-          <span style={dateTextStyle}>{formatDisplayDate(date)}</span>
+          <span className="min-w-[90px] text-center text-sm font-bold">{formatDisplayDate(date)}</span>
 
           <Button
             variant="secondary"
             size="sm"
             disabled={isToday}
             onClick={() => setDate(nextDay(date))}
-            style={{ fontSize: 16, padding: "3px 10px" }}
+            className="max-sm:min-h-[40px]"
+            iconLeft={<CaretRight size={14} weight="bold" />}
           >
-            ›
+            Next
           </Button>
 
           {!isToday && (
@@ -295,12 +291,7 @@ export default function DailyLog() {
               variant="ghost"
               size="sm"
               onClick={() => setDate(TODAY)}
-              style={{
-                color:       "rgba(124,92,255,0.9)",
-                borderColor: "rgba(124,92,255,0.3)",
-                background:  "rgba(124,92,255,0.10)",
-                border:      "1px solid rgba(124,92,255,0.3)",
-              }}
+              className="border border-emerald-400/35 bg-emerald-500/10 text-emerald-300"
             >
               Jump to today
             </Button>
@@ -311,7 +302,7 @@ export default function DailyLog() {
           variant="primary"
           onClick={() => navigate("/log", { state: { date } })}
           disabled={isFuture || saving}
-          iconLeft="🔍"
+          iconLeft={<MagnifyingGlass size={14} weight="bold" />}
         >
           Search Food
         </Button>
@@ -319,7 +310,7 @@ export default function DailyLog() {
 
       {/* Daily totals bar — only shown when there are entries */}
       {entries.length > 0 && (
-        <div style={totalsGridStyle}>
+        <div className="grid grid-cols-5 gap-2.5">
           <StatCard label="Calories" value={totals.calories} unit="kcal" accent />
           <StatCard label="Protein"  value={totals.proteinG} unit="g" />
           <StatCard label="Carbs"    value={totals.carbsG}   unit="g" />
@@ -337,17 +328,17 @@ export default function DailyLog() {
 
       {/* Loading state */}
       {loading && (
-        <div className="pop-in" style={{ display: "grid", gap: 14 }}>
-          <div className="skeleton" style={{ height: 110 }} />
-          <div className="skeleton" style={{ height: 80 }} />
-          <div className="skeleton" style={{ height: 160 }} />
+        <div className="pop-in grid gap-3.5">
+          <div className="skeleton h-[110px]" />
+          <div className="skeleton h-[80px]" />
+          <div className="skeleton h-[160px]" />
         </div>
       )}
 
       {/* Empty state */}
       {!loading && entries.length === 0 && (
         <EmptyState
-          icon={isFuture ? "📅" : "🍽️"}
+          icon={isFuture ? <CaretRight size={24} weight="duotone" /> : <MagnifyingGlass size={24} weight="duotone" />}
           title={isFuture ? "No entries for a future date" : "Let's Get Started!"}
           description={
             isFuture
@@ -356,7 +347,7 @@ export default function DailyLog() {
           }
         >
           {!isFuture && (
-            <Button onClick={() => navigate("/log", { state: { date } })} iconLeft="🔍" size="sm">
+            <Button onClick={() => navigate("/log", { state: { date } })} iconLeft={<MagnifyingGlass size={14} weight="bold" />} size="sm">
               Search & Log Food
             </Button>
           )}
@@ -367,23 +358,23 @@ export default function DailyLog() {
       {!loading && MEAL_TYPE_ORDER.map((mt) => {
         const group = grouped[mt];
         if (group.length === 0) return null;
-        const groupCals = group.reduce((sum, e) => sum + e.calories, 0);
+        const groupCals = Math.round(group.reduce((sum, e) => sum + e.calories, 0));
 
         return (
-          <div key={mt} style={cardStyle}>
+          <div key={mt} className="card pop-in">
             {/* Group header */}
-            <div style={groupHeaderStyle}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={mealIconStyle}>{MEAL_TYPE_ICONS[mt]}</span>
-                <span style={{ fontWeight: 700, fontSize: 14 }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="rounded-lg border border-primary/10 bg-primary/5 px-1.5 py-1 text-base leading-none">{MEAL_TYPE_ICONS[mt]}</span>
+                <span className="text-sm font-bold">
                   {MEAL_TYPE_LABELS[mt]}
                 </span>
               </div>
-              <span style={groupCalStyle}>{groupCals} kcal</span>
+              <span className="text-xs font-semibold text-muted2">{groupCals} kcal</span>
             </div>
 
             {/* Entry rows */}
-            <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
+            <div className="mt-2.5 grid gap-1.5">
               {group.map((entry) => (
                 <FoodEntryRow
                   key={entry.id}
@@ -408,60 +399,3 @@ export default function DailyLog() {
     </div>
   );
 }
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const cardStyle: React.CSSProperties = {
-  border:       "1px solid var(--border)",
-  background:   "rgba(255,255,255,0.04)",
-  borderRadius: 14,
-  padding:      "14px 16px",
-};
-
-const errorBannerStyle: React.CSSProperties = {
-  ...cardStyle,
-  border:     "1px solid rgba(255,80,80,0.35)",
-  background: "rgba(255,80,80,0.08)",
-  fontSize:   13,
-};
-
-const dateNavRowStyle: React.CSSProperties = {
-  display:        "flex",
-  alignItems:     "center",
-  justifyContent: "space-between",
-  gap:            12,
-};
-
-const dateTextStyle: React.CSSProperties = {
-  fontSize:  14,
-  fontWeight: 700,
-  minWidth:  90,
-  textAlign: "center",
-};
-
-const totalsGridStyle: React.CSSProperties = {
-  display:             "grid",
-  gridTemplateColumns: "repeat(5, 1fr)",
-  gap:                 10,
-};
-
-const groupHeaderStyle: React.CSSProperties = {
-  display:        "flex",
-  alignItems:     "center",
-  justifyContent: "space-between",
-};
-
-const mealIconStyle: React.CSSProperties = {
-  fontSize:     16,
-  lineHeight:   1,
-  background:   "rgba(255,255,255,0.06)",
-  border:       "1px solid var(--border)",
-  borderRadius: 8,
-  padding:      "4px 6px",
-};
-
-const groupCalStyle: React.CSSProperties = {
-  fontSize:   12,
-  fontWeight: 600,
-  color:      "var(--muted)",
-};

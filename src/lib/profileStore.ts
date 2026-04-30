@@ -56,7 +56,11 @@ function isUserProfileV1(x: unknown): x is UserProfile {
 export async function loadProfile(): Promise<UserProfile | null> {
   if (USE_TAURI) {
     const profile = await tauriInvoke<UserProfile | null>("load_profile");
-    return profile && isUserProfileV1(profile) ? profile : null;
+    if (profile && isUserProfileV1(profile)) {
+      localStorage.setItem(LS_KEY, JSON.stringify(profile));
+      return profile;
+    }
+    return null;
   }
 
   const raw = localStorage.getItem(LS_KEY);
@@ -79,6 +83,7 @@ export async function saveProfile(profile: UserProfile): Promise<void> {
   if (USE_TAURI) {
     // Requires Rust command: save_profile(profile: UserProfile)
     await tauriInvoke<void>("save_profile", { profile });
+    localStorage.setItem(LS_KEY, JSON.stringify(profile));
     return;
   }
 
@@ -92,6 +97,7 @@ export async function clearProfile(): Promise<void> {
   if (USE_TAURI) {
     // Requires Rust command: clear_profile()
     await tauriInvoke<void>("clear_profile");
+    localStorage.removeItem(LS_KEY);
     return;
   }
 
