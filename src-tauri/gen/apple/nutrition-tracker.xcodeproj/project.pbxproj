@@ -22,39 +22,39 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		1026323A464ABBF1E7BDF51D /* photo_food.rs */ = {isa = PBXFileReference; path = photo_food.rs; sourceTree = "<group>"; };
-		17B0B1F615198CD56822F2ED /* fetch_test.rs */ = {isa = PBXFileReference; path = fetch_test.rs; sourceTree = "<group>"; };
+		1026323A464ABBF1E7BDF51D /* photo_food.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = photo_food.rs; sourceTree = "<group>"; };
+		17B0B1F615198CD56822F2ED /* fetch_test.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = fetch_test.rs; sourceTree = "<group>"; };
 		24140D786C26D3C8CEC2263C /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		2526DBA8AA6D9CB752724C01 /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
 		325FC64384494E23DE6E3A89 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		3752B241D6121422853607C7 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
-		3D781B0842C587B84D8BFF16 /* keyring_store.rs */ = {isa = PBXFileReference; path = keyring_store.rs; sourceTree = "<group>"; };
+		3D781B0842C587B84D8BFF16 /* keyring_store.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = keyring_store.rs; sourceTree = "<group>"; };
 		3E20E60C0854F800DEE23FCF /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
-		415620EFD254ED665BF0D87E /* lib.rs */ = {isa = PBXFileReference; path = lib.rs; sourceTree = "<group>"; };
+		415620EFD254ED665BF0D87E /* lib.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = lib.rs; sourceTree = "<group>"; };
 		42AC5AD8F5121A53DCE2760E /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
-		4833CD5FA606698121B68E0D /* mod.rs */ = {isa = PBXFileReference; path = mod.rs; sourceTree = "<group>"; };
+		4833CD5FA606698121B68E0D /* mod.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = mod.rs; sourceTree = "<group>"; };
 		5090BE4E6FE7DDF6502A28D1 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
 		552963AB3FCB0C9ABB075180 /* nutrition-tracker_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "nutrition-tracker_iOS.entitlements"; sourceTree = "<group>"; };
 		595532F78302B5EE94F81E59 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		5F31CE05768834CB025DB5D6 /* openfoodfacts.rs */ = {isa = PBXFileReference; path = openfoodfacts.rs; sourceTree = "<group>"; };
-		635C71B96D2F8EC6E9A72326 /* network_config.rs */ = {isa = PBXFileReference; path = network_config.rs; sourceTree = "<group>"; };
+		5F31CE05768834CB025DB5D6 /* openfoodfacts.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = openfoodfacts.rs; sourceTree = "<group>"; };
+		635C71B96D2F8EC6E9A72326 /* network_config.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = network_config.rs; sourceTree = "<group>"; };
 		6CF56A1A74E172BF83222D63 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
-		6F94085BDB273885537F7AB4 /* ipc_guards.rs */ = {isa = PBXFileReference; path = ipc_guards.rs; sourceTree = "<group>"; };
-		746C515C81733BAB611C2A1B /* ai_config.rs */ = {isa = PBXFileReference; path = ai_config.rs; sourceTree = "<group>"; };
+		6F94085BDB273885537F7AB4 /* ipc_guards.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = ipc_guards.rs; sourceTree = "<group>"; };
+		746C515C81733BAB611C2A1B /* ai_config.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = ai_config.rs; sourceTree = "<group>"; };
 		88BFE5C3D2339DE54AE692F5 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
-		8B25448FBF7080059870879D /* mod.rs */ = {isa = PBXFileReference; path = mod.rs; sourceTree = "<group>"; };
-		8C6E7E94A7BE9A5BAE84DE82 /* camera_permission.rs */ = {isa = PBXFileReference; path = camera_permission.rs; sourceTree = "<group>"; };
+		8B25448FBF7080059870879D /* mod.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = mod.rs; sourceTree = "<group>"; };
+		8C6E7E94A7BE9A5BAE84DE82 /* camera_permission.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = camera_permission.rs; sourceTree = "<group>"; };
 		8D597F784ED621BDE188AA4A /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
-		A37598AF5609056D26E239F8 /* main.rs */ = {isa = PBXFileReference; path = main.rs; sourceTree = "<group>"; };
+		A37598AF5609056D26E239F8 /* main.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = main.rs; sourceTree = "<group>"; };
 		AC2E9DC106AC8D1B1FCDFBC5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		B17DD95D2ACE3923B888EB0A /* commands.rs */ = {isa = PBXFileReference; path = commands.rs; sourceTree = "<group>"; };
+		B17DD95D2ACE3923B888EB0A /* commands.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = commands.rs; sourceTree = "<group>"; };
 		B37B21C1445C5967473FC6D7 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
-		C73D39963299BFDD3C210120 /* mod.rs */ = {isa = PBXFileReference; path = mod.rs; sourceTree = "<group>"; };
-		CB737951F0A5386F38C3F733 /* ai.rs */ = {isa = PBXFileReference; path = ai.rs; sourceTree = "<group>"; };
-		CD1C3CDC095BACC4FD0CBF5B /* nutrition-tracker_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "nutrition-tracker_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		D4AE3C2AAF3981706D4C66EA /* secure_file_store.rs */ = {isa = PBXFileReference; path = secure_file_store.rs; sourceTree = "<group>"; };
+		C73D39963299BFDD3C210120 /* mod.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = mod.rs; sourceTree = "<group>"; };
+		CB737951F0A5386F38C3F733 /* ai.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = ai.rs; sourceTree = "<group>"; };
+		CD1C3CDC095BACC4FD0CBF5B /* nutrition-tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "nutrition-tracker.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4AE3C2AAF3981706D4C66EA /* secure_file_store.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = secure_file_store.rs; sourceTree = "<group>"; };
 		F18CD946080FFC909FB8D709 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		F512E2F6633CD519209F50F7 /* network_errors.rs */ = {isa = PBXFileReference; path = network_errors.rs; sourceTree = "<group>"; };
+		F512E2F6633CD519209F50F7 /* network_errors.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = network_errors.rs; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -164,7 +164,7 @@
 		CF51874064575FE5D5AFE13B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				CD1C3CDC095BACC4FD0CBF5B /* nutrition-tracker_iOS.app */,
+				CD1C3CDC095BACC4FD0CBF5B /* nutrition-tracker.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -232,7 +232,7 @@
 			packageProductDependencies = (
 			);
 			productName = "nutrition-tracker_iOS";
-			productReference = CD1C3CDC095BACC4FD0CBF5B /* nutrition-tracker_iOS.app */;
+			productReference = CD1C3CDC095BACC4FD0CBF5B /* nutrition-tracker.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -243,8 +243,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = 7872F8C6891F0AADB2A0EBEA /* Build configuration list for PBXProject "nutrition-tracker" */;
 			developmentRegion = en;
@@ -298,7 +296,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "npm run -- tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}";
+			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin:$HOME/.cargo/bin\"; npm run -- tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -318,12 +316,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
-				ARCHS = (
-					arm64,
-				);
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "nutrition-tracker_iOS/nutrition-tracker_iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = "GXU327GGWZ";
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -335,14 +332,25 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
-				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.pierretran.nutrition-tracker;
 				PRODUCT_NAME = "nutrition-tracker";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
-				DEVELOPMENT_TEAM = "GXU327GGWZ";
 			};
 			name = release;
 		};
@@ -469,12 +477,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
-				ARCHS = (
-					arm64,
-				);
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "nutrition-tracker_iOS/nutrition-tracker_iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = "GXU327GGWZ";
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -486,14 +493,25 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
-				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.pierretran.nutrition-tracker;
 				PRODUCT_NAME = "nutrition-tracker";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
-				DEVELOPMENT_TEAM = "GXU327GGWZ";
 			};
 			name = debug;
 		};
