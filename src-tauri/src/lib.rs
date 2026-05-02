@@ -2,13 +2,15 @@ pub mod ai_config;
 pub mod api;
 pub mod camera_permission;
 pub mod credentials;
+pub mod microphone_permission;
 pub mod network_config;
 pub mod utils;
 
 use api::ai::{self, AiResponse, ChatMessage};
+use api::audio_transcription::VoiceFoodTranscript;
 use api::openfoodfacts::{self, SearchResult};
 use api::photo_food::PhotoFoodEstimate;
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -98,15 +100,19 @@ async fn get_ai_advice(
         }
     };
 
-    let contextual_question = if let Some(profile_context) =
-        profile_context.as_deref().filter(|value| !value.trim().is_empty())
+    let contextual_question = if let Some(profile_context) = profile_context
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
     {
         format!(
             "(System Context: {})\n{}\n\n{}",
             ai_context.scope_description, profile_context, question
         )
     } else {
-        format!("(System Context: {})\n\n{}", ai_context.scope_description, question)
+        format!(
+            "(System Context: {})\n\n{}",
+            ai_context.scope_description, question
+        )
     };
 
     // Send to the selected LLM provider
@@ -139,12 +145,29 @@ fn ensure_camera_permission() -> Result<String, String> {
     camera_permission::ensure_camera_permission()
 }
 
+/// Ask the OS for microphone permission before using WebView getUserMedia.
+#[tauri::command]
+fn ensure_microphone_permission() -> Result<String, String> {
+    microphone_permission::ensure_microphone_permission()
+}
+
+/// Transcribe a short voice food entry into searchable text plus hints.
+#[tauri::command]
+async fn transcribe_food_audio(
+    app: AppHandle,
+    audio_base64: String,
+    mime_type: String,
+    provider: Option<String>,
+) -> Result<VoiceFoodTranscript, String> {
+    api::audio_transcription::transcribe(&app, audio_base64, mime_type, provider).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = {
         let builder = tauri::Builder::default();
 
-    #[cfg(any(target_os = "android", target_os = "ios"))]
+        #[cfg(any(target_os = "android", target_os = "ios"))]
         let builder = builder.plugin(tauri_plugin_barcode_scanner::init());
 
         builder
@@ -187,6 +210,8 @@ pub fn run() {
             get_ai_advice,
             analyze_food_photo,
             ensure_camera_permission,
+            ensure_microphone_permission,
+            transcribe_food_audio,
             ai_config::get_ai_config,
             ai_config::save_ai_config,
             ai_config::set_custom_endpoint,

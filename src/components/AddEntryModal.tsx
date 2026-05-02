@@ -1,7 +1,7 @@
 // src/components/AddEntryModal.tsx
 // Sprint 2.7 — Refactored to use ui component library
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { FoodEntryDraft, MealType } from "../types/foodLog";
 import { MEAL_TYPE_LABELS, MEAL_TYPE_ORDER } from "../types/foodLog";
 import Modal from "./ui/Modal";
@@ -15,6 +15,7 @@ interface Props {
   onClose: () => void;
   onAdd:   (draft: Omit<FoodEntryDraft, "date">) => Promise<void>;
   saving?: boolean;
+  initialDraft?: Partial<Omit<FoodEntryDraft, "date">>;
 }
 
 type FormState = {
@@ -29,23 +30,31 @@ type FormState = {
   notes:       string;
 };
 
-const EMPTY: FormState = {
-  foodName:    "",
-  brand:       "",
-  mealType:    "breakfast",
-  calories:    "",
-  proteinG:    "",
-  carbsG:      "",
-  fatG:        "",
-  servingDesc: "",
-  notes:       "",
-};
+function buildFormState(initialDraft?: Partial<Omit<FoodEntryDraft, "date">>): FormState {
+  return {
+    foodName: initialDraft?.foodName ?? "",
+    brand: initialDraft?.brand ?? "",
+    mealType: initialDraft?.mealType ?? "breakfast",
+    calories: initialDraft?.calories != null ? String(initialDraft.calories) : "",
+    proteinG: initialDraft?.proteinG != null ? String(initialDraft.proteinG) : "",
+    carbsG: initialDraft?.carbsG != null ? String(initialDraft.carbsG) : "",
+    fatG: initialDraft?.fatG != null ? String(initialDraft.fatG) : "",
+    servingDesc: initialDraft?.servingDesc ?? "",
+    notes: initialDraft?.notes ?? "",
+  };
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function AddEntryModal({ open, onClose, onAdd, saving }: Props) {
-  const [form,   setForm]   = useState<FormState>(EMPTY);
+export default function AddEntryModal({ open, onClose, onAdd, saving, initialDraft }: Props) {
+  const [form,   setForm]   = useState<FormState>(() => buildFormState(initialDraft));
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+
+  useEffect(() => {
+    if (!open) return;
+    setForm(buildFormState(initialDraft));
+    setErrors({});
+  }, [open, initialDraft]);
 
   const set = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev)   => ({ ...prev,   [key]: value     }));
@@ -77,13 +86,13 @@ export default function AddEntryModal({ open, onClose, onAdd, saving }: Props) {
       servingDesc: form.servingDesc.trim() || undefined,
       notes:       form.notes.trim()       || undefined,
     });
-    setForm(EMPTY);
+    setForm(buildFormState());
     setErrors({});
     onClose();
   }
 
   function handleClose() {
-    setForm(EMPTY);
+    setForm(buildFormState());
     setErrors({});
     onClose();
   }

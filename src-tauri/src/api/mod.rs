@@ -1,4 +1,5 @@
 pub mod ai;
+pub mod audio_transcription;
 /// The `api` module contains all external HTTP client logic.
 ///
 /// ## Adding a new external API
