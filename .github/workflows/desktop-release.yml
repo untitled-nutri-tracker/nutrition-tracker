@@ -22,40 +22,34 @@ jobs:
       - name: Strict Version Check
         id: check
         run: |
-          TAURI_VER=$(jq -r '.version' src-tauri/tauri.conf.json)
-          PKG_VER=$(jq -r '.version' package.json)
+          APP_VERSION=$(jq -r '.version' package.json)
           
-          # Edge Case 1: Mismatched versions
-          if [ "$TAURI_VER" != "$PKG_VER" ]; then
-            echo "Error: Version mismatch! tauri.conf.json ($TAURI_VER) != package.json ($PKG_VER)"
+          # Edge Case: Invalid SemVer format
+          if ! [[ "$APP_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "Error: Version $APP_VERSION is not valid SemVer format."
             echo "is_new_version=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           
-          # Edge Case 2: Invalid SemVer format
-          if ! [[ "$TAURI_VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
-            echo "Error: Version $TAURI_VER is not valid SemVer format."
-            echo "is_new_version=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          
-          # Edge Case 3: Downgrading to a lower version
+          # Edge Case: Downgrading to a lower version
           LATEST_TAG=$(git tag -l "app-v*" | sed 's/^app-v//' | sort -V | tail -n 1)
           
           if [ -z "$LATEST_TAG" ]; then
-            echo "No previous releases found. Proceeding with initial release $TAURI_VER."
+            echo "No previous releases found. Proceeding with initial release $APP_VERSION."
             echo "is_new_version=true" >> "$GITHUB_OUTPUT"
+            echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
             exit 0
           fi
           
           # Compare versions using GNU sort
-          HIGHEST=$(printf "%s\n%s" "$LATEST_TAG" "$TAURI_VER" | sort -V | tail -n 1)
+          HIGHEST=$(printf "%s\n%s" "$LATEST_TAG" "$APP_VERSION" | sort -V | tail -n 1)
           
-          if [ "$HIGHEST" = "$TAURI_VER" ] && [ "$TAURI_VER" != "$LATEST_TAG" ]; then
-            echo "Success: $TAURI_VER is strictly greater than previous latest ($LATEST_TAG). Proceeding."
+          if [ "$HIGHEST" = "$APP_VERSION" ] && [ "$APP_VERSION" != "$LATEST_TAG" ]; then
+            echo "Success: $APP_VERSION is strictly greater than previous latest ($LATEST_TAG). Proceeding."
             echo "is_new_version=true" >> "$GITHUB_OUTPUT"
+            echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
           else
-            echo "Skipping: Proposed version $TAURI_VER is NOT strictly greater than latest release $LATEST_TAG."
+            echo "Skipping: Proposed version $APP_VERSION is NOT strictly greater than latest release $LATEST_TAG."
             echo "is_new_version=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -75,9 +69,9 @@ jobs:
           - platform: 'macos-13'
             args: '--target x86_64-apple-darwin'
           
-          # Uncomment below to add Windows support in the future!
-          # - platform: 'windows-latest'
-          #   args: ''
+          # Windows support
+          - platform: 'windows-latest'
+            args: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -107,10 +101,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Automatically uses the version from your tauri.conf.json (e.g. "app-v0.1.0")
-          tagName: app-v__VERSION__
-          releaseName: 'Nutrition Tracker v__VERSION__'
-          releaseBody: 'See the assets below to download the latest Mac Desktop installer.'
+          tagName: app-v${{ env.APP_VERSION }}
+          releaseName: 'Nutrition Tracker v${{ env.APP_VERSION }}'
+          releaseBody: 'See the assets below to download the latest Mac and Windows installers.'
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
