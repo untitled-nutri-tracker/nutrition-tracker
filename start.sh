@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 export DISPLAY="${DISPLAY:-:1}"
-export HOME="${HOME:-/app/data}"
+export HOME="${APP_HOME:-/app/data}"
 export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 export GDK_BACKEND=x11
 export GDK_SCALE="${GDK_SCALE:-1}"
@@ -17,11 +17,50 @@ VNC_DPI="${VNC_DPI:-96}"
 NOVNC_RESIZE="${NOVNC_RESIZE:-remote}"
 OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2:1b}"
 OLLAMA_VISION_MODEL="${OLLAMA_VISION_MODEL:-llama3.2-vision}"
+OPENAI_MODEL="${OPENAI_MODEL:-${OPENAI_API_MODEL:-gpt-4o-mini}}"
+CUSTOM_MODEL="${CUSTOM_MODEL:-${OPENAI_API_MODEL:-}}"
+CUSTOM_ENDPOINT="${CUSTOM_ENDPOINT:-${OPENAI_API_BASE_URL:-https://openrouter.ai/api/v1}}"
 NUTRILOG_DB_PATH="${NUTRILOG_DB_PATH:-/app/data/nutrition.db}"
 AUTO_CREATE_DB="${AUTO_CREATE_DB:-true}"
 SEED_DEMO_DATA="${SEED_DEMO_DATA:-false}"
-PULL_OLLAMA_MODEL="${PULL_OLLAMA_MODEL:-true}"
+AI_PROVIDER="${AI_PROVIDER:-}"
+PULL_OLLAMA_MODEL="${PULL_OLLAMA_MODEL:-}"
 PULL_OLLAMA_VISION_MODEL="${PULL_OLLAMA_VISION_MODEL:-false}"
+START_OLLAMA="${START_OLLAMA:-}"
+
+if [ -z "$AI_PROVIDER" ]; then
+  if [ -n "${OPENAI_API_BASE_URL:-}" ]; then
+    AI_PROVIDER=custom
+  elif [ -n "${OPENAI_API_KEY:-}" ]; then
+    AI_PROVIDER=openai
+  else
+    AI_PROVIDER=ollama
+  fi
+fi
+
+case "$AI_PROVIDER" in
+  ollama|openai|anthropic|google|custom) ;;
+  *)
+    echo "Warning: invalid AI_PROVIDER=${AI_PROVIDER}; using ollama."
+    AI_PROVIDER=ollama
+    ;;
+esac
+
+if [ -z "$PULL_OLLAMA_MODEL" ]; then
+  if [ "$AI_PROVIDER" = "ollama" ]; then
+    PULL_OLLAMA_MODEL=true
+  else
+    PULL_OLLAMA_MODEL=false
+  fi
+fi
+
+if [ -z "$START_OLLAMA" ]; then
+  if [ "$AI_PROVIDER" = "ollama" ] || [ "$PULL_OLLAMA_MODEL" = "true" ] || [ "$PULL_OLLAMA_VISION_MODEL" = "true" ]; then
+    START_OLLAMA=true
+  else
+    START_OLLAMA=false
+  fi
+fi
 
 mkdir -p /root/.vnc "$HOME" "$XDG_DATA_HOME" /app/data
 
@@ -85,12 +124,14 @@ EOF
 
   cat >"$app_data_dir/ai_config.json" <<EOF
 {
-  "selectedProvider": "ollama",
+  "selectedProvider": "$AI_PROVIDER",
   "selectedModels": {
-    "ollama": "$OLLAMA_MODEL"
+    "ollama": "$OLLAMA_MODEL",
+    "openai": "$OPENAI_MODEL",
+    "custom": "$CUSTOM_MODEL"
   },
   "ollamaEndpoint": "http://localhost:11434",
-  "customEndpoint": "https://openrouter.ai/api/v1",
+  "customEndpoint": "$CUSTOM_ENDPOINT",
   "verifiedProviders": []
 }
 EOF
@@ -115,24 +156,28 @@ prepare_app_data_dir "$XDG_DATA_HOME/nutrition-tracker"
 prepare_app_data_dir "$HOME/.local/share/com.pierretran.nutrition-tracker"
 prepare_app_data_dir "$HOME/.local/share/nutrition-tracker"
 
-echo "Starting Ollama..."
-ollama serve >/tmp/ollama.log 2>&1 &
+if [ "$START_OLLAMA" = "true" ]; then
+  echo "Starting Ollama..."
+  ollama serve >/tmp/ollama.log 2>&1 &
 
-for _ in $(seq 1 30); do
-  if curl -fsS http://localhost:11434/api/tags >/dev/null 2>&1; then
-    break
+  for _ in $(seq 1 30); do
+    if curl -fsS http://localhost:11434/api/tags >/dev/null 2>&1; then
+      break
+    fi
+    sleep 1
+  done
+
+  if [ "$PULL_OLLAMA_MODEL" = "true" ] && [ -n "$OLLAMA_MODEL" ]; then
+    echo "Pulling Ollama model ${OLLAMA_MODEL}..."
+    ollama pull "$OLLAMA_MODEL" || echo "Warning: failed to pull ${OLLAMA_MODEL}. Check /tmp/ollama.log."
   fi
-  sleep 1
-done
 
-if [ "$PULL_OLLAMA_MODEL" = "true" ] && [ -n "$OLLAMA_MODEL" ]; then
-  echo "Pulling Ollama model ${OLLAMA_MODEL}..."
-  ollama pull "$OLLAMA_MODEL" || echo "Warning: failed to pull ${OLLAMA_MODEL}. Check /tmp/ollama.log."
-fi
-
-if [ "$PULL_OLLAMA_VISION_MODEL" = "true" ] && [ -n "$OLLAMA_VISION_MODEL" ]; then
-  echo "Pulling Ollama vision model ${OLLAMA_VISION_MODEL}..."
-  ollama pull "$OLLAMA_VISION_MODEL" || echo "Warning: failed to pull ${OLLAMA_VISION_MODEL}. Check /tmp/ollama.log."
+  if [ "$PULL_OLLAMA_VISION_MODEL" = "true" ] && [ -n "$OLLAMA_VISION_MODEL" ]; then
+    echo "Pulling Ollama vision model ${OLLAMA_VISION_MODEL}..."
+    ollama pull "$OLLAMA_VISION_MODEL" || echo "Warning: failed to pull ${OLLAMA_VISION_MODEL}. Check /tmp/ollama.log."
+  fi
+else
+  echo "Skipping Ollama startup because AI_PROVIDER=${AI_PROVIDER}."
 fi
 
 if command -v dbus-launch >/dev/null 2>&1; then

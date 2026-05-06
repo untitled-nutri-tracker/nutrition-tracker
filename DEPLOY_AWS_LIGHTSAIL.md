@@ -22,6 +22,7 @@ http://SERVER_IP:6080/vnc.html?resize=remote
 - Ollama text model in source: `llama3.2` by default.
 - Ollama photo model in source: `llama3.2-vision` for photo scanning.
 - Docker default text model: `llama3.2:1b` for better CPU performance on Lightsail. Change `OLLAMA_MODEL` if you want a different model.
+- Docker can bypass Ollama when an OpenAI-compatible API is provided through `OPENAI_API_KEY`, `OPENAI_API_BASE_URL`, and `OPENAI_API_MODEL`.
 
 ## Files Added
 
@@ -74,6 +75,24 @@ docker run -p 6080:6080 \
   tauri-cloud-demo
 ```
 
+## Local Test with OpenAI-Compatible API
+
+If you have an OpenAI-compatible endpoint, run without pulling or serving
+Ollama:
+
+```bash
+docker run -p 6080:6080 \
+  -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+  -e OPENAI_API_BASE_URL="$OPENAI_API_BASE_URL" \
+  -e OPENAI_API_MODEL="$OPENAI_API_MODEL" \
+  tauri-cloud-demo
+```
+
+When `OPENAI_API_BASE_URL` is set, startup selects the app's
+`Custom (OpenAI-Compatible)` provider, writes the base URL into
+`ai_config.json`, uses `OPENAI_API_MODEL` as the selected model, and skips
+Ollama startup by default.
+
 ## Local Test with Persistence
 
 Using Compose keeps app data and SQLite files in `./data`:
@@ -93,7 +112,7 @@ http://localhost:6080/vnc.html?resize=remote
 
 1. Create an Ubuntu 22.04 Lightsail instance.
 
-   Prefer 8 GB RAM / 2 vCPU for Ollama. A 4 GB RAM / 2 vCPU instance can work with a very small model such as `llama3.2:1b`.
+   Prefer 8 GB RAM / 2 vCPU if you run Ollama locally. If you use an external OpenAI-compatible API instead of Ollama, 4 GB RAM / 2 vCPU is usually enough for the GUI container.
 
 2. SSH into the instance.
 
@@ -122,7 +141,7 @@ cd REPLACE_WITH_REPO_DIRECTORY
 docker build -t tauri-cloud-demo .
 ```
 
-7. Run the container:
+7. Run the container with the OpenAI-compatible API:
 
 ```bash
 docker run -d \
@@ -131,11 +150,16 @@ docker run -d \
   -e VNC_RESOLUTION=1600x1000 \
   -e VNC_DPI=96 \
   -e NOVNC_RESIZE=remote \
-  -e OLLAMA_MODEL=llama3.2:1b \
+  -e OPENAI_API_KEY="REPLACE_WITH_API_KEY" \
+  -e OPENAI_API_BASE_URL="REPLACE_WITH_BASE_URL" \
+  -e OPENAI_API_MODEL="REPLACE_WITH_MODEL" \
   -v "$PWD/data:/app/data" \
   --restart unless-stopped \
   tauri-cloud-demo
 ```
+
+This selects the app's `Custom (OpenAI-Compatible)` provider and skips Ollama.
+Do not paste the real API key into git-tracked files.
 
 8. In Lightsail Networking, open inbound TCP port `6080`.
 
@@ -262,7 +286,23 @@ If you want the app to show its normal database setup screen instead of auto-cre
 
 ## Ollama Model
 
+You can skip this whole section if you are using `OPENAI_API_KEY`,
+`OPENAI_API_BASE_URL`, and `OPENAI_API_MODEL`.
+
 The source default for text chat is `llama3.2`, but the Docker setup defaults to `llama3.2:1b` for Lightsail CPU performance and writes that choice into the app AI config.
+
+To force the local Ollama path:
+
+```bash
+docker run -d \
+  --name tauri-demo \
+  -p 6080:6080 \
+  -e AI_PROVIDER=ollama \
+  -e OLLAMA_MODEL=llama3.2:1b \
+  -v "$PWD/data:/app/data" \
+  --restart unless-stopped \
+  tauri-cloud-demo
+```
 
 Change the model:
 
@@ -324,9 +364,17 @@ If `http://SERVER_IP:6080/vnc.html` does not load:
 
 If the app opens but AI is slow:
 
-- Use `OLLAMA_MODEL=llama3.2:1b` or `OLLAMA_MODEL=qwen2.5:1.5b`.
-- Use an 8 GB RAM / 2 vCPU Lightsail instance.
+- Prefer the OpenAI-compatible API path for the grading demo.
+- If using Ollama, use `OLLAMA_MODEL=llama3.2:1b` or `OLLAMA_MODEL=qwen2.5:1.5b`.
+- If using Ollama, use an 8 GB RAM / 2 vCPU Lightsail instance.
 - Avoid pulling `llama3.2-vision` unless photo scanning is required.
+
+If the app says no API key is configured:
+
+- Confirm the container was started with `OPENAI_API_KEY`.
+- Confirm `OPENAI_API_BASE_URL` is set for OpenAI-compatible endpoints.
+- Confirm `OPENAI_API_MODEL` is set to a model available from that endpoint.
+- Recreate the container after changing environment variables.
 
 If the app cannot find data after restart:
 
