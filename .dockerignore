@@ -1,0 +1,14 @@
+node_modules
+src-ai/node_modules
+target
+src-tauri/target
+src-rust-crates/**/target
+dist
+.git
+.github
+.vscode
+.idea
+.DS_Store
+*.log
+*.db
+data
