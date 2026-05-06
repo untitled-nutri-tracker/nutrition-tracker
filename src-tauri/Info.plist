@@ -4,5 +4,7 @@
 <dict>
     <key>NSCameraUsageDescription</key>
     <string>NutriLog uses the camera to scan food barcodes and capture food photos for quick logging.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>NutriLog uses the microphone to capture short voice notes for hands-free food logging.</string>
 </dict>
 </plist>

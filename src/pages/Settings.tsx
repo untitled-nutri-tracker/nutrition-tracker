@@ -473,6 +473,12 @@ function ApiKeySection() {
         Select your preferred AI provider and manage API keys. Keys are
         stored securely in your OS keychain.
       </div>
+      <div className="mt-2 rounded-[10px] border border-primary/10 bg-primary/5 px-3 py-2 text-[11px] leading-relaxed text-muted2">
+        Voice logging uses the selected AI provider below when that provider supports speech-to-text.
+        OpenAI uses its native transcription API, Google Gemini uses Gemini audio input, Ollama
+        and Anthropic use on-device transcription inside the app, and Custom providers must expose
+        their own audio transcription endpoint.
+      </div>
 
       {/* Provider selector pills */}
       <div className="flex gap-1.5 flex-wrap mt-3.5 max-sm:gap-1">

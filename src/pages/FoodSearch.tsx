@@ -3,15 +3,25 @@ import { useLocation } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { Barcode, Camera, MagnifyingGlass, WarningCircle } from "@phosphor-icons/react";
 import { createEntry } from "../lib/foodLogStore";
-
-// Toggle: false = localStorage (works now), true = Tauri IPC
-const USE_TAURI = false;
 import {
   SearchProduct, SearchResult, PhotoFoodEstimate, MEAL_TYPES,
   r, defaultMealType, todayStr,
 } from "../types";
 import BarcodeScanner from "../components/BarcodeScanner";
 import FoodPhotoScanner from "../components/FoodPhotoScanner";
+import FoodVoiceRecorder from "../components/FoodVoiceRecorder";
+import AddEntryModal from "../components/AddEntryModal";
+import { useAiConfig } from "../hooks/useAiConfig";
+import type { FoodEntryDraft } from "../types/foodLog";
+import "../styles/barcode-scanner.css";
+
+interface VoiceFoodTranscript {
+  transcript: string;
+  normalizedQuery: string;
+  quantityHint?: number | null;
+  mealTypeHint?: "breakfast" | "lunch" | "dinner" | "snack" | null;
+  confidence?: number | null;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Barcode validation helpers                                         */
@@ -58,6 +68,7 @@ function rankResults(products: SearchProduct[], query: string): SearchProduct[] 
 
 export default function LogFood() {
   const location = useLocation();
+  const aiCfg = useAiConfig();
   const [query, setQuery] = useState("");
   const [barcode, setBarcode] = useState("");
   const [results, setResults] = useState<SearchProduct[]>([]);
@@ -76,7 +87,6 @@ export default function LogFood() {
   // ---- Confirmation card state (for scanned barcodes) ----
   const [confirmProduct, setConfirmProduct] = useState<SearchProduct | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const [confirmSaveToFoods, setConfirmSaveToFoods] = useState(true);
   const [confirmQty, setConfirmQty] = useState("1");
   const [confirmLogged, setConfirmLogged] = useState(false);
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
@@ -96,30 +106,69 @@ export default function LogFood() {
   });
   const [photoLogged, setPhotoLogged] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [voiceLoading, setVoiceLoading] = useState(false);
+  const [voiceResult, setVoiceResult] = useState<VoiceFoodTranscript | null>(null);
+  const [voiceLogged, setVoiceLogged] = useState(false);
+  const [manualEntryOpen, setManualEntryOpen] = useState(false);
+  const [manualEntrySaving, setManualEntrySaving] = useState(false);
+  const [manualEntryPrefill, setManualEntryPrefill] = useState<Partial<Omit<FoodEntryDraft, "date">> | undefined>(undefined);
 
-  async function handleTextSearch() {
-    if (!query.trim()) return;
+  function resetConfirmState() {
+    setConfirmProduct(null);
+    setConfirmLogged(false);
+    setConfirmQty("1");
+    setScannedBarcode(null);
+  }
+
+  function resetVoiceState() {
+    setVoiceResult(null);
+    setVoiceLogged(false);
+    setManualEntryOpen(false);
+    setManualEntryPrefill(undefined);
+  }
+
+  function openVoiceManualEntry(transcript: VoiceFoodTranscript) {
+    setManualEntryPrefill(buildVoiceManualDraft(transcript, mealType));
+    setManualEntryOpen(true);
+  }
+
+  async function runTextSearch(searchTerm: string) {
+    const trimmed = searchTerm.trim();
+    if (!trimmed) {
+      setResults([]);
+      return [] as SearchProduct[];
+    }
     setHasSearched(true);
     setLoading(true);
     setError(null);
-    setConfirmProduct(null); // clear confirmation card on new search
     try {
       const result = await invoke<SearchResult>("search_food_online", {
-        query: query.trim(),
+        query: trimmed,
         page: 1,
       });
-      setResults(rankResults(result.products, query));
+      const ranked = rankResults(result.products, trimmed);
+      setResults(ranked);
+      return ranked;
     } catch (e: any) {
       setError(e?.toString() ?? "Search failed");
       setResults([]);
+      return [] as SearchProduct[];
     } finally {
       setLoading(false);
     }
   }
 
+  async function handleTextSearch() {
+    resetConfirmState();
+    resetVoiceState();
+    await runTextSearch(query);
+  }
+
   async function handleBarcodeSearch() {
     const digits = barcode.replace(/\D/g, "");
     if (!digits) return;
+    resetVoiceState();
     if (!isBarcodeValid(digits)) {
       setBarcodeError(`Barcode must be 8–13 digits. You entered ${digits.length}.`);
       return;
@@ -138,10 +187,9 @@ export default function LogFood() {
     setError(null);
     setBarcodeError(null);
     setBarcodeNotFound(null);
-    setConfirmProduct(null);
-    setConfirmLogged(false);
-    setConfirmQty("1");
+    resetConfirmState();
     setScannedBarcode(code);
+    resetVoiceState();
     try {
       const result = await invoke<SearchResult>("fetch_food_by_barcode", {
         barcode: code,
@@ -182,6 +230,7 @@ export default function LogFood() {
     setPhotoLoading(true);
     setPhotoEstimate(null);
     setPhotoLogged(false);
+    resetVoiceState();
     setError(null);
     try {
       const storedProvider = localStorage.getItem("nutrilog_vision_provider") || "ollama";
@@ -207,6 +256,125 @@ export default function LogFood() {
       setError(e?.toString() ?? "Food photo analysis failed");
     } finally {
       setPhotoLoading(false);
+    }
+  }
+
+  function voiceSourceNote() {
+    if (!voiceResult) return undefined;
+    const noteParts = [
+      `Voice transcript: "${voiceResult.transcript}".`,
+      voiceResult.confidence != null
+        ? `Speech confidence: ${Math.round(voiceResult.confidence * 100)}%.`
+        : "",
+    ].filter(Boolean);
+    return noteParts.join(" ");
+  }
+
+  async function logProduct(product: SearchProduct, qty: number) {
+    await createEntry({
+      date,
+      mealType: mealType as any,
+      foodName: product.product_name,
+      brand: product.brands || undefined,
+      calories: Math.round((product.calories_kcal || 0) * qty),
+      proteinG: Math.round((product.protein_g || 0) * qty * 10) / 10,
+      carbsG: Math.round((product.total_carbohydrate_g || 0) * qty * 10) / 10,
+      fatG: Math.round((product.fat_g || 0) * qty * 10) / 10,
+      servingDesc: `${qty} serving`,
+      notes: voiceSourceNote(),
+    });
+  }
+
+  async function handleVoiceCaptured(audio: { audioBase64: string; mimeType: string }) {
+    setShowVoiceRecorder(false);
+    setVoiceLoading(true);
+    resetVoiceState();
+    resetConfirmState();
+    setError(null);
+    try {
+      const selectedProvider = aiCfg.config?.selectedProvider || "ollama";
+      const transcript = await invoke<VoiceFoodTranscript>("transcribe_food_audio", {
+        audioBase64: audio.audioBase64,
+        mimeType: audio.mimeType,
+        provider: selectedProvider,
+      });
+
+      if (transcript.mealTypeHint) {
+        setMealType(transcript.mealTypeHint.toUpperCase());
+      }
+
+      const normalizedQuery = transcript.normalizedQuery.trim() || transcript.transcript.trim();
+      setQuery(normalizedQuery);
+
+      const ranked = await runTextSearch(normalizedQuery);
+
+      if (transcript.quantityHint && ranked.length > 0) {
+        const suggestedQty = String(r(transcript.quantityHint));
+        setConfirmQty(suggestedQty);
+        setQuantity((prev) => {
+          const next = { ...prev };
+          for (const product of ranked) {
+            const uid = product.barcode || product.product_name;
+            next[uid] = suggestedQty;
+          }
+          return next;
+        });
+      }
+
+      if (ranked.length > 0) {
+        setConfirmProduct(ranked[0]);
+      } else {
+        openVoiceManualEntry(transcript);
+      }
+
+      setVoiceResult(transcript);
+    } catch (e: any) {
+      setError(e?.toString() ?? "Voice transcription failed. Check your AI provider settings and try again.");
+    } finally {
+      setVoiceLoading(false);
+    }
+  }
+
+  async function handleQuickVoiceLog() {
+    if (!voiceResult) return;
+    try {
+      const qty = voiceResult.quantityHint && voiceResult.quantityHint > 0 ? voiceResult.quantityHint : 1;
+      const name = voiceResult.normalizedQuery.trim() || voiceResult.transcript.trim();
+      await createEntry({
+        date,
+        mealType: (voiceResult.mealTypeHint || mealType.toLowerCase()) as any,
+        foodName: name,
+        calories: 0,
+        proteinG: 0,
+        carbsG: 0,
+        fatG: 0,
+        servingDesc: qty === 1 ? "voice entry" : `${r(qty)} servings (voice)`,
+        notes: `Voice-only quick log. Transcript: "${voiceResult.transcript}". Nutrition values need review.`,
+      });
+      setVoiceResult(null);
+      setVoiceLogged(true);
+    } catch (e: any) {
+      setError(e?.toString() ?? "Failed to create quick voice entry");
+    }
+  }
+
+  function handleOpenManualEntryFromVoice() {
+    if (!voiceResult) return;
+    openVoiceManualEntry(voiceResult);
+  }
+
+  async function handleManualAddEntry(draft: Omit<FoodEntryDraft, "date">) {
+    setManualEntrySaving(true);
+    try {
+      await createEntry({
+        ...draft,
+        date,
+      });
+      resetVoiceState();
+    } catch (e: any) {
+      setError(e?.toString() ?? "Failed to create manual entry");
+    } finally {
+      setManualEntrySaving(false);
     }
   }
 
@@ -241,161 +409,35 @@ export default function LogFood() {
 
   /** Log a product from the confirmation card. */
   async function handleConfirmLog() {
-  if (!confirmProduct) return;
-  const product = confirmProduct;
-  setConfirmLoading(true);
-  try {
-    const qty = parseFloat(confirmQty) || 1;
-
-    if (!USE_TAURI) {
-      await createEntry({
-        date,
-        mealType: mealType as any,
-        foodName: product.product_name,
-        brand: product.brands || undefined,
-        calories: Math.round((product.calories_kcal || 0) * qty),
-        proteinG: Math.round((product.protein_g || 0) * qty * 10) / 10,
-        carbsG: Math.round((product.total_carbohydrate_g || 0) * qty * 10) / 10,
-        fatG: Math.round((product.fat_g || 0) * qty * 10) / 10,
-        servingDesc: `${qty} serving`,
-      });
+    if (!confirmProduct) return;
+    const product = confirmProduct;
+    setConfirmLoading(true);
+    try {
+      const qty = parseFloat(confirmQty) || 1;
+      await logProduct(product, qty);
+      resetVoiceState();
       setConfirmLogged(true);
-      return;
+    } catch (e: any) {
+      setError(e?.toString() ?? "Failed to log food");
+    } finally {
+      setConfirmLoading(false);
     }
-
-    // Tauri IPC path
-    const now = Math.floor(Date.now() / 1000);
-    const occurredAt = Math.floor(new Date(date + "T12:00:00").getTime() / 1000);
-    const food = await invoke<any>("create_food", {
-      food: {
-        id: 0, name: product.product_name, brand: product.brands,
-        category: product.categories, source: "openfoodfacts",
-        refUrl: "", barcode: product.barcode, createdAt: now, updatedAt: now,
-      },
-    });
-    const serving = await invoke<any>("create_serving", {
-      serving: {
-        id: 0, food, amount: 100, unit: "GRAM", gramsEquiv: 100,
-        isDefault: true, createdAt: now, updatedAt: now,
-      },
-    });
-    await invoke("create_nutrition_facts", {
-      nutritionFacts: {
-        SERVING: serving,
-        CALORIES_KCAL: product.calories_kcal || 0,
-        FAT_G: product.fat_g || 0,
-        SATURATED_FAT_G: product.saturated_fat_g || 0,
-        TRANS_FAT_G: product.trans_fat_g || 0,
-        CHOLESTEROL_MG: product.cholesterol_mg || 0,
-        SODIUM_MG: product.sodium_mg || 0,
-        TOTAL_CARBOHYDRATE_G: product.total_carbohydrate_g || 0,
-        DIETARY_FIBER_G: product.dietary_fiber_g || 0,
-        TOTAL_SUGARS_G: product.total_sugars_g || 0,
-        ADDED_SUGARS_G: product.added_sugars_g || 0,
-        PROTEIN_G: product.protein_g || 0,
-        VITAMIN_D_MCG: product.vitamin_d_mcg || 0,
-        CALCIUM_MG: product.calcium_mg || 0,
-        IRON_MG: product.iron_mg || 0,
-      },
-    });
-    const meal = await invoke<any>("create_meal", {
-      meal: {
-        id: 0, occurredAt, mealType: mealType.toUpperCase(),
-        title: mealType.charAt(0).toUpperCase() + mealType.slice(1),
-        note: "", createdAt: now, updatedAt: now,
-      },
-    });
-    await invoke("create_meal_item", {
-      mealItem: {
-        id: 0, meal, food, serving, quantity: qty,
-        note: "", createdAt: now, updatedAt: now,
-      },
-    });
-    setConfirmLogged(true);
-  } catch (e: any) {
-    setError(e?.toString() ?? "Failed to log food");
-  } finally {
-    setConfirmLoading(false);
   }
-}
 
   async function handleLog(product: SearchProduct) {
-  const uid = product.barcode || product.product_name;
-  setLoggingId(uid);
-  try {
-    const qty = parseFloat(quantity[uid] || "1") || 1;
-
-    if (!USE_TAURI) {
-      await createEntry({
-        date,
-        mealType: mealType as any,
-        foodName: product.product_name,
-        brand: product.brands || undefined,
-        calories: Math.round((product.calories_kcal || 0) * qty),
-        proteinG: Math.round((product.protein_g || 0) * qty * 10) / 10,
-        carbsG: Math.round((product.total_carbohydrate_g || 0) * qty * 10) / 10,
-        fatG: Math.round((product.fat_g || 0) * qty * 10) / 10,
-        servingDesc: `${qty} serving`,
-      });
+    const uid = product.barcode || product.product_name;
+    setLoggingId(uid);
+    try {
+      const qty = parseFloat(quantity[uid] || "1") || 1;
+      await logProduct(product, qty);
+      resetVoiceState();
       setLoggedIds((prev) => new Set(prev).add(uid));
-      return;
+    } catch (e: any) {
+      setError(e?.toString() ?? "Failed to log food");
+    } finally {
+      setLoggingId(null);
     }
-
-    // Tauri IPC path
-    const now = Math.floor(Date.now() / 1000);
-    const occurredAt = Math.floor(new Date(date + "T12:00:00").getTime() / 1000);
-    const food = await invoke<any>("create_food", {
-      food: {
-        id: 0, name: product.product_name, brand: product.brands,
-        category: product.categories, source: "openfoodfacts",
-        refUrl: "", barcode: product.barcode, createdAt: now, updatedAt: now,
-      },
-    });
-    const serving = await invoke<any>("create_serving", {
-      serving: {
-        id: 0, food, amount: 100, unit: "GRAM", gramsEquiv: 100,
-        isDefault: true, createdAt: now, updatedAt: now,
-      },
-    });
-    await invoke("create_nutrition_facts", {
-      nutritionFacts: {
-        SERVING: serving,
-        CALORIES_KCAL: product.calories_kcal || 0,
-        FAT_G: product.fat_g || 0,
-        SATURATED_FAT_G: product.saturated_fat_g || 0,
-        TRANS_FAT_G: product.trans_fat_g || 0,
-        CHOLESTEROL_MG: product.cholesterol_mg || 0,
-        SODIUM_MG: product.sodium_mg || 0,
-        TOTAL_CARBOHYDRATE_G: product.total_carbohydrate_g || 0,
-        DIETARY_FIBER_G: product.dietary_fiber_g || 0,
-        TOTAL_SUGARS_G: product.total_sugars_g || 0,
-        ADDED_SUGARS_G: product.added_sugars_g || 0,
-        PROTEIN_G: product.protein_g || 0,
-        VITAMIN_D_MCG: product.vitamin_d_mcg || 0,
-        CALCIUM_MG: product.calcium_mg || 0,
-        IRON_MG: product.iron_mg || 0,
-      },
-    });
-    const meal = await invoke<any>("create_meal", {
-      meal: {
-        id: 0, occurredAt, mealType: mealType.toUpperCase(),
-        title: mealType.charAt(0).toUpperCase() + mealType.slice(1),
-        note: "", createdAt: now, updatedAt: now,
-      },
-    });
-    await invoke("create_meal_item", {
-      mealItem: {
-        id: 0, meal, food, serving, quantity: qty,
-        note: "", createdAt: now, updatedAt: now,
-      },
-    });
-    setLoggedIds((prev) => new Set(prev).add(uid));
-  } catch (e: any) {
-    setError(e?.toString() ?? "Failed to log food");
-  } finally {
-    setLoggingId(null);
   }
-}
 
   function handleKeyDown(e: React.KeyboardEvent, action: () => void) {
     if (e.key === "Enter") {
@@ -411,7 +453,7 @@ export default function LogFood() {
       <div className="card pop-in max-w-[900px]">
         <div className="text-primary font-semibold">Log Food</div>
         <div className="mt-1 text-xs text-muted">
-          Search for food, scan a barcode, or enter one manually.
+          Search for food, scan a barcode, speak a meal, or enter one manually.
         </div>
 
         <div className="mt-3.5 flex flex-wrap items-center gap-2">
@@ -471,7 +513,7 @@ export default function LogFood() {
         </div>
 
         {/* Barcode input row */}
-        <div className="mt-2.5 grid grid-cols-1 items-start gap-2.5 sm:grid-cols-[1fr_auto_auto_auto]">
+        <div className="mt-2.5 grid grid-cols-1 items-start gap-2.5 sm:grid-cols-[1fr_auto_auto_auto_auto]">
           <div>
             <div className="relative">
               <input
@@ -591,6 +633,22 @@ export default function LogFood() {
             <Camera size={16} weight="duotone" />
             <span>{photoLoading ? "Analyzing…" : "Snap Food"}</span>
           </button>
+
+          <button
+            id="food-voice-btn"
+            onClick={() => setShowVoiceRecorder(true)}
+            disabled={loading || photoLoading || voiceLoading}
+            style={{
+              ...buttonStyle,
+              background: "linear-gradient(135deg, rgba(255,170,50,0.2), rgba(255,120,80,0.12))",
+              borderColor: "rgba(255,170,50,0.35)",
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+            }}
+          >
+            {voiceLoading ? "Transcribing…" : "🎙 Speak Food"}
+          </button>
         </div>
       </div>
 
@@ -608,6 +666,95 @@ export default function LogFood() {
           onClose={() => setShowPhotoScanner(false)}
         />
       )}
+
+      {showVoiceRecorder && (
+        <FoodVoiceRecorder
+          onAudioCaptured={handleVoiceCaptured}
+          onClose={() => setShowVoiceRecorder(false)}
+        />
+      )}
+
+      {voiceLoading && (
+        <div className="card" style={{ maxWidth: 900, border: "1px solid rgba(255,170,50,0.28)", background: "rgba(255,170,50,0.05)" }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Transcribing voice entry…</div>
+          <div style={{ marginTop: 6, color: "var(--muted)", fontSize: 12 }}>
+            We&apos;re converting your speech to text, extracting the food name, then searching for the best nutrition match.
+          </div>
+        </div>
+      )}
+
+      {voiceResult && (
+        <div className="card confirm-card" style={{ maxWidth: 900, border: "1px solid rgba(255,170,50,0.28)", background: "rgba(255,170,50,0.05)" }}>
+          <div style={{ fontSize: 11, color: "var(--muted2)", fontWeight: 600, marginBottom: 10 }}>
+            Voice transcript
+            {voiceResult.confidence != null ? ` · Confidence ${Math.round(voiceResult.confidence * 100)}%` : ""}
+          </div>
+
+          <div style={{ display: "grid", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 12, color: "var(--muted2)", marginBottom: 4 }}>Heard</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>"{voiceResult.transcript}"</div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <MacroBadge label="Search" value={voiceResult.normalizedQuery || "none"} unit="" color="rgba(255,170,50,0.18)" />
+              {voiceResult.mealTypeHint && (
+                <MacroBadge label="Meal" value={voiceResult.mealTypeHint} unit="" color="rgba(80,200,120,0.16)" />
+              )}
+              {voiceResult.quantityHint != null && (
+                <MacroBadge label="Qty" value={r(voiceResult.quantityHint)} unit="x" color="rgba(100,149,237,0.16)" />
+              )}
+            </div>
+
+            <div style={{ fontSize: 12, color: "var(--muted)" }}>
+              {results.length > 0
+                ? `We found ${results.length} match${results.length === 1 ? "" : "es"} for the spoken entry below.`
+                : "We could not find a nutrition match for that spoken item. Please enter it manually so you can review and save the nutrition details yourself."}
+            </div>
+          </div>
+
+          <div className="confirm-card-actions">
+            {results.length === 0 && (
+              <button
+                className="confirm-add-btn"
+                onClick={handleOpenManualEntryFromVoice}
+              >
+                Manual Input
+              </button>
+            )}
+
+            {results.length === 0 && (
+              <button
+                className="confirm-cancel-btn"
+                onClick={handleQuickVoiceLog}
+                disabled={voiceLogged}
+              >
+                {voiceLogged ? "✓ Quick Logged" : "Quick Log Instead"}
+              </button>
+            )}
+
+            <button
+              className="confirm-cancel-btn"
+              onClick={() => {
+                resetVoiceState();
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      <AddEntryModal
+        open={manualEntryOpen}
+        onClose={() => {
+          setManualEntryOpen(false);
+          setManualEntryPrefill(undefined);
+        }}
+        onAdd={handleManualAddEntry}
+        saving={manualEntrySaving}
+        initialDraft={manualEntryPrefill}
+      />
 
       {photoLoading && (
         <div className="card" style={{ maxWidth: 900, border: "1px solid rgba(80,200,120,0.28)", background: "rgba(80,200,120,0.05)" }}>
@@ -770,14 +917,6 @@ export default function LogFood() {
               Cancel
             </button>
 
-            <label className="flex items-center gap-1.5 text-xs text-muted ml-auto cursor-pointer">
-              <input
-                type="checkbox"
-                checked={confirmSaveToFoods}
-                onChange={(e) => setConfirmSaveToFoods(e.target.checked)}
-              />
-              Save to My Foods
-            </label>
           </div>
         </div>
       )}
@@ -937,7 +1076,28 @@ export default function LogFood() {
   );
 }
 
-function MacroBadge({ label, value, unit, color }: { label: string; value: number; unit: string; color: string }) {
+function buildVoiceManualDraft(
+  transcript: VoiceFoodTranscript,
+  fallbackMealType: string,
+): Partial<Omit<FoodEntryDraft, "date">> {
+  const foodName = transcript.normalizedQuery.trim() || transcript.transcript.trim();
+  const servingDesc = transcript.quantityHint && transcript.quantityHint > 0
+    ? `${r(transcript.quantityHint)} serving${transcript.quantityHint === 1 ? "" : "s"}`
+    : "1 serving";
+
+  return {
+    foodName,
+    mealType: (transcript.mealTypeHint || fallbackMealType.toLowerCase()) as FoodEntryDraft["mealType"],
+    calories: 0,
+    proteinG: 0,
+    carbsG: 0,
+    fatG: 0,
+    servingDesc,
+    notes: `Voice transcript: "${transcript.transcript}". Fill in the nutrition details manually.`,
+  };
+}
+
+function MacroBadge({ label, value, unit, color }: { label: string; value: string | number; unit: string; color: string }) {
   return (
     <span style={{ display: "inline-flex", alignItems: "baseline", gap: 4, padding: "6px 12px", borderRadius: 12, background: color, border: "1px solid rgba(255,255,255,0.12)", fontSize: 13, minWidth: "75px", justifyContent: "center" }}>
       <span style={{ color: "var(--text-muted2)" }}>{label}</span>
