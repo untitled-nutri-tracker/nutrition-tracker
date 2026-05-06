@@ -53,3 +53,12 @@ cd src-tauri && cargo build
 ```bash
 cd src-rust-crates/database && cargo test
 ```
+
+## Releasing a New Version
+
+To trigger the automated GitHub Actions release build (which creates the macOS `.dmg` and Windows installers), you must bump the version number in exactly **two** files before pushing/merging to `main`:
+
+1. `package.json`
+2. `src-tauri/tauri.conf.json`
+
+Both versions must match perfectly in strict SemVer format (e.g. `0.1.1`), and must be strictly greater than the previous released version tag.
