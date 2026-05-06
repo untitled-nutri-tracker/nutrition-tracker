@@ -13,6 +13,7 @@ pub mod commands;
 mod keyring_store;
 mod secure_file_store;
 
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
@@ -99,7 +100,10 @@ impl CredentialManager {
     }
 
     pub fn retrieve(&self, service: &str) -> Result<String, String> {
-        self.with_store(|s| s.retrieve(service))
+        match self.with_store(|s| s.retrieve(service)) {
+            Ok(key) => Ok(key),
+            Err(store_err) => env_credential(service).ok_or(store_err),
+        }
     }
 
     pub fn delete(&self, service: &str) -> Result<(), String> {
@@ -107,11 +111,22 @@ impl CredentialManager {
     }
 
     pub fn exists(&self, service: &str) -> Result<bool, String> {
+        if env_credential(service).is_some() {
+            return Ok(true);
+        }
         self.with_store(|s| s.exists(service))
     }
 
     pub fn list_services(&self) -> Result<Vec<String>, String> {
-        self.with_store(|s| s.list_services())
+        let mut services = self.with_store(|s| s.list_services())?;
+        for service in env_credential_services() {
+            if !services.iter().any(|existing| existing == service) {
+                services.push(service.to_string());
+            }
+        }
+        services.sort();
+        services.dedup();
+        Ok(services)
     }
 
     /// Return a masked preview of a stored credential.
@@ -131,6 +146,46 @@ impl CredentialManager {
             }
             Err(_) => Ok(String::new()),
         }
+    }
+}
+
+fn env_credential(service: &str) -> Option<String> {
+    env_vars_for_service(service).iter().find_map(|name| {
+        std::env::var(name)
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+    })
+}
+
+fn env_credential_services() -> Vec<&'static str> {
+    let mut services = BTreeSet::new();
+    for service in [
+        providers::OPENAI,
+        providers::ANTHROPIC,
+        providers::GOOGLE,
+        providers::CUSTOM,
+        providers::USDA_FDC,
+    ] {
+        if env_credential(service).is_some() {
+            services.insert(service);
+        }
+    }
+    services.into_iter().collect()
+}
+
+fn env_vars_for_service(service: &str) -> &'static [&'static str] {
+    match service {
+        providers::OPENAI => &["OPENAI_API_KEY"],
+        providers::ANTHROPIC => &["ANTHROPIC_API_KEY"],
+        providers::GOOGLE => &["GOOGLE_API_KEY", "GEMINI_API_KEY"],
+        providers::CUSTOM => &[
+            "CUSTOM_LLM_API_KEY",
+            "OPENAI_COMPATIBLE_API_KEY",
+            "OPENAI_API_KEY",
+        ],
+        providers::USDA_FDC => &["USDA_FDC_API_KEY"],
+        _ => &[],
     }
 }
 
