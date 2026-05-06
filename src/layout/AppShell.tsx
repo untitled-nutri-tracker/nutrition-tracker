@@ -129,7 +129,7 @@ export default function AppShell() {
         <div className="flex items-center gap-3 border-b border-subtle p-5">
           <div className="h-9 w-9 rounded-[14px] border border-subtle bg-gradient-to-br from-emerald-300/45 to-cyan-300/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.26)]" />
           <div className="flex flex-col">
-            <strong className="text-base font-semibold tracking-tight leading-none mb-1">NutriLog</strong>
+            <strong className="text-primary font-semibold tracking-tight leading-none mb-1">NutriLog</strong>
             <span className="text-xs leading-none tracking-wide text-muted">Local-first tracker</span>
           </div>
         </div>

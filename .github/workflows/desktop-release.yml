@@ -75,9 +75,9 @@ jobs:
           - platform: 'macos-13'
             args: '--target x86_64-apple-darwin'
           
-          # Uncomment below to add Windows support in the future!
-          # - platform: 'windows-latest'
-          #   args: ''
+          # Windows support
+          - platform: 'windows-latest'
+            args: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
